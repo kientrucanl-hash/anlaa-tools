@@ -105,3 +105,14 @@ Winston log ra `logs/combined.log` và `logs/error.log` (tự rotate 5 MB × 5 f
 - Hằng số định mức: `UPPER_SNAKE_CASE`
 - Không comment giải thích WHAT — chỉ comment khi WHY không rõ ràng
 - Không thêm abstraction khi chưa có ≥3 use case
+
+## Compact Instructions
+
+Khi compact context, **bắt buộc giữ lại**:
+
+- Stack: Node.js + Express + SQLite (`better-sqlite3`) + Vanilla JS, không có build step
+- Quy tắc gạch: 6.5×10.5×22 cm, Tường 110 = 60 viên/m², Tường 220 = 120 viên/m²
+- Làm tròn lên `Math.ceil` cho số bao vật liệu; keo bao 25 kg, xi măng PC40 bao 50 kg
+- Bảo mật: KHÔNG in JWT_SECRET, KHÔNG commit `.env` và `anlaa.db`, mọi endpoint mới cần `requireAuth`/`requireAdmin`
+- Cấu trúc: frontend ở root (`index.html`, `js/`, `css/`), backend ở `server/`, DB ở `server/db/anlaa.db`
+- UI 100% Tiếng Việt, code 100% Tiếng Anh
