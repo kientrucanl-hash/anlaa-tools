@@ -147,3 +147,4 @@ Xem `ACCOUNTS.local.md` (không commit, chỉ dùng nội bộ). Đổi mật kh
 - [ ] Port 4000 không expose trực tiếp ra internet
 - [ ] Backup database đã lên lịch
 - [ ] Đã đổi mật khẩu tài khoản mặc định
+ 
