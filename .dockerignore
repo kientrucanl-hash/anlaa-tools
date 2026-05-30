@@ -1,0 +1,15 @@
+# Docker ignore rules
+**/node_modules
+.git
+.gitignore
+.env
+server/.env
+server/db/*.db
+server/db/*.db-journal
+logs
+02_Process/audit_log
+*.log
+*.zip
+*.json
+!server/package.json
+!server/package-lock.json

@@ -1,0 +1,14 @@
+ACCOUNTS.local.md
+# Environment files (contain secrets — never commit)
+.env
+server/.env
+# Database files
+server/db/anlaa_data.json
+server/db/anlaa.db
+server/db/anlaa.db-shm
+server/db/anlaa.db-wal
+# Generated
+server/node_modules/
+02_Process/
+*.log
+logs/

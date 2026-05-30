@@ -1,0 +1,23 @@
+{
+  "users": [
+    {
+      "id": 1,
+      "username": "admin",
+      "password_hash": "$2a$10$LS9gw4IFxlF0m0M4BuFbp.hMqslm3rSpKqo1UA3sNZAJufC5MSTpO",
+      "role": "admin",
+      "created_at": "2026-05-28 08:40:21"
+    },
+    {
+      "id": 2,
+      "username": "user1",
+      "password_hash": "$2a$10$mVyVFnnwdnuYqUvKTq7zH.mgHK3X5KhgC26y76hJYfnLGZSmOQr2K",
+      "role": "user",
+      "created_at": "2026-05-28 08:40:21"
+    }
+  ],
+  "projects": [],
+  "seq": {
+    "users": 2,
+    "projects": 1
+  }
+}

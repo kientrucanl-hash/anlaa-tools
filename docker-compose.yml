@@ -1,0 +1,16 @@
+services:
+  anlc:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "4000:4000"
+    environment:
+      - PORT=4000
+      - JWT_SECRET=${JWT_SECRET}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-}
+    volumes:
+      # Persist SQLite database outside container
+      - anlc_data:/app/server/db
+
+volumes:
+  anlc_data:
