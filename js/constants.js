@@ -291,3 +291,40 @@ const MATERIAL_METADATA = {
     "tile-clips": { name: "Ke móc cân bằng gạch (Clips)", spec: "Túi 100 chiếc (sử dụng 1 lần)", unit: "túi" },
     "tile-wedges": { name: "Nêm cân bằng khóa gạch phẳng (Wedges)", spec: "Túi 100 chiếc (tái sử dụng)", unit: "túi" }
 };
+
+// Material norms per unit of construction work (định mức vật tư/đơn vị thi công — TCVN)
+// perUnit = quantity of material per 1 unit of work (m², m³, md, cái...)
+const MATERIAL_NORMS = {
+    "masonry-110":        [{ key:"brick-solid",   perUnit:60    }, { key:"cement-pc40", perUnit:8    }, { key:"sand-fine",   perUnit:0.03  }],
+    "masonry-220":        [{ key:"brick-solid",   perUnit:120   }, { key:"cement-pc40", perUnit:16   }, { key:"sand-fine",   perUnit:0.06  }],
+    "masonry-aac-110":    [{ key:"brick-aac",     perUnit:8.5   }, { key:"aac-adhesive",perUnit:2    }],
+    "plastering-1-face":  [{ key:"cement-pc40",   perUnit:4.5   }, { key:"sand-fine",   perUnit:0.012 }],
+    "plastering-2-face":  [{ key:"cement-pc40",   perUnit:9     }, { key:"sand-fine",   perUnit:0.024 }],
+    "plastering-ceiling": [{ key:"cement-pc40",   perUnit:4.5   }, { key:"sand-fine",   perUnit:0.012 }],
+    "screed":             [{ key:"cement-pc40",   perUnit:6     }, { key:"sand-fine",   perUnit:0.03  }],
+    "tiling-floor":       [{ key:"tile-adhesive", perUnit:5     }, { key:"tile-grout",  perUnit:0.3   }],
+    "tiling-wall":        [{ key:"tile-adhesive", perUnit:5     }, { key:"tile-grout",  perUnit:0.3   }],
+    "waterproof-floor":   [{ key:"waterproof",    perUnit:0.5   }],
+    "waterproof-wall":    [{ key:"waterproof",    perUnit:0.5   }],
+    "stone-floor":        [{ key:"tile-adhesive", perUnit:6     }, { key:"tile-grout",  perUnit:0.4   }],
+    "stone-wall":         [{ key:"tile-adhesive", perUnit:6     }, { key:"tile-grout",  perUnit:0.4   }],
+    "concrete-footing":   [{ key:"cement-pc40",   perUnit:280   }, { key:"sand-fine",   perUnit:0.45  }, { key:"gravel", perUnit:0.85 }],
+    "concrete-column":    [{ key:"cement-pc40",   perUnit:300   }, { key:"sand-fine",   perUnit:0.43  }, { key:"gravel", perUnit:0.82 }],
+    "concrete-beam":      [{ key:"cement-pc40",   perUnit:300   }, { key:"sand-fine",   perUnit:0.43  }, { key:"gravel", perUnit:0.82 }],
+    "concrete-slab":      [{ key:"cement-pc40",   perUnit:280   }, { key:"sand-fine",   perUnit:0.45  }, { key:"gravel", perUnit:0.85 }],
+    "concrete-stair":     [{ key:"cement-pc40",   perUnit:300   }, { key:"sand-fine",   perUnit:0.43  }, { key:"gravel", perUnit:0.82 }],
+    "backfill":           [{ key:"sand-fine",     perUnit:1.2   }],
+};
+
+// Purchase unit metadata for materials.html
+const PURCHASE_MATERIAL_LABELS = {
+    "cement-pc40":   { name: "Xi măng PC40",              packSize: 50,   packUnit: "bao 50 kg", displayUnit: "bao" },
+    "sand-fine":     { name: "Cát vàng/mịn",              packSize: null, packUnit: "m³",        displayUnit: "m³"  },
+    "brick-solid":   { name: "Gạch đặc 6.5×10.5×22 cm",  packSize: null, packUnit: "viên",      displayUnit: "viên"},
+    "brick-aac":     { name: "Gạch AAC 10×20×60 cm",      packSize: null, packUnit: "viên",      displayUnit: "viên"},
+    "aac-adhesive":  { name: "Keo xây gạch AAC",          packSize: 25,   packUnit: "bao 25 kg", displayUnit: "bao" },
+    "tile-adhesive": { name: "Keo dán gạch",              packSize: 25,   packUnit: "bao 25 kg", displayUnit: "bao" },
+    "tile-grout":    { name: "Keo chà ron",               packSize: null, packUnit: "kg",        displayUnit: "kg"  },
+    "gravel":        { name: "Đá dăm 1×2",                packSize: null, packUnit: "m³",        displayUnit: "m³"  },
+    "waterproof":    { name: "Vật liệu chống thấm",       packSize: null, packUnit: "kg",        displayUnit: "kg"  },
+};

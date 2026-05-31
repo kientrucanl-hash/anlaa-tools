@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/x-icon" href="favicon.ico">
+    <title>Dự toán Chi phí — ANLAA Mecalc</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Montserrat:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/styles.css?v=2.9">
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        .est-container { display: flex; flex-direction: column; min-height: 100vh; background: var(--bg-main); }
+        .est-topbar {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 12px 24px; background: rgba(17,19,29,0.9);
+            border-bottom: 1px solid var(--border-glass);
+            position: sticky; top: 0; z-index: 100; backdrop-filter: blur(12px);
+        }
+        .est-topbar .brand { display: flex; align-items: center; gap: 10px; }
+        .est-topbar .brand img { width: 28px; height: 28px; object-fit: contain; }
+        .est-topbar .brand h1 { font-size: 16px; font-weight: 700; background: var(--gradient-primary); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .est-breadcrumb { display: flex; align-items: center; gap: 6px; font-size: 13px; }
+        .est-breadcrumb a { color: var(--text-muted); text-decoration: none; padding: 4px 10px; border-radius: 6px; transition: var(--transition-smooth); }
+        .est-breadcrumb a:hover { color: var(--text-primary); background: var(--border-glass); }
+        .est-breadcrumb .active { color: var(--text-primary); font-weight: 600; padding: 4px 10px; background: rgba(0,242,254,0.1); border-radius: 6px; border: 1px solid rgba(0,242,254,0.2); }
+        .est-breadcrumb .sep { color: var(--text-muted); }
+        .est-topbar-right { display: flex; align-items: center; gap: 8px; }
+        .est-main { padding: 24px 32px; flex: 1; max-width: 1400px; margin: 0 auto; width: 100%; }
+        .est-page-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 24px; flex-wrap: wrap; gap: 12px; }
+        .est-page-header h2 { font-size: 22px; font-weight: 800; color: var(--text-primary); }
+        .est-page-header p { font-size: 13px; color: var(--text-muted); margin-top: 4px; }
+        .est-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+        .approve-btn { background: linear-gradient(135deg, #00e676, #00b0ff); color: #000; font-weight: 700; }
+        .approve-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+        .work-prices-panel { background: rgba(22,25,37,0.6); border: 1px solid var(--border-glass); border-radius: 12px; padding: 20px; margin-bottom: 24px; }
+        .work-prices-panel summary { cursor: pointer; font-size: 13px; font-weight: 600; color: var(--text-secondary); user-select: none; }
+        .work-prices-panel summary:hover { color: var(--text-primary); }
+        .sync-badge { font-size: 11px; padding: 2px 8px; border-radius: 12px; margin-left: 8px; background: rgba(0,230,118,0.15); color: #00e676; border: 1px solid rgba(0,230,118,0.3); }
+        .sync-badge.syncing { background: rgba(245,158,11,0.15); color: #fbbf24; border-color: rgba(245,158,11,0.3); }
+        @media (max-width: 768px) { .est-main { padding: 16px; } .est-topbar { padding: 10px 16px; } }
+    </style>
+</head>
+<body>
+
+<!-- Login Overlay (reused from index.html) -->
+<div id="loginOverlay" class="login-overlay" style="display:none;">
+    <div class="login-card">
+        <div class="login-brand">
+            <img src="logo-tool-anlc.webp" alt="Dự toán ANLAA" class="login-logo">
+        </div>
+        <form id="loginForm" autocomplete="off">
+            <div class="login-field">
+                <label for="loginUsername">Tên đăng nhập</label>
+                <input type="text" id="loginUsername" placeholder="Nhập tên đăng nhập" required autocomplete="username">
+            </div>
+            <div class="login-field">
+                <label for="loginPassword">Mật khẩu</label>
+                <div class="pwd-wrapper">
+                    <input type="password" id="loginPassword" placeholder="••••••••" required autocomplete="current-password">
+                    <button type="button" id="togglePassword" class="toggle-pwd">👁</button>
+                </div>
+            </div>
+            <p id="loginError" class="login-error"></p>
+            <button type="submit" id="loginBtn" class="btn btn-primary w-full">Đăng nhập</button>
+        </form>
+    </div>
+</div>
+
+<div id="appContainer" class="est-container">
+
+    <!-- TOP NAVIGATION BAR -->
+    <nav class="est-topbar no-print">
+        <div class="brand">
+            <img src="logo-tool-anlc.webp" alt="ANLAA">
+            <h1>Dự toán ANLAA</h1>
+        </div>
+
+        <div class="est-breadcrumb">
+            <a href="index.html"><i data-lucide="calculator" style="width:14px;height:14px;vertical-align:middle;"></i> Bóc KL Vật tư</a>
+            <span class="sep">›</span>
+            <span class="active"><i data-lucide="file-spreadsheet" style="width:14px;height:14px;vertical-align:middle;"></i> Dự toán Chi phí</span>
+            <span class="sep">›</span>
+            <a href="materials.html" id="navMaterials"><i data-lucide="package" style="width:14px;height:14px;vertical-align:middle;"></i> Vật tư cần mua</a>
+        </div>
+
+        <div class="est-topbar-right">
+            <span id="syncBadge" class="sync-badge">● Đã đồng bộ</span>
+            <span id="userBadge" class="badge" style="font-size:12px;"></span>
+            <button id="logoutBtn" class="btn btn-secondary btn-sm">Đăng xuất</button>
+        </div>
+    </nav>
+
+    <!-- MAIN CONTENT -->
+    <main class="est-main">
+        <div class="est-page-header">
+            <div>
+                <h2>DỰ TOÁN CHI PHÍ THI CÔNG</h2>
+                <p>Nhập hạng mục, kích thước, đơn giá → tự tính khối lượng. Duyệt xong → chuyển sang bảng vật tư cần mua.</p>
+            </div>
+            <div class="est-actions">
+                <button id="btnExportEstimateImage" class="btn btn-gradient btn-sm no-print" title="Xuất bảng dự toán dạng ảnh PNG">
+                    <i data-lucide="image"></i> Xuất ảnh
+                </button>
+                <button id="btnExportEstimateCSV" class="btn btn-secondary btn-sm no-print">
+                    <i data-lucide="file-spreadsheet"></i> Xuất Excel
+                </button>
+                <button id="btnApprove" class="btn approve-btn btn-sm no-print">
+                    <i data-lucide="check-circle"></i> Duyệt → Xem Vật tư mua
+                </button>
+            </div>
+        </div>
+
+        <!-- ESTIMATE TABLE (G8-style) -->
+        <div class="boq-section" style="background:rgba(22,25,37,0.5);border:1px solid var(--border-glass);border-radius:12px;padding:20px;" id="estimatePrintArea">
+            <div class="table-responsive">
+                <table class="cost-table" id="costTable">
+                    <thead>
+                        <tr>
+                            <th rowspan="2" class="th-stt">STT</th>
+                            <th rowspan="2" class="th-name">Hạng mục / Diễn giải</th>
+                            <th rowspan="2" class="th-unit">ĐVT</th>
+                            <th colspan="3" class="th-group-header">Kích thước</th>
+                            <th rowspan="2" class="th-n">Số&nbsp;C.K</th>
+                            <th rowspan="2" class="th-hs">H.số</th>
+                            <th rowspan="2" class="th-qty text-right">K.L</th>
+                            <th rowspan="2" class="th-price text-right">Đơn giá</th>
+                            <th rowspan="2" class="th-total text-right">Thành tiền</th>
+                            <th rowspan="2" class="th-action no-print"></th>
+                        </tr>
+                        <tr>
+                            <th class="th-dim">Dài (m)</th>
+                            <th class="th-dim">Rộng (m)</th>
+                            <th class="th-dim">Cao (m)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="costTableBody">
+                        <tr><td colspan="12" class="empty-boq-msg">Chưa có hạng mục. Nhấn "+ Thêm" hoặc mở Calculator để bóc KL tự động.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="cost-add-row no-print mt-2">
+                <button id="btnAddCostItem" class="btn btn-secondary btn-sm">
+                    <i data-lucide="plus"></i> Thêm hạng mục thi công
+                </button>
+            </div>
+
+            <div class="cost-totals mt-3" id="costTotalsArea" style="display:none;">
+                <div class="cost-total-row">
+                    <span>Tổng chi phí thi công:</span>
+                    <span id="costSubtotal" class="cost-value">0 VNĐ</span>
+                </div>
+                <div class="cost-total-row contingency-row">
+                    <label class="checkbox-container inline-flex">
+                        <input type="checkbox" id="contingencyToggle">
+                        <span class="checkmark"></span>
+                        <span>Dự phòng phí</span>
+                    </label>
+                    <span>
+                        <input type="number" id="contingencyPct" value="5" min="0" max="50" step="1" class="contingency-input"> %
+                    </span>
+                    <span id="contingencyAmount" class="cost-value text-yellow">+0 VNĐ</span>
+                </div>
+                <div class="cost-total-row grand-total-row">
+                    <span class="text-bold">TỔNG DỰ TOÁN:</span>
+                    <span id="costGrandTotal" class="cost-value grand-total-value">0 VNĐ</span>
+                </div>
+            </div>
+
+            <div class="print-signatures-area">
+                <div class="signature-col"><h4>ĐƠN VỊ THI CÔNG</h4><span class="sig-space">(Ký, ghi rõ họ tên)</span></div>
+                <div class="signature-col"><h4>CHỦ ĐẦU TƯ / KHÁCH HÀNG</h4><span class="sig-space">(Ký, ghi rõ họ tên)</span></div>
+            </div>
+        </div>
+
+        <!-- WORK PRICES ACCORDION -->
+        <details class="work-prices-panel no-print mt-4">
+            <summary>Bảng đơn giá thi công (Hà Nội) — click để xem / chỉnh sửa</summary>
+            <div class="mt-3">
+                <div class="table-responsive">
+                    <table class="prices-table" id="workPricesTable">
+                        <thead><tr><th>Hạng mục</th><th>ĐVT</th><th class="text-right">Đơn giá (VNĐ)</th></tr></thead>
+                        <tbody id="workPricesBody"></tbody>
+                    </table>
+                </div>
+                <button id="btnResetWorkPrices" class="btn btn-secondary btn-sm mt-2">Khôi phục mặc định Hà Nội</button>
+            </div>
+        </details>
+
+        <div class="boq-disclaimer mt-3">
+            <p><strong>⚠️ KHUYẾN CÁO:</strong> Bảng dự toán chi phí được tính tự động theo định mức tiêu chuẩn. Cần khảo sát thực tế và trao đổi với đội thi công trước khi ký kết hợp đồng.</p>
+        </div>
+    </main>
+</div>
+
+<div id="toastNotification" class="toast-notification"></div>
+
+<script src="js/constants.js?v=2.9"></script>
+<script src="js/api.js?v=2.9"></script>
+<script src="js/auth.js?v=2.9"></script>
+<script src="js/estimate.js?v=2.9"></script>
+</body>
+</html>

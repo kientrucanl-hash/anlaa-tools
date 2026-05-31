@@ -3,6 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <link rel="icon" type="image/x-icon" href="favicon.ico">
     <link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
     <title>Dự toán ANLAA — Tool Tính Vật tư Xây - Trát - Ốp lát miền Bắc</title>
@@ -11,7 +14,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Montserrat:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <!-- Main Style -->
-    <link rel="stylesheet" href="css/styles.css?v=2.1">
+    <link rel="stylesheet" href="css/styles.css?v=2.9">
     <!-- Chart.js CDN -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <!-- html2canvas CDN -->
@@ -50,7 +53,7 @@
     <div id="appContainer" class="app-container">
         
         <!-- SIDEBAR LEFT: Project & Items Management -->
-        <aside class="app-sidebar no-print">
+        <aside id="appSidebar" class="app-sidebar no-print">
             <div class="sidebar-header-wrapper">
                 <div class="sidebar-brand">
                     <div class="brand-icon">
@@ -61,6 +64,9 @@
                         <span>Mecalc v2.0</span>
                     </div>
                 </div>
+                <button id="sidebarClose" class="sidebar-close-btn" title="Đóng Menu">
+                    <i data-lucide="x"></i>
+                </button>
             </div>
             
             <!-- SCROLLABLE MENU AREA -->
@@ -140,6 +146,23 @@
 
             </div>
             
+            <!-- USER PROFILE CARD MINI -->
+            <div class="sidebar-user-card">
+                <div class="user-avatar-wrapper">
+                    <div class="user-avatar">
+                        <i data-lucide="user"></i>
+                    </div>
+                    <div class="user-status-dot"></div>
+                </div>
+                <div class="user-info-text">
+                    <span id="sidebarUserName" class="user-name">Đang tải...</span>
+                    <span class="user-role">KTS / Người dự toán</span>
+                </div>
+                <button id="sidebarLogoutBtn" class="sidebar-logout-btn" title="Đăng xuất tài khoản">
+                    <i data-lucide="log-out"></i>
+                </button>
+            </div>
+            
             <!-- FIXED FOOTER -->
             <div class="sidebar-footer">
                 <div class="btn-grid-2">
@@ -159,6 +182,7 @@
                 </button>
             </div>
         </aside>
+        <div id="sidebarOverlay" class="sidebar-overlay"></div>
         
         <!-- MAIN WORKSPACE -->
         <main class="app-main">
@@ -166,6 +190,9 @@
             <header class="app-header no-print">
                 <div class="header-welcome">
                     <div class="header-title-block">
+                        <button id="sidebarToggle" class="sidebar-toggle-btn" title="Mở Menu">
+                            <i data-lucide="menu"></i>
+                        </button>
                         <h2>Công cụ Tính khối lượng Vật tư cải tạo</h2>
                         <span id="projectStatusBadge" class="status-badge status-draft">Bản nháp 📄</span>
                     </div>
@@ -661,11 +688,14 @@
                     </div>
                     
                     <div class="boq-actions-block no-print">
-                        <button id="btnPrintPDF" class="btn btn-gradient" title="In hoặc Xuất file PDF chất lượng cao khổ A4 Ngang">
-                            <i data-lucide="file-text"></i> Xuất PDF (A4 Ngang)
+                        <a href="estimate.html" class="btn btn-gradient" title="Mở bảng dự toán chi phí thi công G8-style" style="text-decoration:none;">
+                            <i data-lucide="file-spreadsheet"></i> Dự toán Chi phí →
+                        </a>
+                        <button id="btnPrintPDF" class="btn btn-secondary" title="In hoặc Xuất file PDF chất lượng cao khổ A4 Ngang">
+                            <i data-lucide="file-text"></i> Xuất PDF
                         </button>
-                        <button id="btnExportImage" class="btn btn-gradient" title="Chụp bảng BOQ tải xuống dưới dạng file ảnh PNG">
-                            <i data-lucide="image"></i> Xuất Ảnh BOQ (PNG)
+                        <button id="btnExportImage" class="btn btn-secondary" title="Chụp bảng BOQ tải xuống dưới dạng file ảnh PNG">
+                            <i data-lucide="image"></i> Xuất Ảnh
                         </button>
                         <button id="btnExportCSV" class="btn btn-secondary" title="Xuất file báo cáo Excel CSV tiếng Việt">
                             <i data-lucide="file-spreadsheet"></i> Xuất Excel (CSV)
@@ -704,73 +734,6 @@
                             <span class="text-bold">Viết bằng chữ:</span> <span id="costInWordsText">Không đồng.</span>
                         </div>
                         
-                        <!-- CONSTRUCTION COST SECTION (DỰ TOÁN CHI PHÍ THI CÔNG) -->
-                        <div class="construction-cost-section mt-4" id="constructionCostSection">
-                            <div class="section-header-with-btn">
-                                <h3 class="section-title-cost">DỰ TOÁN CHI PHÍ THI CÔNG</h3>
-                                <span class="text-sm text-gray">Đơn giá tổng hợp (vật liệu + nhân công)</span>
-                            </div>
-
-                            <div class="table-responsive mt-2">
-                                <table class="cost-table" id="costTable">
-                                    <thead>
-                                        <tr>
-                                            <th rowspan="2" class="th-stt">STT</th>
-                                            <th rowspan="2" class="th-name">Hạng mục / Diễn giải</th>
-                                            <th rowspan="2" class="th-unit">ĐVT</th>
-                                            <th colspan="3" class="th-group-header">Kích thước</th>
-                                            <th rowspan="2" class="th-n">Số&nbsp;C.K</th>
-                                            <th rowspan="2" class="th-hs">H.số</th>
-                                            <th rowspan="2" class="th-qty text-right">K.L</th>
-                                            <th rowspan="2" class="th-price text-right">Đơn giá</th>
-                                            <th rowspan="2" class="th-total text-right">Thành tiền</th>
-                                            <th rowspan="2" class="th-action no-print"></th>
-                                        </tr>
-                                        <tr>
-                                            <th class="th-dim">Dài (m)</th>
-                                            <th class="th-dim">Rộng (m)</th>
-                                            <th class="th-dim">Cao (m)</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="costTableBody">
-                                        <tr>
-                                            <td colspan="12" class="empty-boq-msg">Chưa có hạng mục thi công. Thêm hạng mục vật tư ở trên hoặc nhấn "+ Thêm hạng&nbsp;mục"</td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
-
-                            <!-- Add custom item button -->
-                            <div class="cost-add-row no-print mt-2">
-                                <button id="btnAddCostItem" class="btn btn-secondary btn-sm">
-                                    <i data-lucide="plus"></i> Thêm hạng mục thi công
-                                </button>
-                            </div>
-
-                            <!-- Totals footer -->
-                            <div class="cost-totals mt-3" id="costTotalsArea" style="display:none;">
-                                <div class="cost-total-row">
-                                    <span>Tổng chi phí thi công:</span>
-                                    <span id="costSubtotal" class="cost-value">0 VNĐ</span>
-                                </div>
-                                <div class="cost-total-row contingency-row">
-                                    <label class="checkbox-container inline-flex">
-                                        <input type="checkbox" id="contingencyToggle">
-                                        <span class="checkmark"></span>
-                                        <span>Dự phòng phí</span>
-                                    </label>
-                                    <span>
-                                        <input type="number" id="contingencyPct" value="5" min="0" max="50" step="1" class="contingency-input"> %
-                                    </span>
-                                    <span id="contingencyAmount" class="cost-value text-yellow">+0 VNĐ</span>
-                                </div>
-                                <div class="cost-total-row grand-total-row">
-                                    <span class="text-bold">TỔNG DỰ TOÁN:</span>
-                                    <span id="costGrandTotal" class="cost-value grand-total-value">0 VNĐ</span>
-                                </div>
-                            </div>
-                        </div>
-
                         <!-- Disclaimer Rule §12a -->
                         <div class="boq-disclaimer mt-3">
                             <p>
@@ -907,12 +870,12 @@
     <div id="toastNotification" class="toast-notification"></div>
     
     <!-- Application Logic Modules -->
-    <script src="js/constants.js?v=2.1"></script>
-    <script src="js/calculator.js?v=2.1"></script>
-    <script src="js/dxf-parser.js?v=2.1"></script>
-    <script src="js/pdf-takeoff.js?v=2.1"></script>
-    <script src="js/api.js?v=2.1"></script>
-    <script src="js/auth.js?v=2.1"></script>
-    <script src="js/app.js?v=2.1"></script>
+    <script src="js/constants.js?v=2.9"></script>
+    <script src="js/calculator.js?v=2.9"></script>
+    <script src="js/dxf-parser.js?v=2.9"></script>
+    <script src="js/pdf-takeoff.js?v=2.9"></script>
+    <script src="js/api.js?v=2.9"></script>
+    <script src="js/auth.js?v=2.9"></script>
+    <script src="js/app.js?v=2.9"></script>
 </body>
 </html>
