@@ -1463,6 +1463,102 @@ input, select, textarea, button {
 }
 
 /* ==========================================================================
+   RESPONSIVE — estimate.html + materials.html topbar & actions (phone)
+   ========================================================================== */
+
+/* Topbar phone: stack vertically, hide brand text, collapse breadcrumb */
+@media (max-width: 768px) {
+    /* estimate.html topbar */
+    .est-topbar {
+        flex-wrap: wrap !important;
+        gap: 8px !important;
+        padding: 10px 14px !important;
+    }
+    .est-topbar .brand h1 { display: none !important; }
+    .est-topbar .brand img { width: 26px !important; height: 26px !important; }
+    .est-breadcrumb {
+        flex: 1 1 100% !important;
+        order: 3 !important;
+        font-size: 12px !important;
+        gap: 4px !important;
+        overflow-x: auto !important;
+        white-space: nowrap !important;
+        -webkit-overflow-scrolling: touch !important;
+        scrollbar-width: none !important;
+    }
+    .est-breadcrumb::-webkit-scrollbar { display: none !important; }
+    .est-breadcrumb a, .est-breadcrumb .active {
+        padding: 3px 8px !important;
+        font-size: 11px !important;
+        flex-shrink: 0 !important;
+    }
+    .est-topbar-right { gap: 6px !important; }
+    .est-main { padding: 12px !important; }
+
+    /* est-actions buttons wrap */
+    .est-actions {
+        flex-wrap: wrap !important;
+        width: 100% !important;
+        gap: 6px !important;
+    }
+    .est-actions .btn {
+        flex: 1 1 calc(50% - 3px) !important;
+        justify-content: center !important;
+        font-size: 11px !important;
+        padding: 7px 6px !important;
+        min-width: 0 !important;
+    }
+    .est-page-header {
+        flex-direction: column !important;
+        gap: 12px !important;
+    }
+    .est-page-header h2 { font-size: 17px !important; }
+
+    /* cost-table: make it scrollable, increase touch targets */
+    .cost-table { font-size: 11px !important; }
+    .cost-table th { padding: 5px 4px !important; font-size: 10px !important; }
+    .cost-table .th-name { min-width: 140px !important; }
+    .detail-input { padding: 4px 4px !important; font-size: 11px !important; }
+    .cost-name-input { min-width: 130px !important; max-width: 200px !important; font-size: 12px !important; }
+
+    /* cost-totals align left on phone */
+    .cost-totals { align-items: stretch !important; }
+    .cost-total-row { flex-wrap: wrap !important; }
+    .cost-total-row .cost-value { min-width: 0 !important; flex: 1 !important; text-align: right !important; }
+
+    /* materials.html topbar */
+    .mat-topbar {
+        flex-wrap: wrap !important;
+        gap: 8px !important;
+        padding: 10px 14px !important;
+    }
+    .mat-topbar .brand h1 { display: none !important; }
+    .mat-topbar .brand img { width: 26px !important; height: 26px !important; }
+    .mat-main { padding: 12px !important; }
+    .mat-page-header {
+        flex-direction: column !important;
+        gap: 10px !important;
+    }
+    .mat-page-header h2 { font-size: 17px !important; }
+    .mat-actions {
+        flex-wrap: wrap !important;
+        width: 100% !important;
+        gap: 6px !important;
+    }
+    .mat-actions .btn {
+        flex: 1 1 calc(50% - 3px) !important;
+        justify-content: center !important;
+        font-size: 11px !important;
+        padding: 7px 6px !important;
+    }
+
+    /* index.html: body padding-bottom so floating bar doesn't cover content */
+    .app-main {
+        padding-bottom: 160px !important;
+    }
+}
+
+/* ==========================================================================
    NEW ADDITIONS — Digital Takeoff, Spreadsheet Tables, & Toggle Switches
    ========================================================================== */
 
