@@ -2774,6 +2774,15 @@ function renderWorkItemPricesTab() {
     });
 }
 
+// Returns effective unit price for an item.
+// If materialPrice/laborPrice explicitly set → sum them.
+// Otherwise fall back to workItemPrices registry or item.unitPrice.
+function getItemUnitPrice(item) {
+    const hasSplit = item.materialPrice !== undefined || item.laborPrice !== undefined;
+    if (hasSplit) return (parseFloat(item.materialPrice) || 0) + (parseFloat(item.laborPrice) || 0);
+    return workItemPrices[item.workItemKey] !== undefined ? workItemPrices[item.workItemKey] : (item.unitPrice || 0);
+}
+
 function calcRowQty(row, dims) {
     const n = parseFloat(row.n) || 1;
     const l = parseFloat(row.l) || 0;
@@ -2829,6 +2838,77 @@ function genId() {
     return Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 }
 
+function applyProjectTemplate(templateId) {
+    const tmpl = PROJECT_TEMPLATES.find(t => t.id === templateId);
+    if (!tmpl) return;
+    if (constructionItems.some(i => !i.isAuto) &&
+        !confirm(`Áp dụng mẫu "${tmpl.name}" sẽ xóa các hạng mục thủ công hiện tại. Tiếp tục?`)) return;
+    pushUndo();
+    // Keep auto items, replace manual + sections
+    const autoItems = constructionItems.filter(i => i.isAuto);
+    const newItems = [];
+    tmpl.sections.forEach(sec => {
+        newItems.push({ id: genId(), isSection: true, name: sec.name, expanded: true });
+        sec.items.forEach(def => {
+            const dimDef = WORK_ITEM_DIMS[def.key];
+            newItems.push({
+                id: genId(),
+                workItemKey: def.key || "custom",
+                name: def.name || (dimDef ? dimDef.label : "Hạng mục"),
+                unit: def.unit || (dimDef ? dimDef.unit : "m²"),
+                isAuto: false,
+                expanded: false,
+                unitPrice: def.price !== undefined ? def.price : (workItemPrices[def.key] || 0),
+                note: def.note || "",
+                rows: [{ desc: "", n: 1, l: "", w: "", h: "", hs: 1 }]
+            });
+        });
+    });
+    constructionItems = [...autoItems, ...newItems];
+    saveConstructionItems();
+    updateConstructionCostSection();
+    showToast(`✅ Đã áp dụng mẫu: ${tmpl.name}`);
+}
+
+function renderTemplateModal() {
+    let modal = document.getElementById("templateModal");
+    if (!modal) {
+        modal = document.createElement("div");
+        modal.id = "templateModal";
+        modal.className = "collab-modal-overlay";
+        document.body.appendChild(modal);
+    }
+    modal.innerHTML = `
+        <div class="collab-modal" style="max-width:560px;">
+            <div class="collab-modal-header">
+                <h3>Chọn mẫu dự toán</h3>
+                <button class="collab-modal-close" id="closeTemplateModal">×</button>
+            </div>
+            <div class="template-grid">
+                ${PROJECT_TEMPLATES.map(t => `
+                    <div class="template-card" data-id="${t.id}">
+                        <div class="tmpl-icon"><i data-lucide="${t.icon}"></i></div>
+                        <div class="tmpl-info">
+                            <strong>${escapeHtml(t.name)}</strong>
+                            <span>${escapeHtml(t.desc)}</span>
+                        </div>
+                    </div>
+                `).join("")}
+            </div>
+        </div>
+    `;
+    modal.style.display = "flex";
+    if (typeof lucide !== "undefined") lucide.createIcons();
+    modal.querySelector("#closeTemplateModal").addEventListener("click", () => { modal.style.display = "none"; });
+    modal.addEventListener("click", e => { if (e.target === modal) modal.style.display = "none"; });
+    modal.querySelectorAll(".template-card").forEach(card => {
+        card.addEventListener("click", () => {
+            modal.style.display = "none";
+            applyProjectTemplate(card.dataset.id);
+        });
+    });
+}
+
 function initConstructionCostSection() {
     document.getElementById("btnResetWorkPrices")?.addEventListener("click", () => {
         if (confirm("Khôi phục lại đơn giá thi công mặc định Hà Nội?")) {
@@ -2863,6 +2943,22 @@ function initConstructionCostSection() {
         }, 30);
     });
 
+    document.getElementById("btnAddSection")?.addEventListener("click", () => {
+        pushUndo();
+        constructionItems.push({
+            id: genId(),
+            isSection: true,
+            name: "",
+            expanded: true,
+        });
+        saveConstructionItems();
+        updateConstructionCostSection();
+        setTimeout(() => {
+            const inputs = document.querySelectorAll(".section-name-input");
+            inputs[inputs.length - 1]?.focus();
+        }, 30);
+    });
+
     const toggle = document.getElementById("contingencyToggle");
     const pctInput = document.getElementById("contingencyPct");
     if (toggle) {
@@ -2891,6 +2987,24 @@ function initConstructionCostSection() {
         roundingSelect.addEventListener("change", () => { roundingUnit = parseInt(roundingSelect.value) || 0; saveContingency(); updateConstructionCostTotals(); });
     }
 
+    document.getElementById("btnFromTemplate")?.addEventListener("click", renderTemplateModal);
+
+    document.getElementById("btnTogglePaymentSchedule")?.addEventListener("click", () => {
+        const panel = document.getElementById("paymentSchedulePanel");
+        if (!panel) return;
+        const show = panel.style.display === "none";
+        panel.style.display = show ? "" : "none";
+        if (show) renderPaymentSchedule();
+    });
+
+    document.getElementById("btnAddPayment")?.addEventListener("click", () => {
+        paymentSchedule.push({ id: genId(), label: "", pct: 0, amount: 0, note: "", usePct: true });
+        savePaymentSchedule();
+        renderPaymentSchedule();
+    });
+
+    loadNamedRanges();
+    renderNamedRangesPanel();
     updateConstructionCostSection();
 }
 
@@ -2918,15 +3032,56 @@ function updateConstructionCostSection() {
 
     tbody.innerHTML = "";
     let stt = 1;
+    let sectionStt = 0; // Roman numeral counter for sections
 
+    // Pre-compute section subtotals
+    const sectionTotals = {};
+    let currentSectionId = null;
+    constructionItems.forEach(item => {
+        if (item.isSection) { currentSectionId = item.id; sectionTotals[item.id] = 0; return; }
+        if (!currentSectionId) return;
+        const qty = calcItemTotalQty(item);
+        sectionTotals[currentSectionId] = (sectionTotals[currentSectionId] || 0) + qty * getItemUnitPrice(item);
+    });
+
+    const ROMAN = ["I","II","III","IV","V","VI","VII","VIII","IX","X","XI","XII","XIII","XIV","XV"];
     const UNITS = ["m²","m³","md","m","cái","bộ","kg","tấm","bao","viên"];
+
     constructionItems.forEach((item) => {
+        // ── SECTION HEADER ROW ──────────────────────────────────────────
+        if (item.isSection) {
+            sectionStt++;
+            const secTotal = sectionTotals[item.id] || 0;
+            const secTr = document.createElement("tr");
+            secTr.className = "cost-section-header";
+            secTr.dataset.sectionId = item.id;
+            secTr.innerHTML = `
+                <td class="td-stt sec-stt">${ROMAN[sectionStt - 1] || sectionStt}</td>
+                <td colspan="11" class="td-section-name">
+                    <input type="text" class="section-name-input" value="${escapeHtml(item.name)}"
+                        data-id="${item.id}" placeholder="Tên phần / chương (VD: Phần I — Phần thô)">
+                </td>
+                <td class="td-total text-right num-cell sec-subtotal" title="Tổng phần này">
+                    ${secTotal > 0 ? formatVND(roundPrice(secTotal, vatEnabled)) : ""}
+                </td>
+                <td></td>
+                <td class="td-action no-print">
+                    <button class="btn-del-section btn btn-danger btn-xs" data-id="${item.id}" title="Xóa phần">×</button>
+                </td>
+            `;
+            tbody.appendChild(secTr);
+            return; // skip normal item rendering
+        }
+
         const dims = WORK_ITEM_DIMS[item.workItemKey]
             ? (WORK_ITEM_DIMS[item.workItemKey].dims || [])
             : ["l","w","h"];
         const totalQty = calcItemTotalQty(item);
-        const unitPrice = workItemPrices[item.workItemKey] !== undefined ? workItemPrices[item.workItemKey] : (item.unitPrice || 0);
-        const subtotal = totalQty * unitPrice;
+        const effectivePrice = getItemUnitPrice(item);
+        const matPrice = item.materialPrice !== undefined ? parseFloat(item.materialPrice) || 0
+            : (item.isAuto ? effectivePrice : (workItemPrices[item.workItemKey] || 0));
+        const labPrice = item.laborPrice !== undefined ? parseFloat(item.laborPrice) || 0 : 0;
+        const subtotal = totalQty * effectivePrice;
         const isCustom = !item.isAuto;
         const isUnknownKey = !WORK_ITEM_DIMS[item.workItemKey];
 
@@ -2950,13 +3105,22 @@ function updateConstructionCostSection() {
                 </div>
             </td>
             <td class="td-qty text-right num-cell">${formatNum(totalQty)}</td>
-            <td class="td-price text-right num-cell">
-                ${isCustom && isUnknownKey
-                    ? `<input type="number" class="cost-price-input" data-id="${item.id}" value="${unitPrice}" min="0" step="1000" placeholder="0">`
-                    : formatNumber(unitPrice)
-                }
+            <td class="td-price text-right num-cell th-mat-price">
+                <input type="number" class="cost-mat-price-input price-split-input" data-id="${item.id}"
+                    value="${matPrice || ""}" min="0" step="1000" placeholder="0"
+                    title="Đơn giá vật tư (có thể sửa)">
             </td>
-            <td class="td-total text-right num-cell cost-total-cell">${formatNumber(subtotal)}</td>
+            <td class="td-price text-right num-cell th-lab-price">
+                <input type="number" class="cost-lab-price-input price-split-input" data-id="${item.id}"
+                    value="${labPrice || ""}" min="0" step="1000" placeholder="0"
+                    title="Đơn giá nhân công (có thể sửa)">
+            </td>
+            <td class="td-total text-right num-cell cost-total-cell">${formatVND(roundPrice(subtotal, vatEnabled))}</td>
+            <td class="td-note">
+                <input type="text" class="cost-note-input" data-id="${item.id}"
+                    value="${escapeHtml(item.note||"")}" placeholder="Ghi chú kỹ thuật..."
+                    title="${escapeHtml(item.note||"")}">
+            </td>
             <td class="td-action no-print"><button class="btn-del-item btn btn-danger btn-xs" data-id="${item.id}">×</button></td>
         `;
         tbody.appendChild(headerTr);
@@ -2980,7 +3144,7 @@ function updateConstructionCostSection() {
                     <td><input class="detail-input n-input" type="number" placeholder="n" value="${row.n||1}" data-field="n" min="0" step="1"></td>
                     <td><select class="detail-select hs-select" data-field="hs"><option value="1" ${row.hs>=0?"selected":""}>+</option><option value="-1" ${row.hs<0?"selected":""}>−</option></select></td>
                     <td class="text-right num-cell ${rowQty<0?"text-red":""}">${formatNum(rowQty)}</td>
-                    <td></td><td></td>
+                    <td></td><td></td><td></td>
                     <td class="no-print"><button class="btn-del-row btn btn-xs" data-item-id="${item.id}" data-row-idx="${ri}">×</button></td>
                 `;
                 tbody.appendChild(detailTr);
@@ -2988,7 +3152,7 @@ function updateConstructionCostSection() {
 
             const addRowTr = document.createElement("tr");
             addRowTr.className = "cost-addrow-tr no-print";
-            addRowTr.innerHTML = `<td colspan="12"><button class="btn-add-row btn btn-xs btn-secondary" data-item-id="${item.id}"><i data-lucide="plus"></i> thêm dòng diễn giải</button></td>`;
+            addRowTr.innerHTML = `<td colspan="14"><button class="btn-add-row btn btn-xs btn-secondary" data-item-id="${item.id}"><i data-lucide="plus"></i> thêm dòng diễn giải</button></td>`;
             tbody.appendChild(addRowTr);
         }
     });
@@ -3005,6 +3169,8 @@ function updateConstructionCostSection() {
     }
     document.getElementById("costTotalsArea").style.display = "block";
     updateConstructionCostTotals();
+    applyConditionalFormattingAll(tbody);
+    renderValidationBadge();
 }
 
 function escapeHtml(str) {
@@ -3028,6 +3194,24 @@ function safeEval(expr) {
 }
 
 function wireCostTableEvents(tbody) {
+    // Section header: name edit
+    tbody.querySelectorAll(".section-name-input").forEach(input => {
+        input.addEventListener("input", function() {
+            const item = constructionItems.find(i => i.id === this.dataset.id);
+            if (item) { item.name = this.value; saveConstructionItems(); }
+        });
+    });
+
+    // Section header: delete (removes section row only, items stay)
+    tbody.querySelectorAll(".btn-del-section").forEach(btn => {
+        btn.addEventListener("click", () => {
+            pushUndo();
+            constructionItems = constructionItems.filter(i => i.id !== btn.dataset.id);
+            saveConstructionItems();
+            updateConstructionCostSection();
+        });
+    });
+
     tbody.querySelectorAll(".btn-expand").forEach(btn => {
         btn.addEventListener("click", () => {
             const item = constructionItems.find(i => i.id === btn.dataset.id);
@@ -3105,6 +3289,11 @@ function wireCostTableEvents(tbody) {
             const cells = tr.querySelectorAll("td");
             if (cells[8]) { cells[8].innerText = formatNum(rowQty); cells[8].className = `text-right num-cell ${rowQty < 0 ? "text-red" : ""}`; }
             updateItemHeaderQty(item);
+            // Apply conditional formatting to changed cell
+            if (e.target.classList.contains("dim-input") || e.target.classList.contains("n-input")) {
+                applyConditionalFormatting(e.target);
+            }
+            renderValidationBadge();
         });
     });
 
@@ -3139,7 +3328,7 @@ function wireCostTableEvents(tbody) {
         });
     });
 
-    // Gap 1: Inline unit price input for fully custom items
+    // Gap 1: Inline unit price input for fully custom items (legacy fallback)
     tbody.querySelectorAll(".cost-price-input").forEach(input => {
         input.addEventListener("focus", function() { this.select(); });
         input.addEventListener("input", (e) => {
@@ -3151,18 +3340,57 @@ function wireCostTableEvents(tbody) {
         });
     });
 
-    // Expression evaluator: blur → evaluate "3.5*2.4" → 8.4
+    // Price split: material price input
+    tbody.querySelectorAll(".cost-mat-price-input").forEach(input => {
+        input.addEventListener("focus", function() { this.select(); });
+        input.addEventListener("input", (e) => {
+            const item = constructionItems.find(i => i.id === e.target.dataset.id);
+            if (!item) return;
+            item.materialPrice = parseFloat(e.target.value) || 0;
+            saveConstructionItems();
+            updateItemHeaderQty(item);
+        });
+    });
+
+    // Price split: labor price input
+    tbody.querySelectorAll(".cost-lab-price-input").forEach(input => {
+        input.addEventListener("focus", function() { this.select(); });
+        input.addEventListener("input", (e) => {
+            const item = constructionItems.find(i => i.id === e.target.dataset.id);
+            if (!item) return;
+            item.laborPrice = parseFloat(e.target.value) || 0;
+            saveConstructionItems();
+            updateItemHeaderQty(item);
+        });
+    });
+
+    // Technical note input
+    tbody.querySelectorAll(".cost-note-input").forEach(input => {
+        input.addEventListener("input", (e) => {
+            const item = constructionItems.find(i => i.id === e.target.dataset.id);
+            if (!item) return;
+            item.note = e.target.value;
+            saveConstructionItems();
+        });
+    });
+
+    // Expression evaluator: blur → evaluate "3.5*2.4" or named ranges "cc*rp"
     tbody.querySelectorAll(".dim-input, .n-input").forEach(input => {
         input.addEventListener("blur", function() {
-            const result = safeEval(this.value.trim());
+            // Try named-range-aware eval first, then plain safeEval
+            const result = safeEvalWithNames(this.value.trim()) ?? safeEval(this.value.trim());
             if (result !== null) {
                 this.value = result;
                 this.dispatchEvent(new Event("input", { bubbles: true }));
-                this.classList.remove("expr-active");
+                this.classList.remove("expr-active", "nr-active");
             }
+            applyConditionalFormatting(this);
         });
         input.addEventListener("input", function() {
             this.classList.toggle("expr-active", /[+\-*\/()]/.test(this.value));
+            // Highlight if value matches a named range key
+            const hasNameRef = Object.keys(namedRanges).some(k => this.value.includes(k));
+            this.classList.toggle("nr-active", hasNameRef && !this.classList.contains("expr-active"));
         });
     });
 
@@ -3347,12 +3575,11 @@ function updateItemHeaderQty(item) {
     const headerRow = document.querySelector(`.cost-item-header[data-item-id="${item.id}"]`);
     if (!headerRow) return;
     const totalQty = calcItemTotalQty(item);
-    const unitPrice = workItemPrices[item.workItemKey] !== undefined ? workItemPrices[item.workItemKey] : (item.unitPrice || 0);
-    const subtotal = totalQty * unitPrice;
+    const subtotal = totalQty * getItemUnitPrice(item);
     const qtyCell = headerRow.querySelector(".td-qty");
     const totalCell = headerRow.querySelector(".cost-total-cell");
     if (qtyCell) qtyCell.innerText = formatNum(totalQty);
-    if (totalCell) totalCell.innerText = formatNumber(subtotal);
+    if (totalCell) totalCell.innerText = formatVND(roundPrice(subtotal, vatEnabled));
     updateConstructionCostTotals();
 }
 
@@ -3361,9 +3588,9 @@ function updateConstructionCostTotals() {
     let subtotalCustom = 0;
 
     constructionItems.forEach(item => {
+        if (item.isSection) return;
         const totalQty = calcItemTotalQty(item);
-        const unitPrice = workItemPrices[item.workItemKey] !== undefined ? workItemPrices[item.workItemKey] : (item.unitPrice || 0);
-        const itemTotal = totalQty * unitPrice;
+        const itemTotal = totalQty * getItemUnitPrice(item);
         if (item.isAuto) subtotalAuto += itemTotal;
         else subtotalCustom += itemTotal;
     });
@@ -3419,7 +3646,7 @@ function updateConstructionCostTotals() {
 }
 
 function syncAutoConstructionItems() {
-    constructionItems = constructionItems.filter(i => !i.isAuto);
+    constructionItems = constructionItems.filter(i => !i.isAuto || i.isSection);
 
     const newAutoItems = [];
     currentProject.items.forEach(item => {
@@ -3477,4 +3704,185 @@ function syncAutoConstructionItems() {
     const customItems = constructionItems.filter(i => !i.isAuto);
     constructionItems = [...newAutoItems, ...customItems];
     saveConstructionItems();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// NAMED RANGES — đặt tên cho hằng số, dùng trong ô diễn giải
+// ═══════════════════════════════════════════════════════════════
+
+let namedRanges = {};
+
+function loadNamedRanges() {
+    try { namedRanges = JSON.parse(localStorage.getItem("anlaa_named_ranges") || "{}"); } catch { namedRanges = {}; }
+}
+
+function saveNamedRanges() {
+    localStorage.setItem("anlaa_named_ranges", JSON.stringify(namedRanges));
+}
+
+// Resolve named ranges in expression: "cc*rp" → "3.2*4.5"
+function resolveNamedRanges(expr) {
+    let resolved = expr;
+    const keys = Object.keys(namedRanges).sort((a, b) => b.length - a.length);
+    keys.forEach(k => {
+        const safe = k.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        resolved = resolved.replace(new RegExp("\\b" + safe + "\\b", "g"), String(namedRanges[k]));
+    });
+    return resolved;
+}
+
+function safeEvalWithNames(expr) {
+    const s = String(expr || "").trim().replace(/,/g, ".");
+    if (!s) return null;
+    const resolved = resolveNamedRanges(s);
+    if (!/^[\d\s.+\-*\/()]+$/.test(resolved)) return null;
+    try {
+        const v = Function('"use strict";return(' + resolved + ')')();
+        return (typeof v === "number" && isFinite(v) && v >= 0) ? Math.round(v * 1e6) / 1e6 : null;
+    } catch { return null; }
+}
+
+function renderNamedRangesPanel() {
+    const panel = document.getElementById("namedRangesPanel");
+    if (!panel) return;
+    const entries = Object.entries(namedRanges);
+    const emptyMsg = entries.length === 0 ? '<p class="nr-empty">Chưa có biến số. Nhấn "+ Thêm" để định nghĩa.</p>' : "";
+    const rows = entries.map(([k, v]) =>
+        '<div class="nr-row">' +
+        '<input class="nr-key detail-input" type="text" value="' + escapeHtml(k) + '" data-orig="' + escapeHtml(k) + '" placeholder="ten_bien">' +
+        '<span class="nr-eq">=</span>' +
+        '<input class="nr-val detail-input" type="number" value="' + v + '" step="any" placeholder="0">' +
+        '<button class="nr-del btn btn-xs btn-danger" data-key="' + escapeHtml(k) + '">×</button>' +
+        '</div>'
+    ).join("");
+    panel.innerHTML =
+        '<div class="nr-header">' +
+        '<span class="nr-title">Biến số (Named Ranges)</span>' +
+        '<button class="btn btn-xs btn-secondary" id="btnAddNamedRange">+ Thêm</button>' +
+        '</div>' +
+        emptyMsg +
+        '<div class="nr-list">' + rows + '</div>' +
+        '<p class="nr-hint">Dùng tên biến trong ô kích thước. VD: đặt <code>cc=3.2</code> → gõ <code>cc</code> vào ô Cao.</p>';
+    wireNamedRangesEvents(panel);
+}
+
+function wireNamedRangesEvents(panel) {
+    panel.querySelector("#btnAddNamedRange")?.addEventListener("click", () => {
+        const name = "b" + (Object.keys(namedRanges).length + 1);
+        namedRanges[name] = 0;
+        saveNamedRanges();
+        renderNamedRangesPanel();
+        setTimeout(() => { const ks = panel.querySelectorAll(".nr-key"); ks[ks.length-1]?.focus(); }, 30);
+    });
+    panel.querySelectorAll(".nr-key").forEach(input => {
+        input.addEventListener("change", function() {
+            const orig = this.dataset.orig;
+            const nk = this.value.trim().replace(/\s+/g, "_").replace(/[^a-zA-Z0-9_]/g, "");
+            if (!nk || nk === orig) return;
+            if (namedRanges[nk] !== undefined) { showToast("Tên biến đã tồn tại"); this.value = orig; return; }
+            namedRanges[nk] = namedRanges[orig];
+            delete namedRanges[orig];
+            saveNamedRanges();
+            renderNamedRangesPanel();
+        });
+    });
+    panel.querySelectorAll(".nr-val").forEach(input => {
+        input.addEventListener("change", function() {
+            const k = this.closest(".nr-row").querySelector(".nr-key").value.trim().replace(/\s+/g, "_");
+            namedRanges[k] = parseFloat(this.value) || 0;
+            saveNamedRanges();
+        });
+    });
+    panel.querySelectorAll(".nr-del").forEach(btn => {
+        btn.addEventListener("click", function() {
+            delete namedRanges[this.dataset.key];
+            saveNamedRanges();
+            renderNamedRangesPanel();
+        });
+    });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// CONDITIONAL FORMATTING — tô màu ô dim theo giá trị
+// ═══════════════════════════════════════════════════════════════
+
+const CF_RULES = {
+    l: { warnAbove: 50,  errorAbove: 200 },
+    w: { warnAbove: 30,  errorAbove: 100 },
+    h: { warnAbove: 10,  errorAbove: 30  },
+    n: { warnAbove: 100, errorAbove: 500 },
+};
+
+function applyConditionalFormatting(input) {
+    const field = input.dataset.field;
+    const val = parseFloat(input.value);
+    input.classList.remove("cf-zero", "cf-warn", "cf-error", "cf-negative");
+    if (!input.value || input.disabled) return;
+    if (val < 0) { input.classList.add("cf-negative"); return; }
+    if (val === 0 && input.value !== "") { input.classList.add("cf-zero"); return; }
+    const rule = CF_RULES[field];
+    if (!rule) return;
+    if (val > rule.errorAbove) input.classList.add("cf-error");
+    else if (val > rule.warnAbove) input.classList.add("cf-warn");
+}
+
+function applyConditionalFormattingAll(tbody) {
+    tbody.querySelectorAll(".dim-input, .n-input").forEach(applyConditionalFormatting);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// DATA VALIDATION — cảnh báo ô vi phạm quy tắc
+// ═══════════════════════════════════════════════════════════════
+
+function validateCostItems() {
+    const errors = [];
+    constructionItems.forEach(item => {
+        if (item.isSection) return;
+        const dims = (WORK_ITEM_DIMS[item.workItemKey] || {}).dims || [];
+        item.rows.forEach((row, ri) => {
+            const hasAnyDim = dims.some(d => parseFloat(row[d]) > 0);
+            if (hasAnyDim && !row.desc?.trim()) {
+                errors.push({ itemId: item.id, rowIdx: ri, field: "desc", message: "Thiếu diễn giải cho dòng có kích thước" });
+            }
+            dims.forEach(d => {
+                const v = parseFloat(row[d]);
+                if (row[d] !== "" && row[d] !== undefined && v < 0) {
+                    errors.push({ itemId: item.id, rowIdx: ri, field: d, message: "Kích thước " + d.toUpperCase() + " = " + v + " < 0" });
+                }
+            });
+            dims.forEach(d => {
+                const v = parseFloat(row[d]);
+                const rule = CF_RULES[d];
+                if (rule && v > rule.errorAbove) {
+                    errors.push({ itemId: item.id, rowIdx: ri, field: d, message: d.toUpperCase() + " = " + v + "m — bất thường (> " + rule.errorAbove + "m)" });
+                }
+            });
+            if ((parseFloat(row.n) || 0) === 0 && dims.length > 0 && hasAnyDim) {
+                errors.push({ itemId: item.id, rowIdx: ri, field: "n", message: "Số lần (n) = 0 — dòng không tính vào khối lượng" });
+            }
+        });
+    });
+    return errors;
+}
+
+function renderValidationBadge() {
+    const badge = document.getElementById("validationBadge");
+    if (!badge) return;
+    document.querySelectorAll(".cf-invalid").forEach(el => el.classList.remove("cf-invalid"));
+    const errors = validateCostItems();
+    if (errors.length === 0) {
+        badge.style.display = "none";
+        return;
+    }
+    badge.style.display = "inline-flex";
+    badge.title = errors.map(e => "• " + e.message).join("\n");
+    badge.textContent = "⚠ " + errors.length + " cảnh báo";
+    errors.forEach(err => {
+        const trs = document.querySelectorAll('#costTableBody tr.cost-detail-row[data-item-id="' + err.itemId + '"]');
+        const tr = trs[err.rowIdx];
+        if (!tr) return;
+        const sel = err.field === "desc" ? ".desc-input" : '.detail-input[data-field="' + err.field + '"]';
+        const inp = tr.querySelector(sel);
+        if (inp) inp.classList.add("cf-invalid");
+    });
 }
