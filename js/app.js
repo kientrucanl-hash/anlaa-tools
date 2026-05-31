@@ -18,9 +18,17 @@ let workItemPrices = {};   // Construction work item prices (đơn giá thi côn
 let constructionItems = []; // G8-style cost estimate items with expandable rows
 let contingencyEnabled = false;
 let contingencyPct = 5;
+let vatEnabled = false;
+let vatPct = 10;
+let roundingUnit = 10000; // default: round to nearest 10.000đ; 0 = no rounding
 let activeChart = null;
 let undoStack = [];
 let redoStack = [];
+let cellClipboard = null; // { field, value } — Ctrl+C single cell
+let focusedCellInfo = null; // { itemId, rowIdx, field } — track focused dim-input
+let selectedRows = new Set(); // Set of "itemId:rowIdx" strings for multi-select
+let lastSelectedKey = null;   // last clicked row key for Shift+range select
+let dragSrcKey = null;        // "itemId:rowIdx" of drag source row
 
 // Spreadsheet States for Masonry Detailed Geometry Mode
 let wallSegments = [
@@ -33,11 +41,200 @@ let activeNumberInput = null;
 
 // DOM Elements Initialization
 document.addEventListener("keydown", (e) => {
-    if (!(e.ctrlKey || e.metaKey)) return;
-    const inCostArea = document.activeElement?.closest("#boq-report-area, #costTableBody");
-    if (!inCostArea && document.activeElement !== document.body) return;
-    if (e.key === "z" && !e.shiftKey) { e.preventDefault(); applyUndo(); }
-    if (e.key === "y" || (e.key === "z" && e.shiftKey)) { e.preventDefault(); applyRedo(); }
+    const active = document.activeElement;
+    const inCostTable = active?.closest("#costTableBody");
+    const inCostArea = active?.closest("#boq-report-area, #costTableBody");
+
+    // --- Ctrl/Meta shortcuts (Undo/Redo/D/Delete/C/V) ---
+    if (e.ctrlKey || e.metaKey) {
+        if (!inCostArea && active !== document.body) return;
+
+        if (e.key === "z" && !e.shiftKey) { e.preventDefault(); applyUndo(); return; }
+        if (e.key === "y" || (e.key === "z" && e.shiftKey)) { e.preventDefault(); applyRedo(); return; }
+
+        // Ctrl+D — fill down: copy all dim/n values from row above into current row
+        if (e.key === "d" && inCostTable) {
+            const tr = active?.closest("tr.cost-detail-row");
+            if (!tr) return;
+            e.preventDefault(); // prevent browser bookmark-page only after confirming we're in a detail row
+            const item = constructionItems.find(i => i.id === tr.dataset.itemId);
+            if (!item) return;
+            const ri = parseInt(tr.dataset.rowIdx);
+            if (ri === 0) { showToast("Không có dòng trên để copy xuống"); return; }
+            const above = item.rows[ri - 1];
+            pushUndo();
+            item.rows[ri] = { ...item.rows[ri], l: above.l, w: above.w, h: above.h, n: above.n, hs: above.hs };
+            saveConstructionItems();
+            updateConstructionCostSection();
+            // Re-focus same field in same row after re-render
+            setTimeout(() => {
+                const rows = document.querySelectorAll(`#costTableBody tr.cost-detail-row[data-item-id="${item.id}"]`);
+                const field = focusedCellInfo?.field || "l";
+                rows[ri]?.querySelector(`.dim-input[data-field="${field}"], .n-input[data-field="${field}"]`)?.focus();
+            }, 30);
+            showToast("↓ Fill down từ dòng trên");
+            return;
+        }
+
+        // Ctrl+Enter — duplicate current row (clone xuống dưới)
+        if (e.key === "Enter" && inCostTable) {
+            const tr = active?.closest("tr.cost-detail-row");
+            if (!tr) return;
+            e.preventDefault();
+            const item = constructionItems.find(i => i.id === tr.dataset.itemId);
+            if (!item) return;
+            const ri = parseInt(tr.dataset.rowIdx);
+            pushUndo();
+            const clone = { ...item.rows[ri] };
+            item.rows.splice(ri + 1, 0, clone);
+            saveConstructionItems();
+            updateConstructionCostSection();
+            setTimeout(() => {
+                const rows = document.querySelectorAll(`#costTableBody tr.cost-detail-row[data-item-id="${item.id}"]`);
+                rows[ri + 1]?.querySelector(".desc-input")?.focus();
+            }, 30);
+            showToast("↕ Đã nhân đôi dòng");
+            return;
+        }
+
+        // Ctrl+C — copy giá trị ô dim/n đang focus
+        if (e.key === "c" && inCostTable && active?.classList.contains("detail-input") && active.type === "number") {
+            cellClipboard = { field: active.dataset.field, value: active.value };
+            showToast(`📋 Copy: ${active.value || "0"}`);
+            return; // không preventDefault để trình duyệt vẫn copy text
+        }
+
+        // Ctrl+V — paste vào ô dim/n đang focus (nếu clipboard là số đơn, không phải Excel range)
+        if (e.key === "v" && inCostTable && active?.classList.contains("detail-input") && active.type === "number") {
+            if (!cellClipboard) return;
+            e.preventDefault();
+            active.value = cellClipboard.value;
+            active.dispatchEvent(new Event("input", { bubbles: true }));
+            showToast(`📋 Paste: ${cellClipboard.value}`);
+            return;
+        }
+
+        // Ctrl+Delete — xóa dòng(s) đang focus hoặc được select
+        if (e.key === "Delete" && inCostTable) {
+            e.preventDefault();
+            if (selectedRows.size > 0) {
+                // Multi-delete selected rows
+                pushUndo();
+                let deletedCount = 0;
+                // Group by itemId, sort rowIdx desc to splice correctly
+                const grouped = {};
+                selectedRows.forEach(key => {
+                    const [iid, ri] = key.split(":"); const riNum = parseInt(ri);
+                    if (!grouped[iid]) grouped[iid] = [];
+                    grouped[iid].push(riNum);
+                });
+                Object.entries(grouped).forEach(([iid, ris]) => {
+                    const item = constructionItems.find(i => i.id === iid);
+                    if (!item) return;
+                    ris.sort((a, b) => b - a).forEach(ri => {
+                        if (item.rows.length > 1) { item.rows.splice(ri, 1); deletedCount++; }
+                    });
+                });
+                selectedRows.clear(); lastSelectedKey = null;
+                saveConstructionItems(); updateConstructionCostSection();
+                showToast(`🗑 Đã xóa ${deletedCount} dòng`);
+            } else {
+                const tr = active?.closest("tr.cost-detail-row");
+                if (!tr) return;
+                const item = constructionItems.find(i => i.id === tr.dataset.itemId);
+                if (!item || item.rows.length <= 1) { showToast("Không thể xóa dòng cuối cùng"); return; }
+                const ri = parseInt(tr.dataset.rowIdx);
+                pushUndo();
+                item.rows.splice(ri, 1);
+                saveConstructionItems(); updateConstructionCostSection();
+                setTimeout(() => {
+                    const rows = document.querySelectorAll(`#costTableBody tr.cost-detail-row[data-item-id="${item.id}"]`);
+                    rows[Math.min(ri, rows.length - 1)]?.querySelector(".desc-input")?.focus();
+                }, 30);
+                showToast("🗑 Đã xóa dòng");
+            }
+            return;
+        }
+    }
+
+    // --- Arrow keys navigation (không cần Ctrl) ---
+    if (inCostTable && (e.key === "ArrowUp" || e.key === "ArrowDown" || e.key === "ArrowLeft" || e.key === "ArrowRight")) {
+        const isDimOrN = active?.classList.contains("detail-input") && active.type === "number";
+        const isDesc = active?.classList.contains("desc-input");
+        if (!isDimOrN && !isDesc) return;
+
+        const tr = active.closest("tr.cost-detail-row");
+        if (!tr) return;
+
+        const fieldOrder = ["desc", "l", "w", "h", "n"];
+        const currentField = active.dataset.field;
+        const fi = fieldOrder.indexOf(currentField);
+
+        if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
+            // Only navigate between cells if cursor is at start/end of input
+            const atStart = active.selectionStart === 0;
+            const atEnd = active.selectionEnd === active.value.length;
+            if (e.key === "ArrowLeft" && !atStart) return;
+            if (e.key === "ArrowRight" && !atEnd) return;
+            e.preventDefault();
+            const nextFi = e.key === "ArrowLeft" ? fi - 1 : fi + 1;
+            if (nextFi < 0 || nextFi >= fieldOrder.length) return;
+            const nextField = fieldOrder[nextFi];
+            const nextInput = tr.querySelector(`[data-field="${nextField}"]:not([disabled])`);
+            if (nextInput) nextInput.focus();
+            return;
+        }
+
+        if (e.key === "ArrowUp" || e.key === "ArrowDown") {
+            e.preventDefault();
+            const item = constructionItems.find(i => i.id === tr.dataset.itemId);
+            if (!item) return;
+            const ri = parseInt(tr.dataset.rowIdx);
+            const allRows = [...document.querySelectorAll(`#costTableBody tr.cost-detail-row[data-item-id="${item.id}"]`)];
+            const targetRi = e.key === "ArrowUp" ? ri - 1 : ri + 1;
+            if (targetRi < 0 || targetRi >= allRows.length) return;
+
+            // Shift+Arrow: extend multi-row selection
+            if (e.shiftKey) {
+                const currentKey = `${item.id}:${ri}`;
+                const targetKey = `${item.id}:${targetRi}`;
+                if (!lastSelectedKey) lastSelectedKey = currentKey;
+                // Toggle current into selection, add target
+                selectedRows.add(currentKey);
+                selectedRows.add(targetKey);
+                lastSelectedKey = targetKey;
+                refreshRowSelectionUI();
+            }
+
+            const targetInput = allRows[targetRi].querySelector(`[data-field="${currentField}"]:not([disabled])`) ||
+                                allRows[targetRi].querySelector(".desc-input");
+            if (targetInput) targetInput.focus();
+            return;
+        }
+    }
+
+    // --- F2 — focus vào ô dim L của dòng đang highlight (nếu đang ở header row) ---
+    if (e.key === "F2" && inCostTable) {
+        const tr = active?.closest("tr.cost-item-header");
+        if (!tr) return;
+        e.preventDefault();
+        const itemId = tr.dataset.itemId;
+        const item = constructionItems.find(i => i.id === itemId);
+        if (!item || !item.expanded) return;
+        const firstDetail = document.querySelector(`#costTableBody tr.cost-detail-row[data-item-id="${itemId}"]`);
+        firstDetail?.querySelector(".desc-input")?.focus();
+        return;
+    }
+
+    // --- Escape — blur ô hiện tại hoặc clear selection ---
+    if (e.key === "Escape" && inCostTable) {
+        if (selectedRows.size > 0) {
+            selectedRows.clear(); lastSelectedKey = null;
+            refreshRowSelectionUI();
+        } else {
+            active?.blur();
+        }
+    }
 });
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -86,6 +283,15 @@ document.addEventListener("DOMContentLoaded", () => {
     
     // Log project loaded
     logAuditEvent("LOAD_PROJECT", `Dự án "${currentProject.name}" được tải thành công với ${currentProject.items.length} hạng mục.`);
+
+    // 8. Init collaboration (only on estimate page where collab.js is loaded)
+    if (typeof collabInit === 'function') {
+        // Wait for auth to resolve, then init with project id + role
+        setTimeout(() => {
+            const role = currentProject.my_role || (currentProject.id ? 'owner' : null);
+            collabInit(currentProject.id || null, role);
+        }, 800);
+    }
 });
 
 /**
@@ -96,33 +302,35 @@ function initOffCanvasSidebar() {
     const sidebarClose = document.getElementById("sidebarClose");
     const sidebarOverlay = document.getElementById("sidebarOverlay");
     const appSidebar = document.getElementById("appSidebar");
-    const tabBtns = document.querySelectorAll(".sidebar-tab-nav .tab-btn");
+    const tabBtns = document.querySelectorAll(".sb-nav .tab-btn");
 
-    if (!sidebarToggle || !sidebarClose || !sidebarOverlay || !appSidebar) return;
-
-    // Open sidebar
-    sidebarToggle.addEventListener("click", () => {
-        appSidebar.classList.add("active");
-        sidebarOverlay.classList.add("active");
-    });
-
-    // Close sidebar
     const closeSidebar = () => {
         appSidebar.classList.remove("active");
         sidebarOverlay.classList.remove("active");
     };
 
-    sidebarClose.addEventListener("click", closeSidebar);
-    sidebarOverlay.addEventListener("click", closeSidebar);
-
-    // Auto-close sidebar on mobile when tab switcher is clicked
-    tabBtns.forEach(btn => {
-        btn.addEventListener("click", () => {
-            if (window.innerWidth <= 1200) {
-                closeSidebar();
-            }
-        });
+    if (sidebarToggle) sidebarToggle.addEventListener("click", () => {
+        appSidebar.classList.add("active");
+        sidebarOverlay.classList.add("active");
     });
+    if (sidebarClose) sidebarClose.addEventListener("click", closeSidebar);
+    if (sidebarOverlay) sidebarOverlay.addEventListener("click", closeSidebar);
+
+    // Auto-close on mobile when a tab is selected
+    tabBtns.forEach(btn => btn.addEventListener("click", () => {
+        if (window.innerWidth <= 1200) closeSidebar();
+    }));
+
+    // More menu toggle
+    const btnMore = document.getElementById("btnMoreActions");
+    const moreMenu = document.getElementById("sbMoreMenu");
+    if (btnMore && moreMenu) {
+        btnMore.addEventListener("click", (e) => {
+            e.stopPropagation();
+            moreMenu.style.display = moreMenu.style.display === "none" ? "block" : "none";
+        });
+        document.addEventListener("click", () => { moreMenu.style.display = "none"; });
+    }
 }
 
 /**
@@ -156,12 +364,15 @@ function initProjectAndPrices() {
         constructionItems = JSON.parse(storedCostItems);
     }
 
-    // Load contingency settings
+    // Load contingency + VAT + rounding settings
     const storedContingency = localStorage.getItem("anlaa_contingency");
     if (storedContingency) {
         const c = JSON.parse(storedContingency);
         contingencyEnabled = c.enabled || false;
         contingencyPct = c.pct || 5;
+        vatEnabled = c.vatEnabled || false;
+        vatPct = c.vatPct || 10;
+        roundingUnit = c.roundingUnit !== undefined ? c.roundingUnit : 10000;
     }
 
     // Load Project Data
@@ -203,6 +414,9 @@ async function syncProjectToAPI() {
     try {
         if (currentProject.id) {
             await API.updateProject(currentProject.id, currentProject.name, currentProject.address, currentProject.items);
+            if (typeof broadcastChange === 'function') {
+                broadcastChange({ name: currentProject.name, address: currentProject.address, data: currentProject.items });
+            }
         } else {
             const created = await API.createProject(currentProject.name, currentProject.address, currentProject.items);
             currentProject.id = created.id;
@@ -425,6 +639,15 @@ function triggerAllPreviews() {
 function formatVND(value) {
     const rounded = Math.round(value);
     return rounded.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".") + " VNĐ";
+}
+
+/**
+ * Rounds price to nearest unit (e.g. 1000, 10000).
+ * When VAT is applied, rounding is skipped (caller passes skipRound=true).
+ */
+function roundPrice(value, skipRound = false) {
+    if (skipRound || roundingUnit === 0) return Math.round(value);
+    return Math.round(value / roundingUnit) * roundingUnit;
 }
 
 /**
@@ -2575,7 +2798,7 @@ function saveConstructionItems() {
 }
 
 function saveContingency() {
-    localStorage.setItem("anlaa_contingency", JSON.stringify({ enabled: contingencyEnabled, pct: contingencyPct }));
+    localStorage.setItem("anlaa_contingency", JSON.stringify({ enabled: contingencyEnabled, pct: contingencyPct, vatEnabled, vatPct, roundingUnit }));
 }
 
 function pushUndo() {
@@ -2651,6 +2874,23 @@ function initConstructionCostSection() {
         pctInput.addEventListener("input", () => { contingencyPct = parseFloat(pctInput.value) || 0; saveContingency(); updateConstructionCostTotals(); });
     }
 
+    const vatToggle = document.getElementById("vatToggle");
+    const vatPctInput = document.getElementById("vatPct");
+    if (vatToggle) {
+        vatToggle.checked = vatEnabled;
+        vatToggle.addEventListener("change", () => { vatEnabled = vatToggle.checked; saveContingency(); updateConstructionCostTotals(); });
+    }
+    if (vatPctInput) {
+        vatPctInput.value = vatPct;
+        vatPctInput.addEventListener("input", () => { vatPct = parseFloat(vatPctInput.value) || 0; saveContingency(); updateConstructionCostTotals(); });
+    }
+
+    const roundingSelect = document.getElementById("roundingSelect");
+    if (roundingSelect) {
+        roundingSelect.value = String(roundingUnit);
+        roundingSelect.addEventListener("change", () => { roundingUnit = parseInt(roundingSelect.value) || 0; saveContingency(); updateConstructionCostTotals(); });
+    }
+
     updateConstructionCostSection();
 }
 
@@ -2696,16 +2936,18 @@ function updateConstructionCostSection() {
         headerTr.innerHTML = `
             <td class="td-stt">${stt++}</td>
             <td class="td-name" colspan="7">
-                <button class="btn-expand no-print" data-id="${item.id}">${item.expanded ? "▼" : "▶"}</button>
-                ${item.isAuto
-                    ? `<span class="item-name">${escapeHtml(item.name)}</span><span class="item-unit-badge">${item.unit}</span>`
-                    : `<input type="text" class="cost-name-input" list="workItemSuggestions"
-                           value="${escapeHtml(item.name)}" data-id="${item.id}"
-                           placeholder="Gõ tên hạng mục..." autocomplete="off">
-                       <select class="cost-unit-inline" data-id="${item.id}">
-                           ${UNITS.map(u => `<option value="${u}" ${item.unit===u?"selected":""}>${u}</option>`).join("")}
-                       </select>`
-                }
+                <div class="td-name-content">
+                    <button class="btn-expand no-print" data-id="${item.id}">${item.expanded ? "▼" : "▶"}</button>
+                    ${item.isAuto
+                        ? `<span class="item-name">${escapeHtml(item.name)}</span><span class="item-unit-badge">${item.unit}</span>`
+                        : `<input type="text" class="cost-name-input" list="workItemSuggestions"
+                               value="${escapeHtml(item.name)}" data-id="${item.id}"
+                               placeholder="Gõ tên hạng mục..." autocomplete="off">
+                           <select class="cost-unit-inline" data-id="${item.id}">
+                               ${UNITS.map(u => `<option value="${u}" ${item.unit===u?"selected":""}>${u}</option>`).join("")}
+                           </select>`
+                    }
+                </div>
             </td>
             <td class="td-qty text-right num-cell">${formatNum(totalQty)}</td>
             <td class="td-price text-right num-cell">
@@ -2723,11 +2965,13 @@ function updateConstructionCostSection() {
             item.rows.forEach((row, ri) => {
                 const rowQty = calcRowQty(row, dims);
                 const detailTr = document.createElement("tr");
-                detailTr.className = "cost-detail-row";
+                const rowKey = `${item.id}:${ri}`;
+                detailTr.className = "cost-detail-row" + (selectedRows.has(rowKey) ? " row-selected" : "");
                 detailTr.dataset.itemId = item.id;
                 detailTr.dataset.rowIdx = ri;
+                detailTr.draggable = true;
                 detailTr.innerHTML = `
-                    <td></td>
+                    <td class="td-drag no-print"><span class="drag-handle" title="Kéo để sắp xếp / Click để chọn dòng">⠿</span></td>
                     <td class="td-desc"><input class="detail-input desc-input" type="text" placeholder="Diễn giải..." value="${escapeHtml(row.desc||"")}" data-field="desc"></td>
                     <td></td>
                     <td><input class="detail-input dim-input" type="number" placeholder="L" value="${row.l||""}" data-field="l" ${!dims.includes("l")?"disabled":""}></td>
@@ -2751,6 +2995,14 @@ function updateConstructionCostSection() {
 
     if (typeof lucide !== "undefined") lucide.createIcons();
     wireCostTableEvents(tbody);
+    refreshRowSelectionUI(); // re-apply selection classes after DOM rebuild
+    // Add comment buttons to detail rows (collab feature)
+    if (typeof addCommentButtonToRow === 'function') {
+        tbody.querySelectorAll("tr.cost-detail-row").forEach(tr => {
+            addCommentButtonToRow(tr, tr.dataset.itemId, parseInt(tr.dataset.rowIdx));
+        });
+        renderCommentDots();
+    }
     document.getElementById("costTotalsArea").style.display = "block";
     updateConstructionCostTotals();
 }
@@ -2805,6 +3057,33 @@ function wireCostTableEvents(tbody) {
             pushUndo();
             const item = constructionItems.find(i => i.id === btn.dataset.itemId);
             if (item && item.rows.length > 1) { item.rows.splice(parseInt(btn.dataset.rowIdx), 1); saveConstructionItems(); updateConstructionCostSection(); }
+        });
+    });
+
+    // Row highlight on focus + track focusedCellInfo
+    tbody.querySelectorAll(".detail-input, .detail-select, .cost-name-input, .cost-price-input").forEach(input => {
+        input.addEventListener("focus", function() {
+            // Remove highlight from all rows
+            tbody.querySelectorAll("tr.cost-detail-row.row-focused, tr.cost-item-header.row-focused").forEach(r => r.classList.remove("row-focused"));
+            // Highlight current row
+            const tr = this.closest("tr");
+            if (tr) tr.classList.add("row-focused");
+            // Track cell for Ctrl+D fill-down target
+            if (this.dataset.field) {
+                const trRow = this.closest("tr.cost-detail-row");
+                if (trRow) {
+                    focusedCellInfo = { itemId: trRow.dataset.itemId, rowIdx: parseInt(trRow.dataset.rowIdx), field: this.dataset.field };
+                    // Broadcast cursor position to collaborators
+                    if (typeof broadcastCursor === 'function') {
+                        broadcastCursor(trRow.dataset.itemId, parseInt(trRow.dataset.rowIdx));
+                    }
+                }
+            }
+        });
+        input.addEventListener("blur", function() {
+            const tr = this.closest("tr");
+            if (tr) tr.classList.remove("row-focused");
+            if (!this.closest("#costTableBody")) focusedCellInfo = null;
         });
     });
 
@@ -2925,7 +3204,7 @@ function wireCostTableEvents(tbody) {
             const item = constructionItems.find(i => i.id === tr.dataset.itemId);
             if (!item) return;
 
-            if (e.key === "Enter" && !e.shiftKey) {
+            if (e.key === "Enter" && !e.shiftKey && !e.ctrlKey && !e.metaKey) {
                 e.preventDefault();
                 pushUndo();
                 item.rows.push({ desc:"", n:1, l:"", w:"", h:"", hs:1 });
@@ -2960,6 +3239,108 @@ function wireCostTableEvents(tbody) {
             }
         });
     });
+
+    // ── Drag-to-reorder detail rows ──────────────────────────────────────
+    tbody.querySelectorAll("tr.cost-detail-row").forEach(tr => {
+        tr.addEventListener("dragstart", (e) => {
+            dragSrcKey = `${tr.dataset.itemId}:${tr.dataset.rowIdx}`;
+            tr.classList.add("drag-dragging");
+            e.dataTransfer.effectAllowed = "move";
+            e.dataTransfer.setData("text/plain", dragSrcKey);
+        });
+        tr.addEventListener("dragend", () => {
+            dragSrcKey = null;
+            tbody.querySelectorAll("tr.cost-detail-row").forEach(r => {
+                r.classList.remove("drag-dragging", "drag-over");
+            });
+        });
+        tr.addEventListener("dragover", (e) => {
+            if (!dragSrcKey) return;
+            e.preventDefault();
+            e.dataTransfer.dropEffect = "move";
+            // Only highlight if same itemId
+            if (tr.dataset.itemId === dragSrcKey.split(":")[0]) {
+                tbody.querySelectorAll("tr.cost-detail-row").forEach(r => r.classList.remove("drag-over"));
+                tr.classList.add("drag-over");
+            }
+        });
+        tr.addEventListener("dragleave", () => tr.classList.remove("drag-over"));
+        tr.addEventListener("drop", (e) => {
+            e.preventDefault();
+            tr.classList.remove("drag-over");
+            if (!dragSrcKey) return;
+            const [srcItemId, srcRiStr] = dragSrcKey.split(":");
+            const srcRi = parseInt(srcRiStr);
+            const dstRi = parseInt(tr.dataset.rowIdx);
+            if (srcItemId !== tr.dataset.itemId || srcRi === dstRi) return;
+            const item = constructionItems.find(i => i.id === srcItemId);
+            if (!item) return;
+            pushUndo();
+            const [moved] = item.rows.splice(srcRi, 1);
+            item.rows.splice(dstRi, 0, moved);
+            selectedRows.clear(); lastSelectedKey = null;
+            saveConstructionItems();
+            updateConstructionCostSection();
+            showToast("↕ Đã sắp xếp lại dòng");
+        });
+    });
+
+    // ── Click drag-handle to select / deselect row ───────────────────────
+    tbody.querySelectorAll(".drag-handle").forEach(handle => {
+        handle.addEventListener("click", (e) => {
+            e.stopPropagation();
+            const tr = handle.closest("tr.cost-detail-row");
+            if (!tr) return;
+            const key = `${tr.dataset.itemId}:${tr.dataset.rowIdx}`;
+            const ri = parseInt(tr.dataset.rowIdx);
+
+            if (e.shiftKey && lastSelectedKey) {
+                // Shift+Click: select range within same item
+                const [lastItemId, lastRiStr] = lastSelectedKey.split(":");
+                if (lastItemId === tr.dataset.itemId) {
+                    const lastRi = parseInt(lastRiStr);
+                    const [lo, hi] = [Math.min(ri, lastRi), Math.max(ri, lastRi)];
+                    for (let i = lo; i <= hi; i++) selectedRows.add(`${tr.dataset.itemId}:${i}`);
+                    refreshRowSelectionUI();
+                    return;
+                }
+            }
+
+            // Regular click: toggle
+            if (selectedRows.has(key)) {
+                selectedRows.delete(key);
+                if (selectedRows.size === 0) lastSelectedKey = null;
+            } else {
+                if (!e.ctrlKey && !e.metaKey) selectedRows.clear();
+                selectedRows.add(key);
+                lastSelectedKey = key;
+            }
+            refreshRowSelectionUI();
+        });
+    });
+
+    // Click anywhere else on tbody clears selection
+    tbody.addEventListener("click", (e) => {
+        if (!e.target.closest(".drag-handle") && selectedRows.size > 0) {
+            selectedRows.clear(); lastSelectedKey = null;
+            refreshRowSelectionUI();
+        }
+    });
+}
+
+function refreshRowSelectionUI() {
+    const tbody = document.getElementById("costTableBody");
+    if (!tbody) return;
+    tbody.querySelectorAll("tr.cost-detail-row").forEach(tr => {
+        const key = `${tr.dataset.itemId}:${tr.dataset.rowIdx}`;
+        tr.classList.toggle("row-selected", selectedRows.has(key));
+    });
+    // Update selection badge in kbd-hints bar
+    const badge = document.getElementById("selectionBadge");
+    if (badge) {
+        badge.textContent = selectedRows.size > 0 ? `${selectedRows.size} dòng đang chọn — Ctrl+Del để xóa, Esc để bỏ chọn` : "";
+        badge.style.display = selectedRows.size > 0 ? "inline" : "none";
+    }
 }
 
 function updateItemHeaderQty(item) {
@@ -2976,21 +3357,64 @@ function updateItemHeaderQty(item) {
 }
 
 function updateConstructionCostTotals() {
-    let subtotal = 0;
+    let subtotalAuto = 0;
+    let subtotalCustom = 0;
+
     constructionItems.forEach(item => {
         const totalQty = calcItemTotalQty(item);
         const unitPrice = workItemPrices[item.workItemKey] !== undefined ? workItemPrices[item.workItemKey] : (item.unitPrice || 0);
-        subtotal += totalQty * unitPrice;
+        const itemTotal = totalQty * unitPrice;
+        if (item.isAuto) subtotalAuto += itemTotal;
+        else subtotalCustom += itemTotal;
     });
 
+    const subtotal = subtotalAuto + subtotalCustom;
     const contingency = contingencyEnabled ? subtotal * (contingencyPct / 100) : 0;
-    const grandTotal = subtotal + contingency;
-    const toggle = document.getElementById("contingencyToggle");
+    const beforeVat = subtotal + contingency;
+    // VAT applied after contingency; rounding skipped when VAT is on
+    const vatAmount = vatEnabled ? beforeVat * (vatPct / 100) : 0;
+    const grandTotal = beforeVat + vatAmount;
+    // Rounded total: only when VAT is off
+    const grandTotalRounded = roundPrice(grandTotal, vatEnabled);
 
     const el = (id) => document.getElementById(id);
-    if (el("costSubtotal")) el("costSubtotal").innerText = formatNumber(Math.round(subtotal)) + " VNĐ";
-    if (el("contingencyAmount")) el("contingencyAmount").innerText = "+" + formatNumber(Math.round(contingency)) + " VNĐ";
-    if (el("costGrandTotal")) el("costGrandTotal").innerText = formatNumber(Math.round(grandTotal)) + " VNĐ";
+    const toggle = document.getElementById("contingencyToggle");
+
+    // Group subtotals — show only if both groups have items
+    const hasAuto = constructionItems.some(i => i.isAuto);
+    const hasCustom = constructionItems.some(i => !i.isAuto);
+    if (el("subtotalAutoRow")) el("subtotalAutoRow").style.display = (hasAuto && hasCustom) ? "" : "none";
+    if (el("subtotalCustomRow")) el("subtotalCustomRow").style.display = (hasAuto && hasCustom) ? "" : "none";
+    if (el("subtotalAuto")) el("subtotalAuto").innerText = formatVND(roundPrice(subtotalAuto, vatEnabled));
+    if (el("subtotalCustom")) el("subtotalCustom").innerText = formatVND(roundPrice(subtotalCustom, vatEnabled));
+
+    if (el("costSubtotal")) el("costSubtotal").innerText = formatVND(roundPrice(subtotal, vatEnabled));
+    if (el("contingencyAmount")) el("contingencyAmount").innerText = "+" + formatVND(roundPrice(contingency, vatEnabled));
+
+    // VAT row visibility
+    if (el("vatRow")) el("vatRow").style.display = "";
+    if (el("vatToggle")) el("vatToggle").checked = vatEnabled;
+    if (el("vatPct")) el("vatPct").value = vatPct;
+    if (el("vatAmount")) el("vatAmount").innerText = vatEnabled ? "+" + formatVND(Math.round(vatAmount)) : "+0 VNĐ";
+
+    // Grand total: when VAT on → show precise; when VAT off → show rounded
+    if (el("costGrandTotal")) {
+        el("costGrandTotal").innerText = formatVND(vatEnabled ? Math.round(grandTotal) : grandTotalRounded);
+    }
+
+    // Rounded row: show diff only when rounding unit > 0 and VAT is off
+    if (el("costGrandTotalRounded")) {
+        if (!vatEnabled && roundingUnit > 0 && grandTotalRounded !== Math.round(grandTotal)) {
+            const diff = grandTotalRounded - Math.round(grandTotal);
+            el("costGrandTotalRounded").innerText = `≈ ${formatVND(grandTotalRounded)} (${diff > 0 ? "+" : ""}${formatVND(diff)})`;
+        } else if (vatEnabled) {
+            el("costGrandTotalRounded").innerText = "Không làm tròn khi có VAT";
+            el("costGrandTotalRounded").style.color = "#94a3b8";
+        } else {
+            el("costGrandTotalRounded").innerText = "—";
+        }
+    }
+
     if (toggle) toggle.checked = contingencyEnabled;
 }
 
