@@ -1,4 +1,4 @@
-FROM node:20-alpine
+FROM node:20.19-alpine
 
 # Install build tools for better-sqlite3 native module
 RUN apk add --no-cache python3 make g++

@@ -17,5 +17,8 @@ jobs:
           script: |
             cd /home/ubuntu/anlaa-tools
             git pull origin main
-            docker compose up --build -d
+            docker compose up --build --force-recreate -d
+            docker image prune -f
+            sleep 15
             docker compose ps
+            docker compose exec -T anlc wget -qO- http://127.0.0.1:4000/health || (echo "Health check FAILED" && docker compose logs --tail=50 anlc && exit 1)

@@ -2,6 +2,7 @@ const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const db = require('../db/database');
+const { requireAuth } = require('../middleware/auth');
 
 const router = express.Router();
 
@@ -38,6 +39,26 @@ router.get('/me', (req, res) => {
     } catch {
         res.status(401).json({ error: 'Phiên đăng nhập hết hạn' });
     }
+});
+
+// PUT /api/auth/password — change own password
+router.put('/password', requireAuth, (req, res) => {
+    const { currentPassword, newPassword } = req.body;
+
+    if (!currentPassword || !newPassword) {
+        return res.status(400).json({ error: 'Vui lòng nhập đầy đủ mật khẩu cũ và mới' });
+    }
+    if (newPassword.length < 6) {
+        return res.status(400).json({ error: 'Mật khẩu mới phải có ít nhất 6 ký tự' });
+    }
+
+    const user = db.users.findById(req.user.id);
+    if (!user || !bcrypt.compareSync(currentPassword, user.password_hash)) {
+        return res.status(401).json({ error: 'Mật khẩu hiện tại không đúng' });
+    }
+
+    db.users.updatePassword(user.id, bcrypt.hashSync(newPassword, 10));
+    res.json({ message: 'Đổi mật khẩu thành công' });
 });
 
 module.exports = router;

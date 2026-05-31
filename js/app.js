@@ -2441,8 +2441,14 @@ function initTakeoffWorkspace() {
 async function loadProjectsFromAPI() {
     try {
         const projects = await API.getProjects();
-        // Load most recent draft or rejected project
-        const active = projects.find(p => ['draft', 'rejected'].includes(p.status)) || projects[0];
+
+        // If history page requested a specific project, open it
+        const requestedId = parseInt(localStorage.getItem('anlaa_open_project_id') || '0');
+        localStorage.removeItem('anlaa_open_project_id');
+        const requested = requestedId ? projects.find(p => p.id === requestedId) : null;
+
+        // Load most recent draft or rejected project (or requested project)
+        const active = requested || projects.find(p => ['draft', 'rejected'].includes(p.status)) || projects[0];
 
         if (active) {
             currentProject = {

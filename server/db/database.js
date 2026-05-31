@@ -98,6 +98,9 @@ const db = {
                 'INSERT INTO users (username, password_hash, role, created_at) VALUES (?, ?, ?, ?)'
             ).run(username, password_hash, role, now());
             return db.users.findById(result.lastInsertRowid);
+        },
+        updatePassword(id, password_hash) {
+            sqliteDb.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(password_hash, id);
         }
     },
 

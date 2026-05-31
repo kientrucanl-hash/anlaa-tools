@@ -219,6 +219,20 @@
     </div>
 </div>
 
+<script>
+// Early admin guard — redirect before any render if not authenticated as admin
+(function() {
+    try {
+        const user = JSON.parse(localStorage.getItem('anlaa_user') || 'null');
+        const token = localStorage.getItem('anlaa_token');
+        if (!token || !user || user.role !== 'admin') {
+            window.location.replace('/');
+        }
+    } catch {
+        window.location.replace('/');
+    }
+})();
+</script>
 <script src="js/api.js"></script>
 <script src="js/auth.js"></script>
 <script src="js/admin.js"></script>

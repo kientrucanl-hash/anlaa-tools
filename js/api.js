@@ -41,6 +41,9 @@ const API = {
 
     me: () => apiFetch('/auth/me'),
 
+    changePassword: (currentPassword, newPassword) =>
+        apiFetch('/auth/password', { method: 'PUT', body: JSON.stringify({ currentPassword, newPassword }) }),
+
     // Projects
     getProjects: () => apiFetch('/projects'),
 
