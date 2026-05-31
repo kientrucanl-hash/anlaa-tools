@@ -19,6 +19,8 @@ let constructionItems = []; // G8-style cost estimate items with expandable rows
 let contingencyEnabled = false;
 let contingencyPct = 5;
 let activeChart = null;
+let undoStack = [];
+let redoStack = [];
 
 // Spreadsheet States for Masonry Detailed Geometry Mode
 let wallSegments = [
@@ -30,6 +32,14 @@ let doorDeductions = [];
 let activeNumberInput = null;
 
 // DOM Elements Initialization
+document.addEventListener("keydown", (e) => {
+    if (!(e.ctrlKey || e.metaKey)) return;
+    const inCostArea = document.activeElement?.closest("#boq-report-area, #costTableBody");
+    if (!inCostArea && document.activeElement !== document.body) return;
+    if (e.key === "z" && !e.shiftKey) { e.preventDefault(); applyUndo(); }
+    if (e.key === "y" || (e.key === "z" && e.shiftKey)) { e.preventDefault(); applyRedo(); }
+});
+
 document.addEventListener("DOMContentLoaded", () => {
     // 1. Load data from localStorage
     initProjectAndPrices();
@@ -2562,6 +2572,30 @@ function saveContingency() {
     localStorage.setItem("anlaa_contingency", JSON.stringify({ enabled: contingencyEnabled, pct: contingencyPct }));
 }
 
+function pushUndo() {
+    undoStack.push(JSON.stringify(constructionItems));
+    if (undoStack.length > 30) undoStack.shift();
+    redoStack = [];
+}
+
+function applyUndo() {
+    if (!undoStack.length) { showToast("Không còn gì để hoàn tác"); return; }
+    redoStack.push(JSON.stringify(constructionItems));
+    constructionItems = JSON.parse(undoStack.pop());
+    saveConstructionItems();
+    updateConstructionCostSection();
+    showToast("↩ Hoàn tác");
+}
+
+function applyRedo() {
+    if (!redoStack.length) { showToast("Không còn gì để làm lại"); return; }
+    undoStack.push(JSON.stringify(constructionItems));
+    constructionItems = JSON.parse(redoStack.pop());
+    saveConstructionItems();
+    updateConstructionCostSection();
+    showToast("↪ Làm lại");
+}
+
 function genId() {
     return Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 }
@@ -2578,20 +2612,26 @@ function initConstructionCostSection() {
         }
     });
 
+    initWorkItemDatalist();
+
     document.getElementById("btnAddCostItem")?.addEventListener("click", () => {
-        const key = "ceiling-gypsum";
+        pushUndo();
         constructionItems.push({
             id: genId(),
-            workItemKey: key,
-            name: (WORK_ITEM_DIMS[key] || {}).label || "Hạng mục mới",
-            unit: (WORK_ITEM_DIMS[key] || {}).unit || "m²",
+            workItemKey: "custom",
+            name: "",
+            unit: "m²",
             isAuto: false,
             expanded: true,
-            unitPrice: workItemPrices[key] || 0,
+            unitPrice: 0,
             rows: [{ desc: "", n: 1, l: "", w: "", h: "", hs: 1 }]
         });
         saveConstructionItems();
         updateConstructionCostSection();
+        setTimeout(() => {
+            const inputs = document.querySelectorAll(".cost-name-input");
+            inputs[inputs.length - 1]?.focus();
+        }, 30);
     });
 
     const toggle = document.getElementById("contingencyToggle");
@@ -2608,6 +2648,18 @@ function initConstructionCostSection() {
     updateConstructionCostSection();
 }
 
+function initWorkItemDatalist() {
+    if (document.getElementById("workItemSuggestions")) return;
+    const dl = document.createElement("datalist");
+    dl.id = "workItemSuggestions";
+    Object.values(WORK_ITEM_DIMS).forEach(v => {
+        const opt = document.createElement("option");
+        opt.value = v.label;
+        dl.appendChild(opt);
+    });
+    document.body.appendChild(dl);
+}
+
 function updateConstructionCostSection() {
     const tbody = document.getElementById("costTableBody");
     if (!tbody) return;
@@ -2621,11 +2673,16 @@ function updateConstructionCostSection() {
     tbody.innerHTML = "";
     let stt = 1;
 
+    const UNITS = ["m²","m³","md","m","cái","bộ","kg","tấm","bao","viên"];
     constructionItems.forEach((item) => {
-        const dims = (WORK_ITEM_DIMS[item.workItemKey] || {}).dims || [];
+        const dims = WORK_ITEM_DIMS[item.workItemKey]
+            ? (WORK_ITEM_DIMS[item.workItemKey].dims || [])
+            : ["l","w","h"];
         const totalQty = calcItemTotalQty(item);
         const unitPrice = workItemPrices[item.workItemKey] !== undefined ? workItemPrices[item.workItemKey] : (item.unitPrice || 0);
         const subtotal = totalQty * unitPrice;
+        const isCustom = !item.isAuto;
+        const isUnknownKey = !WORK_ITEM_DIMS[item.workItemKey];
 
         const headerTr = document.createElement("tr");
         headerTr.className = "cost-item-header" + (item.isAuto ? " cost-auto" : " cost-custom");
@@ -2635,12 +2692,22 @@ function updateConstructionCostSection() {
             <td class="td-name" colspan="7">
                 <button class="btn-expand no-print" data-id="${item.id}">${item.expanded ? "▼" : "▶"}</button>
                 ${item.isAuto
-                    ? `<span class="item-name">${escapeHtml(item.name)}</span>`
-                    : `<select class="cost-name-select" data-id="${item.id}">${Object.entries(WORK_ITEM_DIMS).map(([k,m]) => `<option value="${k}" ${item.workItemKey===k?"selected":""}>${m.label}</option>`).join("")}</select>`
+                    ? `<span class="item-name">${escapeHtml(item.name)}</span><span class="item-unit-badge">${item.unit}</span>`
+                    : `<input type="text" class="cost-name-input" list="workItemSuggestions"
+                           value="${escapeHtml(item.name)}" data-id="${item.id}"
+                           placeholder="Gõ tên hạng mục..." autocomplete="off">
+                       <select class="cost-unit-inline" data-id="${item.id}">
+                           ${UNITS.map(u => `<option value="${u}" ${item.unit===u?"selected":""}>${u}</option>`).join("")}
+                       </select>`
                 }
             </td>
             <td class="td-qty text-right num-cell">${formatNum(totalQty)}</td>
-            <td class="td-price text-right num-cell">${formatNumber(unitPrice)}</td>
+            <td class="td-price text-right num-cell">
+                ${isCustom && isUnknownKey
+                    ? `<input type="number" class="cost-price-input" data-id="${item.id}" value="${unitPrice}" min="0" step="1000" placeholder="0">`
+                    : formatNumber(unitPrice)
+                }
+            </td>
             <td class="td-total text-right num-cell cost-total-cell">${formatNumber(subtotal)}</td>
             <td class="td-action no-print"><button class="btn-del-item btn btn-danger btn-xs" data-id="${item.id}">×</button></td>
         `;
@@ -2712,6 +2779,7 @@ function wireCostTableEvents(tbody) {
 
     tbody.querySelectorAll(".btn-del-item").forEach(btn => {
         btn.addEventListener("click", () => {
+            pushUndo();
             constructionItems = constructionItems.filter(i => i.id !== btn.dataset.id);
             saveConstructionItems();
             updateConstructionCostSection();
@@ -2720,6 +2788,7 @@ function wireCostTableEvents(tbody) {
 
     tbody.querySelectorAll(".btn-add-row").forEach(btn => {
         btn.addEventListener("click", () => {
+            pushUndo();
             const item = constructionItems.find(i => i.id === btn.dataset.itemId);
             if (item) { item.rows.push({ desc:"", n:1, l:"", w:"", h:"", hs:1 }); saveConstructionItems(); updateConstructionCostSection(); }
         });
@@ -2727,11 +2796,13 @@ function wireCostTableEvents(tbody) {
 
     tbody.querySelectorAll(".btn-del-row").forEach(btn => {
         btn.addEventListener("click", () => {
+            pushUndo();
             const item = constructionItems.find(i => i.id === btn.dataset.itemId);
             if (item && item.rows.length > 1) { item.rows.splice(parseInt(btn.dataset.rowIdx), 1); saveConstructionItems(); updateConstructionCostSection(); }
         });
     });
 
+    // Cell input: update data + recalculate row qty live
     tbody.querySelectorAll(".detail-input, .detail-select").forEach(input => {
         input.addEventListener("focus", function() { if (this.type === "number") this.select(); });
         input.addEventListener("input", (e) => {
@@ -2742,7 +2813,9 @@ function wireCostTableEvents(tbody) {
             const field = e.target.dataset.field;
             item.rows[ri][field] = field === "desc" ? e.target.value : (parseFloat(e.target.value) || (field === "hs" ? 1 : ""));
             saveConstructionItems();
-            const dims = (WORK_ITEM_DIMS[item.workItemKey] || {}).dims || [];
+            const dims = WORK_ITEM_DIMS[item.workItemKey]
+                ? (WORK_ITEM_DIMS[item.workItemKey].dims || [])
+                : ["l","w","h"];
             const rowQty = calcRowQty(item.rows[ri], dims);
             const cells = tr.querySelectorAll("td");
             if (cells[8]) { cells[8].innerText = formatNum(rowQty); cells[8].className = `text-right num-cell ${rowQty < 0 ? "text-red" : ""}`; }
@@ -2750,24 +2823,53 @@ function wireCostTableEvents(tbody) {
         });
     });
 
-    tbody.querySelectorAll(".cost-name-select").forEach(sel => {
-        sel.addEventListener("change", (e) => {
+    // Gap 1: Free-form item name with datalist autocomplete
+    tbody.querySelectorAll(".cost-name-input").forEach(input => {
+        input.addEventListener("change", (e) => {
             const item = constructionItems.find(i => i.id === e.target.dataset.id);
             if (!item) return;
-            item.workItemKey = e.target.value;
-            item.name = (WORK_ITEM_DIMS[item.workItemKey] || {}).label || item.workItemKey;
-            item.unit = (WORK_ITEM_DIMS[item.workItemKey] || {}).unit || "m²";
-            item.unitPrice = workItemPrices[item.workItemKey] || 0;
+            const typed = e.target.value.trim();
+            const match = Object.entries(WORK_ITEM_DIMS).find(([, v]) => v.label === typed);
+            if (match) {
+                item.workItemKey = match[0];
+                item.name = match[1].label;
+                item.unit = match[1].unit;
+                item.unitPrice = workItemPrices[item.workItemKey] || 0;
+            } else {
+                item.workItemKey = "custom";
+                item.name = typed || "Hạng mục mới";
+            }
             saveConstructionItems();
             updateConstructionCostSection();
         });
     });
 
-    // Expression evaluator: blur on number inputs → evaluate "3.5*2.4" → 8.4
+    // Gap 1: Unit selector for custom items
+    tbody.querySelectorAll(".cost-unit-inline").forEach(sel => {
+        sel.addEventListener("change", (e) => {
+            const item = constructionItems.find(i => i.id === e.target.dataset.id);
+            if (!item) return;
+            item.unit = e.target.value;
+            saveConstructionItems();
+        });
+    });
+
+    // Gap 1: Inline unit price input for fully custom items
+    tbody.querySelectorAll(".cost-price-input").forEach(input => {
+        input.addEventListener("focus", function() { this.select(); });
+        input.addEventListener("input", (e) => {
+            const item = constructionItems.find(i => i.id === e.target.dataset.id);
+            if (!item) return;
+            item.unitPrice = parseFloat(e.target.value) || 0;
+            saveConstructionItems();
+            updateItemHeaderQty(item);
+        });
+    });
+
+    // Expression evaluator: blur → evaluate "3.5*2.4" → 8.4
     tbody.querySelectorAll(".dim-input, .n-input").forEach(input => {
         input.addEventListener("blur", function() {
-            const raw = this.value.trim();
-            const result = safeEval(raw);
+            const result = safeEval(this.value.trim());
             if (result !== null) {
                 this.value = result;
                 this.dispatchEvent(new Event("input", { bubbles: true }));
@@ -2775,16 +2877,42 @@ function wireCostTableEvents(tbody) {
             }
         });
         input.addEventListener("input", function() {
-            const hasOp = /[+\-*\/()]/.test(this.value);
-            this.classList.toggle("expr-active", hasOp);
-        });
-        input.addEventListener("focus", function() {
-            const raw = this.dataset.expr || "";
-            if (raw) this.value = raw;
+            this.classList.toggle("expr-active", /[+\-*\/()]/.test(this.value));
         });
     });
 
-    // Tab → next cell; Tab on last cell → next row or new row; Enter → new row
+    // Gap 2: Paste from Excel/G8 — tab-separated values fill cells across columns/rows
+    tbody.querySelectorAll(".detail-input").forEach(input => {
+        input.addEventListener("paste", function(e) {
+            const text = (e.clipboardData || window.clipboardData).getData("text");
+            if (!text.includes("\t") && !text.includes("\n")) return;
+            e.preventDefault();
+            const tr = this.closest("tr");
+            const item = constructionItems.find(i => i.id === tr.dataset.itemId);
+            if (!item) return;
+            pushUndo();
+            const fieldOrder = ["desc","l","w","h","n"];
+            const startRi = parseInt(tr.dataset.rowIdx);
+            const startCol = fieldOrder.indexOf(this.dataset.field);
+            const pastedRows = text.trim().split(/\r?\n/).map(r => r.split("\t"));
+            pastedRows.forEach((cols, rowOffset) => {
+                const ri = startRi + rowOffset;
+                while (item.rows.length <= ri) item.rows.push({ desc:"", n:1, l:"", w:"", h:"", hs:1 });
+                cols.forEach((val, colOffset) => {
+                    const fi = startCol + colOffset;
+                    if (fi >= fieldOrder.length) return;
+                    const field = fieldOrder[fi];
+                    const clean = val.trim().replace(/,/g, ".");
+                    item.rows[ri][field] = field === "desc" ? clean : (parseFloat(clean) || "");
+                });
+            });
+            saveConstructionItems();
+            updateConstructionCostSection();
+            showToast(`✓ Đã dán ${pastedRows.length} dòng từ clipboard`);
+        });
+    });
+
+    // Tab → next enabled cell; Tab at row end → next row or new row; Enter → new row
     tbody.querySelectorAll(".detail-input:not([disabled])").forEach(input => {
         input.addEventListener("keydown", function(e) {
             const tr = this.closest("tr");
@@ -2793,7 +2921,8 @@ function wireCostTableEvents(tbody) {
 
             if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault();
-                item.rows.push({ desc: "", n: 1, l: "", w: "", h: "", hs: 1 });
+                pushUndo();
+                item.rows.push({ desc:"", n:1, l:"", w:"", h:"", hs:1 });
                 saveConstructionItems();
                 updateConstructionCostSection();
                 setTimeout(() => {
@@ -2805,8 +2934,7 @@ function wireCostTableEvents(tbody) {
 
             if (e.key === "Tab" && !e.shiftKey) {
                 const rowInputs = [...tr.querySelectorAll(".detail-input:not([disabled])")];
-                const isLast = rowInputs.indexOf(this) === rowInputs.length - 1;
-                if (!isLast) return;
+                if (rowInputs.indexOf(this) < rowInputs.length - 1) return;
                 e.preventDefault();
                 const ri = parseInt(tr.dataset.rowIdx);
                 const allRows = [...document.querySelectorAll(`#costTableBody tr.cost-detail-row[data-item-id="${item.id}"]`)];
@@ -2814,7 +2942,8 @@ function wireCostTableEvents(tbody) {
                 if (nextRow) {
                     nextRow.querySelector(".desc-input")?.focus();
                 } else {
-                    item.rows.push({ desc: "", n: 1, l: "", w: "", h: "", hs: 1 });
+                    pushUndo();
+                    item.rows.push({ desc:"", n:1, l:"", w:"", h:"", hs:1 });
                     saveConstructionItems();
                     updateConstructionCostSection();
                     setTimeout(() => {
