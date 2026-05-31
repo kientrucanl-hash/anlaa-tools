@@ -67,6 +67,9 @@ document.addEventListener("DOMContentLoaded", () => {
     // 6.6 Init Construction Cost Section
     initConstructionCostSection();
 
+    // 6.7 Init Off-Canvas Sidebar for Mobile Responsive Layout
+    initOffCanvasSidebar();
+
     // 7. Initial UI calculation update
     triggerAllPreviews();
     updateBOQTable();
@@ -74,6 +77,43 @@ document.addEventListener("DOMContentLoaded", () => {
     // Log project loaded
     logAuditEvent("LOAD_PROJECT", `Dự án "${currentProject.name}" được tải thành công với ${currentProject.items.length} hạng mục.`);
 });
+
+/**
+ * Initializes off-canvas hamburger drawer sidebar for mobile viewports
+ */
+function initOffCanvasSidebar() {
+    const sidebarToggle = document.getElementById("sidebarToggle");
+    const sidebarClose = document.getElementById("sidebarClose");
+    const sidebarOverlay = document.getElementById("sidebarOverlay");
+    const appSidebar = document.getElementById("appSidebar");
+    const tabBtns = document.querySelectorAll(".sidebar-tab-nav .tab-btn");
+
+    if (!sidebarToggle || !sidebarClose || !sidebarOverlay || !appSidebar) return;
+
+    // Open sidebar
+    sidebarToggle.addEventListener("click", () => {
+        appSidebar.classList.add("active");
+        sidebarOverlay.classList.add("active");
+    });
+
+    // Close sidebar
+    const closeSidebar = () => {
+        appSidebar.classList.remove("active");
+        sidebarOverlay.classList.remove("active");
+    };
+
+    sidebarClose.addEventListener("click", closeSidebar);
+    sidebarOverlay.addEventListener("click", closeSidebar);
+
+    // Auto-close sidebar on mobile when tab switcher is clicked
+    tabBtns.forEach(btn => {
+        btn.addEventListener("click", () => {
+            if (window.innerWidth <= 1200) {
+                closeSidebar();
+            }
+        });
+    });
+}
 
 /**
  * Initializes project state and prices from localStorage
@@ -2651,6 +2691,17 @@ function formatNum(v) {
     return Math.abs(n) < 0.005 ? "0" : (n % 1 === 0 ? n.toFixed(0) : n.toFixed(2));
 }
 
+// Evaluate simple math expressions like "3.5*2.4" or "(5+2)/3"
+function safeEval(expr) {
+    const s = String(expr || "").trim().replace(/,/g, ".");
+    if (!s || !/[+\-*\/()]/.test(s)) return null;
+    if (!/^[\d\s.+\-*\/()]+$/.test(s)) return null;
+    try {
+        const v = Function('"use strict";return(' + s + ')')();
+        return (typeof v === "number" && isFinite(v) && v >= 0) ? Math.round(v * 1e6) / 1e6 : null;
+    } catch { return null; }
+}
+
 function wireCostTableEvents(tbody) {
     tbody.querySelectorAll(".btn-expand").forEach(btn => {
         btn.addEventListener("click", () => {
@@ -2709,6 +2760,69 @@ function wireCostTableEvents(tbody) {
             item.unitPrice = workItemPrices[item.workItemKey] || 0;
             saveConstructionItems();
             updateConstructionCostSection();
+        });
+    });
+
+    // Expression evaluator: blur on number inputs → evaluate "3.5*2.4" → 8.4
+    tbody.querySelectorAll(".dim-input, .n-input").forEach(input => {
+        input.addEventListener("blur", function() {
+            const raw = this.value.trim();
+            const result = safeEval(raw);
+            if (result !== null) {
+                this.value = result;
+                this.dispatchEvent(new Event("input", { bubbles: true }));
+                this.classList.remove("expr-active");
+            }
+        });
+        input.addEventListener("input", function() {
+            const hasOp = /[+\-*\/()]/.test(this.value);
+            this.classList.toggle("expr-active", hasOp);
+        });
+        input.addEventListener("focus", function() {
+            const raw = this.dataset.expr || "";
+            if (raw) this.value = raw;
+        });
+    });
+
+    // Tab → next cell; Tab on last cell → next row or new row; Enter → new row
+    tbody.querySelectorAll(".detail-input:not([disabled])").forEach(input => {
+        input.addEventListener("keydown", function(e) {
+            const tr = this.closest("tr");
+            const item = constructionItems.find(i => i.id === tr.dataset.itemId);
+            if (!item) return;
+
+            if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                item.rows.push({ desc: "", n: 1, l: "", w: "", h: "", hs: 1 });
+                saveConstructionItems();
+                updateConstructionCostSection();
+                setTimeout(() => {
+                    const rows = document.querySelectorAll(`#costTableBody tr.cost-detail-row[data-item-id="${item.id}"]`);
+                    rows[rows.length - 1]?.querySelector(".desc-input")?.focus();
+                }, 30);
+                return;
+            }
+
+            if (e.key === "Tab" && !e.shiftKey) {
+                const rowInputs = [...tr.querySelectorAll(".detail-input:not([disabled])")];
+                const isLast = rowInputs.indexOf(this) === rowInputs.length - 1;
+                if (!isLast) return;
+                e.preventDefault();
+                const ri = parseInt(tr.dataset.rowIdx);
+                const allRows = [...document.querySelectorAll(`#costTableBody tr.cost-detail-row[data-item-id="${item.id}"]`)];
+                const nextRow = allRows[ri + 1];
+                if (nextRow) {
+                    nextRow.querySelector(".desc-input")?.focus();
+                } else {
+                    item.rows.push({ desc: "", n: 1, l: "", w: "", h: "", hs: 1 });
+                    saveConstructionItems();
+                    updateConstructionCostSection();
+                    setTimeout(() => {
+                        const rows = document.querySelectorAll(`#costTableBody tr.cost-detail-row[data-item-id="${item.id}"]`);
+                        rows[rows.length - 1]?.querySelector(".desc-input")?.focus();
+                    }, 30);
+                }
+            }
         });
     });
 }

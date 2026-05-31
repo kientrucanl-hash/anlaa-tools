@@ -92,6 +92,24 @@ input, select, textarea, button {
     grid-template-columns: 280px 1fr;
     min-height: 100vh;
 }
+.sidebar-header-wrapper {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+}
+
+.sidebar-toggle-btn {
+    display: none !important;
+}
+
+.sidebar-close-btn {
+    display: none !important;
+}
+
+.sidebar-overlay {
+    display: none;
+}
 
 /* --- Sidebar Navigation Panel (Glassmorphism) --- */
 .app-sidebar {
@@ -1160,18 +1178,96 @@ input, select, textarea, button {
 /* ==========================================================================
    RESPONSIVE OVERRIDES (MOBILE & TABLET VIEW)
    ========================================================================== */
-@media (max-width: 1024px) {
+@media (max-width: 1200px) {
     .app-container {
-        grid-template-columns: 1fr;
+        grid-template-columns: 1fr !important;
     }
     
     .app-sidebar {
-        height: auto !important;
-        overflow: visible !important; /* Force reset desktop fixed layout constraints */
-        position: relative;
-        border-right: none;
-        border-bottom: 1px solid var(--border-glass);
-        padding: 20px;
+        position: fixed !important;
+        top: 0 !important;
+        left: -290px !important; /* Hide sidebar off-screen left by default */
+        width: 280px !important;
+        height: 100vh !important;
+        z-index: 1000 !important;
+        background: rgba(17, 19, 29, 0.98) !important;
+        backdrop-filter: blur(24px) !important;
+        border-right: 1px solid var(--border-glass) !important;
+        border-bottom: none !important;
+        box-shadow: 10px 0 40px rgba(0, 0, 0, 0.5) !important;
+        transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        display: flex !important;
+        flex-direction: column !important;
+        justify-content: space-between !important;
+        padding: 24px !important;
+        overflow-y: hidden !important;
+    }
+    
+    .app-sidebar.active {
+        left: 0 !important; /* Slide in on active */
+    }
+    
+    /* Toggle & Close Buttons visible */
+    .sidebar-toggle-btn {
+        display: flex !important;
+        align-items: center;
+        justify-content: center;
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid var(--border-glass);
+        border-radius: 8px;
+        width: 38px;
+        height: 38px;
+        color: var(--text-secondary);
+        cursor: pointer;
+        transition: var(--transition-smooth);
+        margin-right: 8px;
+    }
+    
+    .sidebar-toggle-btn:hover {
+        background: rgba(255, 255, 255, 0.08);
+        border-color: rgba(0, 242, 254, 0.3);
+        color: var(--border-focus);
+    }
+    
+    .sidebar-close-btn {
+        display: flex !important;
+        align-items: center;
+        justify-content: center;
+        background: rgba(255, 255, 255, 0.02);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        color: var(--text-muted);
+        cursor: pointer;
+        width: 32px;
+        height: 32px;
+        border-radius: 8px;
+        transition: var(--transition-smooth);
+    }
+    
+    .sidebar-close-btn:hover {
+        color: #ff5252;
+        background: rgba(255, 82, 82, 0.1);
+        border-color: rgba(255, 82, 82, 0.2);
+    }
+    
+    /* Overlay visible and animated */
+    .sidebar-overlay {
+        display: block !important;
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        width: 100vw !important;
+        height: 100vh !important;
+        background: rgba(0, 0, 0, 0.6) !important;
+        backdrop-filter: blur(4px) !important;
+        z-index: 999 !important;
+        opacity: 0 !important;
+        pointer-events: none !important;
+        transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    }
+    
+    .sidebar-overlay.active {
+        opacity: 1 !important;
+        pointer-events: auto !important;
     }
     
     .items-manager {
@@ -1183,22 +1279,23 @@ input, select, textarea, button {
     }
     
     .app-main {
-        padding: 20px;
-        height: auto;
-        overflow-y: visible;
+        padding: 20px !important;
+        height: auto !important;
+        overflow-y: visible !important;
+        padding-bottom: 120px !important;
     }
     
     .workspace-grid {
-        grid-template-columns: 1fr;
+        grid-template-columns: 1fr !important;
     }
     
     .boq-table-container {
-        grid-column: span 12;
+        grid-column: span 12 !important;
     }
     
     .chart-container-wrapper {
-        grid-column: span 12;
-        margin-top: 20px;
+        grid-column: span 12 !important;
+        margin-top: 20px !important;
     }
     
     /* Responsive Floating Summary Bar */
@@ -1211,6 +1308,60 @@ input, select, textarea, button {
 }
 
 @media (max-width: 768px) {
+    /* Premium Mobile Header Overrides */
+    .app-header {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 12px !important;
+        padding-bottom: 16px !important;
+    }
+    
+    .header-welcome {
+        text-align: left !important;
+    }
+    
+    .header-welcome h2 {
+        font-size: 18px !important;
+        line-height: 1.3 !important;
+    }
+    
+    .header-welcome p {
+        font-size: 11px !important;
+        margin-top: 4px !important;
+    }
+    
+    .header-title-block {
+        flex-direction: row !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+        flex-wrap: wrap !important;
+        gap: 8px !important;
+    }
+    
+    .header-title-block h2 {
+        flex: 1 !important;
+        min-width: 180px !important;
+    }
+    
+    .header-actions {
+        display: flex !important;
+        flex-wrap: wrap !important;
+        align-items: center !important;
+        justify-content: flex-start !important;
+        gap: 8px !important;
+        width: 100% !important;
+        border-top: 1px dashed rgba(255, 255, 255, 0.05) !important;
+        padding-top: 12px !important;
+    }
+    
+    .header-actions .btn, 
+    .header-actions .location-badge, 
+    .header-actions .user-badge {
+        font-size: 11px !important;
+        padding: 6px 10px !important;
+        height: auto !important;
+    }
+
     .grid-form {
         gap: 12px;
     }
@@ -2240,6 +2391,7 @@ input:checked + .slider:before {
 }
 .detail-input:focus { border-color: var(--border-focus); outline: none; background: rgba(0,242,254,0.06); }
 .detail-input:disabled { opacity: 0.3; cursor: not-allowed; }
+.detail-input.expr-active { border-color: #f59e0b !important; background: rgba(245,158,11,0.08) !important; color: #fbbf24; }
 
 .desc-input { min-width: 120px; }
 .dim-input { width: 52px; text-align: right; }
