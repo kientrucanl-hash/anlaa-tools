@@ -70,7 +70,16 @@ Có hệ thống tài khoản user/admin + workflow phê duyệt dự án (draft
 - Thêm endpoint mới → phải qua `requireAuth` hoặc `requireAdmin`
 - Thêm input mới → phải qua joi schema
 
+## Môi trường & Deploy
+
+- **Production URL**: https://tool.kientrucanl.vn
+- **VPS Server**: `ubuntu@51.79.250.113`
+- **Reverse Proxy**: Nginx trên VPS (`/etc/nginx/sites-available/tool`) chuyển tiếp về `http://127.0.0.1:4000`
+- **Docker Compose**: Ứng dụng chạy dưới dạng container `anlaa-tools-anlc-1` trên cổng `4000` của VPS
+- **Quy trình Deploy**: Chạy script `./deploy-vps.ps1` để tự động nén mã nguồn, SCP lên VPS, giải nén và build lại Docker container.
+
 ## Khởi động nhanh
+
 
 ```bash
 cd server
