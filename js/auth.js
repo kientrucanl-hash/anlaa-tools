@@ -39,6 +39,16 @@ function updateUserBadge(user) {
     if (adminBtn && user.role === 'admin') {
         adminBtn.style.display = '';
     }
+    
+    // Update Sidebar User Profile Card mini
+    const sidebarUserName = document.getElementById('sidebarUserName');
+    if (sidebarUserName) {
+        sidebarUserName.textContent = `${user.role === 'admin' ? '⚡ ' : ''}${user.username}`;
+    }
+    const sidebarUserRole = document.querySelector('.sidebar-user-card .user-role');
+    if (sidebarUserRole) {
+        sidebarUserRole.textContent = user.role === 'admin' ? 'Quản trị viên' : 'KTS / Người dự toán';
+    }
 }
 
 async function initAuth() {
@@ -99,6 +109,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const logoutBtn = document.getElementById('logoutBtn');
     if (logoutBtn) logoutBtn.addEventListener('click', handleLogout);
+
+    const sidebarLogoutBtn = document.getElementById('sidebarLogoutBtn');
+    if (sidebarLogoutBtn) sidebarLogoutBtn.addEventListener('click', handleLogout);
 
     // Show password toggle
     const togglePwd = document.getElementById('togglePassword');

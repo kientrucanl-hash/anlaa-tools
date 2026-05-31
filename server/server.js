@@ -61,18 +61,32 @@ app.get('/health', (_, res) => {
     res.json({ status: 'ok', uptime: Math.floor(process.uptime()) });
 });
 
-// Serve static frontend files from parent directory
-app.use(express.static(path.join(__dirname, '..')));
+// Serve static frontend files from parent directory with HTML cache control
+app.use(express.static(path.join(__dirname, '..'), {
+    setHeaders: (res, filePath) => {
+        const baseName = path.basename(filePath);
+        if (baseName === 'index.html' || baseName.endsWith('.html')) {
+            res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+            res.setHeader('Pragma', 'no-cache');
+            res.setHeader('Expires', '0');
+        }
+    }
+}));
 
 // API Routes
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/projects', require('./routes/projects'));
 
-// SPA fallback — serve index.html for non-API routes
+// SPA fallback — serve index.html for non-API routes with explicit cache-control
 app.get('*', (req, res) => {
     if (req.path.startsWith('/api/')) {
         return res.status(404).json({ error: 'API endpoint not found' });
     }
+    res.set({
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
+    });
     res.sendFile(path.join(__dirname, '..', 'index.html'));
 });
 
