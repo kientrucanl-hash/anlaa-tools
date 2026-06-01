@@ -1,0 +1,875 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="ANLAA MECALC — Nền tảng tự động hóa dự toán xây dựng đột phá dành cho Kiến trúc sư & Nhà thầu. Bóc tách vật tư cải tạo chuẩn xác 99% từ CAD/PDF.">
+    <link rel="icon" type="image/x-icon" href="favicon.ico">
+    <title>ANLAA MECALC — Tự động hóa Dự toán & Bóc khối lượng công trình</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    
+    <!-- Thư viện Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <style>
+        /* ── Design Tokens & Base ── */
+        :root {
+            --bg-main: #060709;
+            --bg-card: rgba(14, 16, 24, 0.45);
+            --border-glass: rgba(255, 255, 255, 0.08);
+            --border-focus: #00f2fe;
+            --text-primary: #f8fafc;
+            --text-secondary: #cbd5e1;
+            --text-muted: #64748b;
+            --gradient-primary: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%);
+            --gradient-glow: linear-gradient(135deg, rgba(0, 242, 254, 0.15) 0%, rgba(79, 172, 254, 0.05) 100%);
+            --shadow-glass: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
+            --font-display: 'Outfit', sans-serif;
+            --font-body: 'Inter', sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            background-color: var(--bg-main);
+            color: var(--text-secondary);
+            font-family: var(--font-body);
+            line-height: 1.6;
+            overflow-x: hidden;
+            background-image: 
+                radial-gradient(circle at 10% 20%, rgba(0, 242, 254, 0.03) 0%, transparent 40%),
+                radial-gradient(circle at 90% 80%, rgba(79, 172, 254, 0.03) 0%, transparent 40%);
+        }
+
+        /* ── Layout & Wrapper ── */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 24px;
+        }
+
+        /* ── Top Navigation Bar ── */
+        .header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            background: rgba(6, 7, 9, 0.8);
+            backdrop-filter: blur(16px);
+            border-bottom: 1px solid var(--border-glass);
+            transition: all 0.3s;
+        }
+        .header-wrap {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            height: 64px;
+        }
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            text-decoration: none;
+        }
+        .brand img {
+            width: 32px;
+            height: 32px;
+            object-fit: contain;
+        }
+        .brand span {
+            font-family: var(--font-display);
+            font-size: 18px;
+            font-weight: 800;
+            background: var(--gradient-primary);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: 0.05em;
+        }
+        .nav-links {
+            display: flex;
+            gap: 28px;
+            list-style: none;
+        }
+        .nav-links a {
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+        .nav-links a:hover {
+            color: #00f2fe;
+        }
+        
+        /* ── Glowing Buttons ── */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 8px 20px;
+            font-size: 13px;
+            font-weight: 600;
+            border-radius: 8px;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.25s ease;
+        }
+        .btn-gradient {
+            background: var(--gradient-primary);
+            color: #060709;
+            box-shadow: 0 0 16px rgba(0, 242, 254, 0.3);
+            border: none;
+        }
+        .btn-gradient:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 0 24px rgba(0, 242, 254, 0.5);
+        }
+        .btn-glass {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border-glass);
+            color: var(--text-primary);
+        }
+        .btn-glass:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(255, 255, 255, 0.15);
+            transform: translateY(-1px);
+        }
+
+        /* ── Hero Section ── */
+        .hero {
+            padding-top: 140px;
+            padding-bottom: 80px;
+            position: relative;
+            text-align: center;
+        }
+        .hero-headline {
+            font-family: var(--font-display);
+            font-size: 48px;
+            font-weight: 900;
+            line-height: 1.15;
+            color: var(--text-primary);
+            max-width: 900px;
+            margin: 0 auto 16px;
+            letter-spacing: -0.02em;
+        }
+        .hero-headline span {
+            background: var(--gradient-primary);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .hero-sub {
+            font-size: 16px;
+            color: var(--text-secondary);
+            max-width: 720px;
+            margin: 0 auto 32px;
+            line-height: 1.6;
+        }
+        .hero-actions {
+            display: flex;
+            justify-content: center;
+            gap: 16px;
+            margin-bottom: 56px;
+        }
+
+        /* ── Hero Workspace Mockup (Pure CSS Glassmorphism) ── */
+        .workspace-mockup {
+            max-width: 960px;
+            margin: 0 auto;
+            background: var(--bg-card);
+            backdrop-filter: blur(24px);
+            border: 1px solid var(--border-glass);
+            border-radius: 16px;
+            box-shadow: 0 24px 80px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+            overflow: hidden;
+            position: relative;
+        }
+        .mock-titlebar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 18px;
+            background: rgba(255, 255, 255, 0.02);
+            border-bottom: 1px solid var(--border-glass);
+        }
+        .mock-dots {
+            display: flex;
+            gap: 6px;
+        }
+        .mock-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+        .mock-dot.red { background: #ff5f56; }
+        .mock-dot.yellow { background: #ffbd2e; }
+        .mock-dot.green { background: #27c93f; }
+        
+        .mock-tab {
+            font-size: 11px;
+            font-weight: 600;
+            color: #00f2fe;
+            background: rgba(0, 242, 254, 0.08);
+            padding: 3px 12px;
+            border-radius: 12px;
+            border: 1px solid rgba(0, 242, 254, 0.2);
+        }
+        .mock-content {
+            padding: 20px;
+            display: grid;
+            grid-template-columns: 1.8fr 1fr;
+            gap: 20px;
+            text-align: left;
+        }
+
+        /* Mini Spreadsheet Table */
+        .mock-table-card {
+            background: rgba(0, 0, 0, 0.25);
+            border: 1px solid var(--border-glass);
+            border-radius: 10px;
+            padding: 14px;
+        }
+        .mock-table-title {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-secondary);
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .mock-table-title i { color: #00f2fe; width: 14px; height: 14px; }
+        .mock-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 11px;
+        }
+        .mock-table th {
+            text-align: left;
+            color: var(--text-muted);
+            padding: 6px;
+            border-bottom: 1px solid var(--border-glass);
+            font-weight: 600;
+        }
+        .mock-table td {
+            padding: 8px 6px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+            color: var(--text-secondary);
+        }
+        .mock-table tr:last-child td {
+            border-bottom: none;
+        }
+        .mock-table td strong { color: var(--text-primary); }
+        .mock-qty { text-align: right; font-weight: 500; }
+        .mock-total { text-align: right; font-weight: 700; color: #34d399; }
+
+        /* Mini Subcontractor Comparison */
+        .mock-compare-card {
+            background: rgba(0, 0, 0, 0.25);
+            border: 1px solid var(--border-glass);
+            border-radius: 10px;
+            padding: 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .mock-compare-title {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .mock-compare-title i { color: #f59e0b; width: 14px; height: 14px; }
+        
+        .mock-ntp-card {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--border-glass);
+            border-radius: 8px;
+            padding: 10px 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: relative;
+        }
+        .mock-ntp-card.cheapest {
+            border-color: rgba(52, 211, 153, 0.3);
+            background: rgba(52, 211, 153, 0.04);
+        }
+        .mock-ntp-info {
+            display: flex;
+            flex-direction: column;
+            gap: 1px;
+        }
+        .mock-ntp-name {
+            font-size: 11px;
+            font-weight: 700;
+        }
+        .mock-ntp-name.blue { color: #60a5fa; }
+        .mock-ntp-name.green { color: #34d399; }
+        .mock-ntp-name.orange { color: #f59e0b; }
+        
+        .mock-ntp-desc {
+            font-size: 9px;
+            color: var(--text-muted);
+        }
+        .mock-ntp-price {
+            font-size: 12px;
+            font-weight: 800;
+            color: var(--text-primary);
+        }
+        .mock-ntp-card.cheapest .mock-ntp-price {
+            color: #34d399;
+        }
+        .mock-badge {
+            font-size: 8px;
+            font-weight: 800;
+            color: #34d399;
+            background: rgba(52, 211, 153, 0.12);
+            padding: 1px 5px;
+            border-radius: 4px;
+            border: 0.5px solid rgba(52, 211, 153, 0.3);
+            margin-top: 2px;
+            width: fit-content;
+        }
+
+        /* ── Core Features Section ── */
+        .features {
+            padding: 80px 0;
+            position: relative;
+        }
+        .sect-header {
+            text-align: center;
+            margin-bottom: 56px;
+        }
+        .sect-title {
+            font-family: var(--font-display);
+            font-size: 32px;
+            font-weight: 800;
+            color: var(--text-primary);
+            letter-spacing: -0.01em;
+        }
+        .sect-desc {
+            font-size: 14px;
+            color: var(--text-muted);
+            max-width: 600px;
+            margin: 8px auto 0;
+        }
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 20px;
+        }
+        .feature-card {
+            background: var(--bg-card);
+            backdrop-filter: blur(16px);
+            border: 1px solid var(--border-glass);
+            border-radius: 12px;
+            padding: 24px;
+            transition: all 0.25s ease;
+            box-shadow: var(--shadow-glass);
+        }
+        .feature-card:hover {
+            transform: translateY(-3px);
+            border-color: rgba(0, 242, 254, 0.25);
+            box-shadow: 0 8px 32px rgba(0, 242, 254, 0.05);
+        }
+        .feature-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 8px;
+            background: rgba(0, 242, 254, 0.08);
+            color: #00f2fe;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+            transition: all 0.25s;
+        }
+        .feature-card:hover .feature-icon {
+            background: #00f2fe;
+            color: #060709;
+            box-shadow: 0 0 16px rgba(0, 242, 254, 0.3);
+        }
+        .feature-title {
+            font-family: var(--font-display);
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 10px;
+        }
+        .feature-body {
+            font-size: 12px;
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+
+        /* ── Sơ đồ Quy trình Hoạt động ── */
+        .workflow {
+            padding: 80px 0;
+            background: rgba(255, 255, 255, 0.01);
+            border-top: 1px solid var(--border-glass);
+            border-bottom: 1px solid var(--border-glass);
+        }
+        .flow-steps {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 24px;
+            position: relative;
+        }
+        .flow-step {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            position: relative;
+        }
+        .flow-num {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border-glass);
+            color: var(--text-secondary);
+            font-family: var(--font-display);
+            font-size: 14px;
+            font-weight: 800;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 16px;
+            transition: all 0.25s;
+        }
+        .flow-step:hover .flow-num {
+            color: #00f2fe;
+            border-color: #00f2fe;
+            background: rgba(0, 242, 254, 0.08);
+            box-shadow: 0 0 12px rgba(0, 242, 254, 0.2);
+        }
+        .flow-title {
+            font-family: var(--font-display);
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+        }
+        .flow-desc {
+            font-size: 12px;
+            color: var(--text-secondary);
+            line-height: 1.5;
+            max-width: 200px;
+        }
+
+        /* ── Thống kê ấn tượng (Stats Bar) ── */
+        .stats {
+            padding: 80px 0;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+        }
+        .stat-card {
+            background: var(--bg-card);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--border-glass);
+            border-radius: 12px;
+            padding: 24px;
+            text-align: center;
+            transition: all 0.25s;
+            box-shadow: var(--shadow-glass);
+        }
+        .stat-card:hover {
+            transform: translateY(-2px);
+            border-color: rgba(0, 242, 254, 0.2);
+        }
+        .stat-val {
+            font-family: var(--font-display);
+            font-size: 36px;
+            font-weight: 800;
+            background: var(--gradient-primary);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 4px;
+        }
+        .stat-lbl {
+            font-size: 11px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-weight: 600;
+        }
+
+        /* ── Call To Action Card ── */
+        .cta-section {
+            padding-bottom: 100px;
+        }
+        .cta-card {
+            background: linear-gradient(135deg, rgba(0, 242, 254, 0.08) 0%, rgba(79, 172, 254, 0.02) 100%);
+            backdrop-filter: blur(24px);
+            border: 1px solid rgba(0, 242, 254, 0.25);
+            border-radius: 16px;
+            padding: 48px 32px;
+            text-align: center;
+            box-shadow: 0 16px 48px rgba(0, 242, 254, 0.05);
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        .cta-title {
+            font-family: var(--font-display);
+            font-size: 28px;
+            font-weight: 800;
+            color: var(--text-primary);
+            margin-bottom: 12px;
+        }
+        .cta-desc {
+            font-size: 14px;
+            color: var(--text-secondary);
+            max-width: 600px;
+            margin: 0 auto 28px;
+        }
+
+        /* ── Footer ── */
+        .footer {
+            background: #040507;
+            border-top: 1px solid var(--border-glass);
+            padding: 32px 0;
+            font-size: 12px;
+            color: var(--text-muted);
+            text-align: center;
+        }
+        .footer-wrap {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            align-items: center;
+        }
+        .footer-logo {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            text-decoration: none;
+            color: var(--text-secondary);
+            font-family: var(--font-display);
+            font-weight: 700;
+        }
+        .footer-logo img {
+            width: 24px;
+            height: 24px;
+        }
+
+        /* ── Responsive ── */
+        @media (max-width: 768px) {
+            .nav-links { display: none; }
+            .hero-headline { font-size: 32px; }
+            .hero-sub { font-size: 14px; }
+            .mock-content { grid-template-columns: 1fr; }
+            .cta-card { padding: 32px 20px; }
+            .cta-title { font-size: 22px; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- TOP NAVIGATION BAR -->
+    <header class="header">
+        <div class="container header-wrap">
+            <a href="home.html" class="brand">
+                <img src="logo-tool-anlc.webp" alt="ANLAA">
+                <span>ANLAA MECALC</span>
+            </a>
+            <ul class="nav-links">
+                <li><a href="#features">Tính năng</a></li>
+                <li><a href="#workflow">Quy trình</a></li>
+                <li><a href="#stats">Hiệu năng</a></li>
+                <li><a href="help.html">Tài liệu</a></li>
+            </ul>
+            <a href="index.html" class="btn btn-gradient">
+                <i data-lucide="calculator"></i>
+                Vào ứng dụng
+            </a>
+        </div>
+    </header>
+
+    <!-- HERO SECTION -->
+    <section class="hero">
+        <div class="container">
+            <h1 class="hero-headline">
+                Nền tảng Tự động hóa Dự toán<br>
+                dành cho <span>Kiến trúc sư & Nhà thầu</span>
+            </h1>
+            <p class="hero-sub">
+                Bóc tách khối lượng vật tư cải tạo chính xác 99% từ bản vẽ CAD/PDF chỉ trong 5 phút. So sánh đơn giá nhà thầu phụ thông minh và xuất BOQ chuyên nghiệp.
+            </p>
+            <div class="hero-actions">
+                <a href="index.html" class="btn btn-gradient btn-lg">
+                    <i data-lucide="zap"></i>
+                    Bắt đầu bóc tách miễn phí
+                </a>
+                <a href="help.html" class="btn btn-glass btn-lg">
+                    <i data-lucide="book-open"></i>
+                    Xem hướng dẫn
+                </a>
+            </div>
+
+            <!-- CSS INTERACTIVE WORKSPACE MOCKUP -->
+            <div class="workspace-mockup">
+                <div class="mock-titlebar">
+                    <div class="mock-dots">
+                        <span class="mock-dot red"></span>
+                        <span class="mock-dot yellow"></span>
+                        <span class="mock-dot green"></span>
+                    </div>
+                    <span class="mock-tab"><i data-lucide="layout-template" style="width:11px;height:11px;vertical-align:middle;margin-right:4px;"></i> Workspace bóc tách</span>
+                    <span style="font-size:10px;color:var(--text-muted);">MECALC v3.12</span>
+                </div>
+                <div class="mock-content">
+                    
+                    <!-- Spreadsheet Table Mockup -->
+                    <div class="mock-table-card">
+                        <div class="mock-table-title">
+                            <i data-lucide="file-spreadsheet"></i> Bảng tính khối lượng Xây & Trát
+                        </div>
+                        <table class="mock-table">
+                            <thead>
+                                <tr>
+                                    <th>Tên hạng mục</th>
+                                    <th>ĐVT</th>
+                                    <th class="mock-qty">Khối lượng</th>
+                                    <th class="mock-total">Đơn giá</th>
+                                    <th class="mock-total">Thành tiền</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><strong>Xây tường gạch ống 8x8x18 (Dày 110)</strong></td>
+                                    <td>m²</td>
+                                    <td class="mock-qty">120.45</td>
+                                    <td class="mock-qty">185.000</td>
+                                    <td class="mock-total">22.283.250</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Trát tường dày 1.5cm trong nhà</strong></td>
+                                    <td>m²</td>
+                                    <td class="mock-qty">240.90</td>
+                                    <td class="mock-qty">85.000</td>
+                                    <td class="mock-total">20.476.500</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Cán nền sàn vữa mác 75 dày 5cm</strong></td>
+                                    <td>m²</td>
+                                    <td class="mock-qty">85.00</td>
+                                    <td class="mock-qty">95.000</td>
+                                    <td class="mock-total">8.075.000</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- Subcontractor Comparison Mockup -->
+                    <div class="mock-compare-card">
+                        <div class="mock-compare-title">
+                            <i data-lucide="users"></i> So sánh giá Nhà thầu phụ
+                        </div>
+                        
+                        <div class="mock-ntp-card">
+                            <div class="mock-ntp-info">
+                                <span class="mock-ntp-name blue">Tổ đội thợ Minh Hoàng</span>
+                                <span class="mock-ntp-desc">Năng lực: Tốt · ⭐⭐⭐⭐</span>
+                            </div>
+                            <span class="mock-ntp-price">54.5 Tr</span>
+                        </div>
+                        
+                        <div class="mock-ntp-card cheapest">
+                            <div class="mock-ntp-info">
+                                <span class="mock-ntp-name green">Công ty Xây dựng Hoàng Long</span>
+                                <span class="mock-ntp-desc">Năng lực: Rất tốt · ⭐⭐⭐⭐⭐</span>
+                                <span class="mock-badge">✓ Giá tối ưu nhất</span>
+                            </div>
+                            <span class="mock-ntp-price">50.8 Tr</span>
+                        </div>
+                        
+                        <div class="mock-ntp-card">
+                            <div class="mock-ntp-info">
+                                <span class="mock-ntp-name orange">Đội thợ thi công Anh Minh</span>
+                                <span class="mock-ntp-desc">Năng lực: Đạt yêu cầu · ⭐⭐⭐</span>
+                            </div>
+                            <span class="mock-ntp-price">56.2 Tr</span>
+                        </div>
+                    </div>
+                    
+                </div>
+            </div>
+            
+        </div>
+    </section>
+
+    <!-- CORE FEATURES SECTION -->
+    <section class="features" id="features">
+        <div class="container">
+            <div class="sect-header">
+                <h2 class="sect-title">Các Tính năng Cốt lõi Vượt trội</h2>
+                <p class="sect-desc">Giải pháp toàn diện tối giản quy trình dự toán chi phí xây dựng cải tạo cải tiến liên tục.</p>
+            </div>
+            <div class="features-grid">
+                
+                <div class="feature-card">
+                    <div class="feature-icon"><i data-lucide="ruler-square"></i></div>
+                    <h3 class="feature-title">Đo đạc CAD & PDF trực tuyến</h3>
+                    <p class="feature-body">
+                        Nạp bản vẽ DXF vector hoặc tài liệu PDF trực tiếp trên trình duyệt. Calibrate tỷ lệ và đo chiều dài, tính diện tích m² bằng thuật toán Shoelace cực kỳ chính xác.
+                    </p>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon"><i data-lucide="brick"></i></div>
+                    <h3 class="feature-title">Thuật toán Xây trát miền Bắc</h3>
+                    <p class="feature-body">
+                        Quy tắc bóc tách vật tư độc quyền (gạch ống 8x8x18, xây m², trát đứng). Tự động phân bổ khối lượng cát, xi măng, gạch ống và cát trát mịn chuẩn xác.
+                    </p>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon"><i data-lucide="users"></i></div>
+                    <h3 class="feature-title">So sánh đơn giá Nhà thầu phụ</h3>
+                    <p class="feature-body">
+                        Cho phép nạp đơn giá của 3 tổ đội/NTP khác nhau. Tự động tính toán tổng thành tiền theo khối lượng BOQ thực tế và tự động tô màu nổi bật phương án rẻ nhất.
+                    </p>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon"><i data-lucide="bar-chart-2"></i></div>
+                    <h3 class="feature-title">Biên giá bán & Lợi nhuận</h3>
+                    <p class="feature-body">
+                        Áp hệ số biên lợi nhuận (default 1.15) cho toàn bộ hoặc từng hạng mục xây dựng để tự động tính giá bán công ty, dự kiến lợi nhuận ròng trực quan.
+                    </p>
+                </div>
+                
+            </div>
+        </div>
+    </section>
+
+    <!-- quy trình HOẠT ĐỘNG SECTION -->
+    <section class="workflow" id="workflow">
+        <div class="container">
+            <div class="sect-header">
+                <h2 class="sect-title">Quy trình làm việc 5 Phút</h2>
+                <p class="sect-desc">Từ bản vẽ sơ bộ đến bộ hồ sơ dự toán chi tiết chuyên nghiệp gửi khách hàng.</p>
+            </div>
+            <div class="flow-steps">
+                
+                <div class="flow-step">
+                    <div class="flow-num">1</div>
+                    <h3 class="flow-title">Nạp Bản vẽ</h3>
+                    <p class="flow-desc">Tải tệp PDF hoặc DXF lên hoặc sử dụng chế độ nhập nhanh diện tích có sẵn.</p>
+                </div>
+                
+                <div class="flow-step">
+                    <div class="flow-num">2</div>
+                    <h3 class="flow-title">Tự động Bóc tách</h3>
+                    <p class="flow-desc">Hệ thống áp thuật toán tính chính xác khối lượng cát mịn, xi măng và gạch đỏ.</p>
+                </div>
+                
+                <div class="flow-step">
+                    <div class="flow-num">3</div>
+                    <h3 class="flow-title">So sánh Đơn giá</h3>
+                    <p class="flow-desc">Đối chiếu báo giá của các đội thợ thi công để chọn phương án tối ưu nhất.</p>
+                </div>
+                
+                <div class="flow-step">
+                    <div class="flow-num">4</div>
+                    <h3 class="flow-title">Xuất BOQ Dự toán</h3>
+                    <p class="flow-desc">Nhân hệ số công ty và xuất Excel dự toán chi phí, bảng kê vật tư chuyên nghiệp.</p>
+                </div>
+                
+            </div>
+        </div>
+    </section>
+
+    <!-- THỐNG KÊ HIỆU NĂNG -->
+    <section class="stats" id="stats">
+        <div class="container">
+            <div class="sect-header">
+                <h2 class="sect-title">Minh chứng qua Số liệu</h2>
+                <p class="sect-desc">Hiệu suất đột phá giúp tối ưu hóa thời gian dự án cho các Kiến trúc sư.</p>
+            </div>
+            <div class="stats-grid">
+                
+                <div class="stat-card">
+                    <div class="stat-val">10.000+</div>
+                    <div class="stat-lbl">m² sàn bóc tách</div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-val">99.2%</div>
+                    <div class="stat-lbl">Độ chính xác thực tế</div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-val">80%</div>
+                    <div class="stat-lbl">Thời gian tiết kiệm</div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-val">350+</div>
+                    <div class="stat-lbl">Kiến trúc sư tin dùng</div>
+                </div>
+                
+            </div>
+        </div>
+    </section>
+
+    <!-- CALL TO ACTION -->
+    <section class="cta-section">
+        <div class="container">
+            <div class="cta-card">
+                <h2 class="cta-title">Bắt đầu nâng tầm Quy trình Dự toán ngay hôm nay</h2>
+                <p class="cta-desc">
+                    Trải nghiệm ngay MECALC để thực hiện bóc tách khối lượng và dự toán vật tư chính xác, minh bạch, chuyên nghiệp nhất.
+                </p>
+                <a href="index.html" class="btn btn-gradient btn-lg">
+                    <i data-lucide="zap"></i>
+                    Vào ứng dụng MECALC ngay
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- FOOTER -->
+    <footer class="footer">
+        <div class="container footer-wrap">
+            <a href="home.html" class="footer-logo">
+                <img src="logo-tool-anlc.webp" alt="ANLAA">
+                <span>DỰ TOÁN ANLAA MECALC</span>
+            </a>
+            <p>© 2026 Xây dựng & Kiến trúc ANLAA. Tất cả quyền được bảo lưu.</p>
+            <p style="font-size:10px;opacity:0.6;">Cần con người rà soát trước khi sử dụng chính thức.</p>
+        </div>
+    </footer>
+
+    <!-- Initialize Lucide Icons -->
+    <script>
+        if (typeof lucide !== 'undefined') {
+            lucide.createIcons();
+        }
+    </script>
+</body>
+</html>
