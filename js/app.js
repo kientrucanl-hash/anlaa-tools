@@ -276,6 +276,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // 6.7 Init Off-Canvas Sidebar for Mobile Responsive Layout
     initOffCanvasSidebar();
+    initNotifications();
 
     // 7. Initial UI calculation update
     triggerAllPreviews();
@@ -2922,25 +2923,7 @@ function initConstructionCostSection() {
 
     initWorkItemDatalist();
 
-    document.getElementById("btnAddCostItem")?.addEventListener("click", () => {
-        pushUndo();
-        constructionItems.push({
-            id: genId(),
-            workItemKey: "custom",
-            name: "",
-            unit: "m²",
-            isAuto: false,
-            expanded: true,
-            unitPrice: 0,
-            rows: [{ desc: "", n: 1, l: "", w: "", h: "", hs: 1 }]
-        });
-        saveConstructionItems();
-        updateConstructionCostSection();
-        setTimeout(() => {
-            const inputs = document.querySelectorAll(".cost-name-input");
-            inputs[inputs.length - 1]?.focus();
-        }, 30);
-    });
+    document.getElementById("btnAddCostItem")?.addEventListener("click", renderPricingPickerModal);
 
     document.getElementById("btnAddSection")?.addEventListener("click", () => {
         pushUndo();
@@ -3044,6 +3027,457 @@ function initConstructionCostSection() {
     renderNamedRangesPanel();
     loadPaymentSchedule();
     updateConstructionCostSection();
+}
+
+// ─── Add Item Modal (unified: catalog picker + custom + sync) ─────────────────
+// Single entry point for "Thêm hạng mục". Two inner tabs:
+//   Tab 1 — Catalog: multi-select from WORK_ITEM_DIMS + sell prices, duplicate warning
+//   Tab 2 — Custom:  free-form name/unit/price rows, with option to sync back to pricing
+const WORK_ITEM_GROUPS = [
+    { label: "Đất & Móng",              keys: ["excavation","backfill","concrete-footing"] },
+    { label: "Kết cấu BTCT",             keys: ["formwork","concrete-column","concrete-beam","concrete-slab","concrete-stair"] },
+    { label: "Xây tường",                keys: ["masonry-110","masonry-220","masonry-aac-110"] },
+    { label: "Trát & Hoàn thiện tường",  keys: ["plastering-1-face","plastering-2-face","plastering-ceiling","skim-coat","paint-interior","paint-exterior","paint-ceiling"] },
+    { label: "Nền & Ốp lát",             keys: ["screed","tiling-floor","tiling-wall","waterproof-floor","waterproof-wall","stone-floor","stone-wall"] },
+    { label: "Trần",                     keys: ["ceiling-gypsum","ceiling-wood"] },
+    { label: "Cửa & Lan can",            keys: ["railing","fence","pathway","door","window"] },
+    { label: "Điện, Nước & Thiết bị",    keys: ["sanitary","electrical","plumbing"] },
+];
+
+// Custom rows pending addition (tab 2 state)
+let _customRows = [];
+
+function renderPricingPickerModal() {
+    let overlay = document.getElementById("pricingPickerModal");
+    if (overlay) {
+        overlay.style.display = "flex";
+        _ppickSwitchTab("catalog");
+        return;
+    }
+
+    overlay = document.createElement("div");
+    overlay.id = "pricingPickerModal";
+    overlay.className = "collab-modal-overlay";
+    overlay.style.cssText = "display:flex;align-items:center;justify-content:center;z-index:3000;";
+    overlay.innerHTML = `
+    <div id="ppickDialog" style="
+        background:var(--bg-card);border:1px solid var(--border-glass);border-radius:14px;
+        padding:20px;width:min(860px,96vw);max-height:90vh;display:flex;flex-direction:column;gap:12px;
+        box-shadow:0 24px 80px rgba(0,0,0,0.65);">
+
+        <!-- Header -->
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;">
+            <div>
+                <div style="font-size:15px;font-weight:800;color:var(--text-primary);">Thêm hạng mục thi công</div>
+                <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">
+                    Chọn từ danh mục có sẵn hoặc thêm tùy chỉnh •
+                    <a href="pricing.html" target="_blank" style="color:#00f2fe;text-decoration:none;">Cấu hình giá bán ↗</a>
+                </div>
+            </div>
+            <button id="ppickClose" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:18px;line-height:1;padding:2px 6px;">✕</button>
+        </div>
+
+        <!-- Inner tab bar -->
+        <div style="display:flex;gap:3px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:3px;width:fit-content;">
+            <button class="ppick-tab ppick-tab-active" data-ptab="catalog" style="padding:5px 16px;font-size:12px;font-weight:600;border:none;border-radius:6px;cursor:pointer;background:rgba(0,242,254,0.1);color:#00f2fe;">
+                Từ bảng giá
+            </button>
+            <button class="ppick-tab" data-ptab="custom" style="padding:5px 16px;font-size:12px;font-weight:600;border:none;border-radius:6px;cursor:pointer;background:none;color:var(--text-muted);">
+                Thêm tùy chỉnh
+            </button>
+        </div>
+
+        <!-- PANEL: Catalog -->
+        <div id="ppickPanelCatalog" style="display:flex;flex-direction:column;gap:10px;flex:1;min-height:0;">
+            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+                <input id="ppickSearch" type="text" placeholder="Tìm hạng mục..."
+                    style="flex:1;min-width:130px;padding:6px 10px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:6px;color:var(--text-primary);font-size:12px;">
+                <select id="ppickFilter" style="padding:6px 10px;background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.1);border-radius:6px;color:var(--text-primary);font-size:12px;">
+                    <option value="all">Tất cả hạng mục</option>
+                    <option value="has-price">Đã có đơn giá bán</option>
+                    <option value="no-price">Chưa có đơn giá bán</option>
+                    <option value="new">Chưa có trong dự toán</option>
+                </select>
+                <button id="ppickSelAll" class="btn btn-secondary btn-xs">Chọn tất cả</button>
+                <button id="ppickClearAll" class="btn btn-secondary btn-xs">Bỏ chọn</button>
+            </div>
+            <div id="ppickCatalogBody" style="overflow-y:auto;flex:1;border:1px solid rgba(255,255,255,0.06);border-radius:8px;min-height:200px;max-height:380px;"></div>
+            <div id="ppickDupWarn" style="display:none;padding:8px 12px;background:rgba(251,191,36,0.08);border:1px solid rgba(251,191,36,0.25);border-radius:6px;font-size:12px;color:#fbbf24;"></div>
+        </div>
+
+        <!-- PANEL: Custom -->
+        <div id="ppickPanelCustom" style="display:none;flex-direction:column;gap:10px;flex:1;min-height:0;">
+            <div style="font-size:12px;color:var(--text-muted);">Nhập hạng mục tùy chỉnh. Tick "Sync" để ghi đơn giá ngược lại bảng giá công ty sau khi thêm.</div>
+            <div style="overflow-y:auto;max-height:340px;">
+                <table style="width:100%;border-collapse:collapse;font-size:12px;" id="ppickCustomTable">
+                    <thead>
+                        <tr style="background:rgba(255,255,255,0.03);">
+                            <th style="padding:7px 8px;text-align:left;font-size:10px;color:var(--text-muted);font-weight:600;text-transform:uppercase;">Tên hạng mục</th>
+                            <th style="padding:7px 8px;width:70px;font-size:10px;color:var(--text-muted);font-weight:600;text-transform:uppercase;">ĐVT</th>
+                            <th style="padding:7px 8px;width:120px;text-align:right;font-size:10px;color:var(--text-muted);font-weight:600;text-transform:uppercase;">Đơn giá</th>
+                            <th style="padding:7px 8px;width:48px;text-align:center;font-size:10px;color:var(--text-muted);font-weight:600;text-transform:uppercase;" title="Sync ngược lại bảng giá công ty">Sync</th>
+                            <th style="width:32px;"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="ppickCustomRows"></tbody>
+                </table>
+            </div>
+            <button id="ppickAddCustomRow" class="btn btn-secondary btn-sm" style="align-self:flex-start;">
+                + Thêm dòng
+            </button>
+        </div>
+
+        <!-- Footer -->
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding-top:8px;border-top:1px solid rgba(255,255,255,0.06);">
+            <div id="ppickCount" style="font-size:12px;color:var(--text-muted);">Chưa chọn</div>
+            <div style="display:flex;gap:8px;">
+                <button id="ppickCancel" class="btn btn-secondary btn-sm">Hủy</button>
+                <button id="ppickConfirm" class="btn btn-gradient btn-sm" disabled>
+                    <i data-lucide="plus"></i> Thêm vào dự toán
+                </button>
+            </div>
+        </div>
+    </div>`;
+    document.body.appendChild(overlay);
+
+    // Wire close
+    overlay.addEventListener("click", e => { if (e.target === overlay) _closePricingPicker(); });
+    document.getElementById("ppickClose")?.addEventListener("click", _closePricingPicker);
+    document.getElementById("ppickCancel")?.addEventListener("click", _closePricingPicker);
+
+    // Inner tab switching
+    overlay.querySelectorAll(".ppick-tab").forEach(btn => {
+        btn.addEventListener("click", () => _ppickSwitchTab(btn.dataset.ptab));
+    });
+
+    // Catalog tab controls
+    document.getElementById("ppickSearch")?.addEventListener("input", _ppickRefreshCatalog);
+    document.getElementById("ppickFilter")?.addEventListener("change", _ppickRefreshCatalog);
+    document.getElementById("ppickSelAll")?.addEventListener("click", () => {
+        document.querySelectorAll(".ppick-cb").forEach(cb => { cb.checked = true; });
+        _ppickUpdateFooter();
+    });
+    document.getElementById("ppickClearAll")?.addEventListener("click", () => {
+        document.querySelectorAll(".ppick-cb").forEach(cb => { cb.checked = false; });
+        _ppickUpdateFooter();
+    });
+
+    // Custom tab controls
+    document.getElementById("ppickAddCustomRow")?.addEventListener("click", _ppickAddCustomRow);
+
+    // Confirm
+    document.getElementById("ppickConfirm")?.addEventListener("click", _ppickConfirm);
+
+    if (typeof lucide !== "undefined") lucide.createIcons();
+    _customRows = [];
+    _ppickSwitchTab("catalog");
+}
+
+function _closePricingPicker() {
+    const el = document.getElementById("pricingPickerModal");
+    if (el) el.style.display = "none";
+    _customRows = [];
+}
+
+function _ppickSwitchTab(tab) {
+    const tabs = document.querySelectorAll(".ppick-tab");
+    tabs.forEach(b => {
+        const active = b.dataset.ptab === tab;
+        b.style.background = active ? "rgba(0,242,254,0.1)" : "none";
+        b.style.color = active ? "#00f2fe" : "var(--text-muted)";
+    });
+    document.getElementById("ppickPanelCatalog").style.display = tab === "catalog" ? "flex" : "none";
+    document.getElementById("ppickPanelCustom").style.display  = tab === "custom"  ? "flex" : "none";
+    if (tab === "catalog") _ppickRefreshCatalog();
+    if (tab === "custom")  _ppickRenderCustomRows();
+    _ppickUpdateFooter();
+}
+
+function _getSellPrices() {
+    const sellState  = JSON.parse(localStorage.getItem("anlaa_sell_state") || "{}");
+    const workPrices = JSON.parse(localStorage.getItem("anlaa_work_prices") || "{}");
+    const defaultMargin = sellState.defaultMargin || 1.15;
+    const margins     = sellState.margins || {};
+
+    const result = {};
+    Object.keys(WORK_ITEM_DIMS).forEach(key => {
+        const wip = DEFAULT_WORK_ITEM_PRICES[key];
+        const cost = workPrices[key] !== undefined ? workPrices[key] : (wip ? wip.price : 0);
+        if (cost <= 0) { result[key] = 0; return; }
+        const margin = margins[key] !== undefined ? parseFloat(margins[key]) : defaultMargin;
+        result[key] = Math.round(cost * margin);
+    });
+    return result;
+}
+
+function _ppickRefreshCatalog() {
+    const body = document.getElementById("ppickCatalogBody");
+    if (!body) return;
+    const search = (document.getElementById("ppickSearch")?.value || "").toLowerCase().trim();
+    const filter = document.getElementById("ppickFilter")?.value || "all";
+    const sellPrices = _getSellPrices();
+    const workPrices = JSON.parse(localStorage.getItem("anlaa_work_prices") || "{}");
+
+    // Keys already in the current estimate
+    const existingKeys = new Set(constructionItems.filter(i => !i.isSection).map(i => i.workItemKey));
+
+    // Preserve checked state across re-renders
+    const checked = new Set();
+    document.querySelectorAll(".ppick-cb:checked").forEach(cb => checked.add(cb.value));
+
+    let html = `<table style="width:100%;border-collapse:collapse;font-size:12px;">
+        <thead><tr style="position:sticky;top:0;background:rgba(11,13,20,0.98);z-index:1;">
+            <th style="width:32px;padding:8px;"></th>
+            <th style="padding:8px 10px;text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);">Hạng mục</th>
+            <th style="padding:8px;text-align:center;font-size:10px;text-transform:uppercase;color:var(--text-muted);width:46px;">ĐVT</th>
+            <th style="padding:8px 10px;text-align:right;font-size:10px;text-transform:uppercase;color:var(--text-muted);width:120px;">Đơn giá bán</th>
+            <th style="padding:8px 10px;text-align:right;font-size:10px;text-transform:uppercase;color:var(--text-muted);width:100px;">Giá vốn</th>
+            <th style="padding:8px;width:60px;font-size:10px;text-transform:uppercase;color:var(--text-muted);text-align:center;">Trong DT</th>
+        </tr></thead><tbody>`;
+
+    let visible = 0;
+    let dupKeys = [];
+
+    WORK_ITEM_GROUPS.forEach(group => {
+        const items = group.keys.map(key => {
+            const def = WORK_ITEM_DIMS[key];
+            if (!def) return null;
+            const sell = sellPrices[key] || 0;
+            const wip  = DEFAULT_WORK_ITEM_PRICES[key];
+            const cost = workPrices[key] !== undefined ? workPrices[key] : (wip ? wip.price : 0);
+            const inEstimate = existingKeys.has(key);
+            if (search && !(def.label.toLowerCase().includes(search) || key.toLowerCase().includes(search))) return null;
+            if (filter === "has-price" && sell <= 0) return null;
+            if (filter === "no-price"  && sell > 0)  return null;
+            if (filter === "new"       && inEstimate) return null;
+            return { key, label: def.label, unit: def.unit, sell, cost, inEstimate };
+        }).filter(Boolean);
+
+        if (items.length === 0) return;
+
+        html += `<tr><td colspan="6" style="padding:5px 10px 3px;font-size:10px;font-weight:700;color:#a5b4fc;text-transform:uppercase;letter-spacing:0.05em;background:rgba(99,102,241,0.06);border-top:1px solid rgba(99,102,241,0.15);">${group.label}</td></tr>`;
+
+        items.forEach(({ key, label, unit, sell, cost, inEstimate }) => {
+            visible++;
+            const isChecked = checked.has(key);
+            if (isChecked && inEstimate) dupKeys.push(label);
+            const hasSell = sell > 0;
+            const sellFmt = hasSell ? sell.toLocaleString("vi-VN") + " đ" : `<span style="color:var(--text-muted);font-style:italic;">—</span>`;
+            const costFmt = cost > 0 ? cost.toLocaleString("vi-VN") + " đ" : "—";
+            const pct = (hasSell && cost > 0) ? `<span style="font-size:10px;color:#f59e0b;margin-left:3px;">+${(((sell-cost)/cost)*100).toFixed(0)}%</span>` : "";
+            const dupTag = inEstimate
+                ? `<span style="font-size:10px;padding:1px 5px;border-radius:3px;background:rgba(251,191,36,0.15);color:#fbbf24;border:1px solid rgba(251,191,36,0.3);font-weight:600;">Đã có</span>`
+                : `<span style="font-size:10px;color:var(--text-muted);">—</span>`;
+            html += `<tr class="ppick-row" data-key="${key}"
+                style="cursor:pointer;transition:background 0.1s;${isChecked ? "background:rgba(0,242,254,0.06);" : ""}${inEstimate ? "opacity:0.8;" : ""}">
+                <td style="text-align:center;padding:6px 10px;">
+                    <input type="checkbox" class="ppick-cb" value="${key}" ${isChecked ? "checked" : ""}
+                        style="width:14px;height:14px;cursor:pointer;accent-color:#00f2fe;">
+                </td>
+                <td style="padding:6px 10px;font-weight:500;color:var(--text-primary);">${escapeHtml(label)}</td>
+                <td style="padding:6px 8px;text-align:center;font-size:11px;color:var(--text-muted);">${unit}</td>
+                <td style="padding:6px 10px;text-align:right;font-weight:700;color:${hasSell ? "#34d399" : "var(--text-muted)"};">${sellFmt}${pct}</td>
+                <td style="padding:6px 10px;text-align:right;font-size:11px;color:#60a5fa;">${costFmt}</td>
+                <td style="padding:6px 8px;text-align:center;">${dupTag}</td>
+            </tr>`;
+        });
+    });
+
+    html += `</tbody></table>`;
+    if (visible === 0) html = `<div style="text-align:center;padding:40px;color:var(--text-muted);font-size:13px;">Không tìm thấy hạng mục nào</div>`;
+    body.innerHTML = html;
+
+    // Row click toggles checkbox
+    body.querySelectorAll(".ppick-row").forEach(row => {
+        row.addEventListener("click", e => {
+            if (e.target.type === "checkbox") return;
+            const cb = row.querySelector(".ppick-cb");
+            if (cb) { cb.checked = !cb.checked; row.style.background = cb.checked ? "rgba(0,242,254,0.06)" : ""; }
+            _ppickUpdateFooter();
+        });
+    });
+    body.querySelectorAll(".ppick-cb").forEach(cb => {
+        cb.addEventListener("change", () => { _ppickRefreshDupWarn(); _ppickUpdateFooter(); });
+    });
+
+    _ppickRefreshDupWarn();
+    _ppickUpdateFooter();
+}
+
+function _ppickRefreshDupWarn() {
+    const existingKeys = new Set(constructionItems.filter(i => !i.isSection).map(i => i.workItemKey));
+    const dupLabels = [...document.querySelectorAll(".ppick-cb:checked")]
+        .filter(cb => existingKeys.has(cb.value))
+        .map(cb => {
+            const def = WORK_ITEM_DIMS[cb.value];
+            return def ? def.label : cb.value;
+        });
+    const warn = document.getElementById("ppickDupWarn");
+    if (!warn) return;
+    if (dupLabels.length > 0) {
+        warn.style.display = "block";
+        warn.innerHTML = `⚠️ <b>${dupLabels.length} hạng mục đã có trong dự toán</b> sẽ bị thêm trùng: ${dupLabels.map(l => `<i>${escapeHtml(l)}</i>`).join(", ")} — vẫn tiếp tục?`;
+    } else {
+        warn.style.display = "none";
+    }
+}
+
+// ── Custom tab ────────────────────────────────────────────────────────────────
+function _ppickAddCustomRow() {
+    _customRows.push({ name: "", unit: "m²", price: 0, sync: false });
+    _ppickRenderCustomRows();
+    // Focus the new name input
+    setTimeout(() => {
+        const inputs = document.querySelectorAll(".ppick-cname");
+        inputs[inputs.length - 1]?.focus();
+    }, 20);
+}
+
+function _ppickRenderCustomRows() {
+    const tbody = document.getElementById("ppickCustomRows");
+    if (!tbody) return;
+    if (_customRows.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" style="padding:16px 10px;text-align:center;color:var(--text-muted);font-size:12px;">
+            Nhấn "+ Thêm dòng" để bắt đầu nhập hạng mục tùy chỉnh</td></tr>`;
+        _ppickUpdateFooter();
+        return;
+    }
+    tbody.innerHTML = _customRows.map((row, i) => `
+        <tr data-ci="${i}" style="border-bottom:1px solid rgba(255,255,255,0.05);">
+            <td style="padding:5px 8px;">
+                <input class="ppick-cname" type="text" value="${escapeHtml(row.name)}" placeholder="Tên hạng mục..." data-ci="${i}"
+                    style="width:100%;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:5px;padding:5px 8px;color:var(--text-primary);font-size:12px;">
+            </td>
+            <td style="padding:5px 6px;">
+                <select class="ppick-cunit" data-ci="${i}"
+                    style="width:100%;background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.1);border-radius:5px;padding:5px 6px;color:var(--text-primary);font-size:12px;">
+                    ${["m²","m³","md","cái","bộ","m","gói"].map(u => `<option ${row.unit===u?"selected":""}>${u}</option>`).join("")}
+                </select>
+            </td>
+            <td style="padding:5px 6px;">
+                <input class="ppick-cprice" type="text" value="${row.price > 0 ? row.price.toLocaleString("vi-VN") : ""}" placeholder="0" data-ci="${i}" inputmode="numeric"
+                    style="width:100%;text-align:right;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:5px;padding:5px 8px;color:var(--text-primary);font-size:12px;">
+            </td>
+            <td style="padding:5px 6px;text-align:center;">
+                <input type="checkbox" class="ppick-csync" data-ci="${i}" ${row.sync ? "checked" : ""}
+                    title="Ghi đơn giá này ngược lại bảng giá công ty sau khi thêm"
+                    style="width:14px;height:14px;cursor:pointer;accent-color:#34d399;">
+            </td>
+            <td style="padding:5px 6px;text-align:center;">
+                <button class="ppick-cdel btn btn-secondary btn-xs" data-ci="${i}" style="padding:3px 7px;color:#f87171;">✕</button>
+            </td>
+        </tr>`).join("");
+
+    // Wire inputs
+    tbody.querySelectorAll(".ppick-cname").forEach(el => el.addEventListener("input", e => {
+        _customRows[+e.target.dataset.ci].name = e.target.value; _ppickUpdateFooter();
+    }));
+    tbody.querySelectorAll(".ppick-cunit").forEach(el => el.addEventListener("change", e => {
+        _customRows[+e.target.dataset.ci].unit = e.target.value;
+    }));
+    tbody.querySelectorAll(".ppick-cprice").forEach(el => el.addEventListener("input", e => {
+        _customRows[+e.target.dataset.ci].price = parseInt(e.target.value.replace(/\D/g, "")) || 0;
+    }));
+    tbody.querySelectorAll(".ppick-csync").forEach(el => el.addEventListener("change", e => {
+        _customRows[+e.target.dataset.ci].sync = e.target.checked;
+    }));
+    tbody.querySelectorAll(".ppick-cdel").forEach(el => el.addEventListener("click", e => {
+        _customRows.splice(+e.target.dataset.ci, 1); _ppickRenderCustomRows();
+    }));
+    _ppickUpdateFooter();
+}
+
+// ── Footer count + confirm button state ──────────────────────────────────────
+function _ppickUpdateFooter() {
+    const isCustomPanel = document.getElementById("ppickPanelCustom")?.style.display !== "none";
+    let count = 0;
+    let label = "";
+
+    if (!isCustomPanel) {
+        count = document.querySelectorAll(".ppick-cb:checked").length;
+        label = count > 0 ? `Đã chọn ${count} hạng mục từ danh mục` : "Chưa chọn hạng mục nào";
+    } else {
+        count = _customRows.filter(r => r.name.trim()).length;
+        const syncCount = _customRows.filter(r => r.name.trim() && r.sync).length;
+        label = count > 0
+            ? `${count} hạng mục tùy chỉnh${syncCount > 0 ? ` • ${syncCount} sẽ sync → bảng giá` : ""}`
+            : "Chưa có hạng mục nào";
+    }
+
+    const el = document.getElementById("ppickCount");
+    if (el) el.textContent = label;
+    const btn = document.getElementById("ppickConfirm");
+    if (btn) btn.disabled = count === 0;
+}
+
+// ── Confirm: add to constructionItems, handle sync ────────────────────────────
+function _ppickConfirm() {
+    const isCustomPanel = document.getElementById("ppickPanelCustom")?.style.display !== "none";
+
+    if (!isCustomPanel) {
+        // Catalog tab
+        const selectedKeys = [...document.querySelectorAll(".ppick-cb:checked")].map(cb => cb.value);
+        if (selectedKeys.length === 0) return;
+        const sellPrices = _getSellPrices();
+        const workPrices = JSON.parse(localStorage.getItem("anlaa_work_prices") || "{}");
+        pushUndo();
+        selectedKeys.forEach(key => {
+            const def = WORK_ITEM_DIMS[key];
+            if (!def) return;
+            const wip  = DEFAULT_WORK_ITEM_PRICES[key];
+            const cost = workPrices[key] !== undefined ? workPrices[key] : (wip ? wip.price : 0);
+            const sell = sellPrices[key] || 0;
+            constructionItems.push({
+                id: genId(), workItemKey: key, name: def.label, unit: def.unit,
+                isAuto: false, expanded: true,
+                materialPrice: sell > 0 ? sell : cost,
+                laborPrice: 0,
+                rows: [{ desc: "", n: 1, l: "", w: "", h: "", hs: 1 }]
+            });
+        });
+        saveConstructionItems();
+        updateConstructionCostSection();
+        _closePricingPicker();
+        showToast(`✅ Đã thêm ${selectedKeys.length} hạng mục từ bảng giá`);
+    } else {
+        // Custom tab
+        const valid = _customRows.filter(r => r.name.trim());
+        if (valid.length === 0) return;
+
+        // Sync back to anlaa_work_prices for items that have a key match AND sync=true
+        const syncItems = valid.filter(r => r.sync && r.price > 0);
+        if (syncItems.length > 0) {
+            const workPrices = JSON.parse(localStorage.getItem("anlaa_work_prices") || "{}");
+            // Try to match by label to a WORK_ITEM_DIMS key
+            syncItems.forEach(r => {
+                const match = Object.entries(WORK_ITEM_DIMS).find(([, v]) => v.label === r.name.trim());
+                if (match) workPrices[match[0]] = r.price;
+                // else: custom name has no key — cannot sync to keyed price store, skip
+            });
+            localStorage.setItem("anlaa_work_prices", JSON.stringify(workPrices));
+        }
+
+        pushUndo();
+        valid.forEach(r => {
+            const match = Object.entries(WORK_ITEM_DIMS).find(([, v]) => v.label === r.name.trim());
+            constructionItems.push({
+                id: genId(),
+                workItemKey: match ? match[0] : "custom",
+                name: r.name.trim(),
+                unit: r.unit,
+                isAuto: false, expanded: true,
+                materialPrice: r.price > 0 ? r.price : 0,
+                laborPrice: 0,
+                rows: [{ desc: "", n: 1, l: "", w: "", h: "", hs: 1 }]
+            });
+        });
+
+        saveConstructionItems();
+        updateConstructionCostSection();
+        _closePricingPicker();
+        const syncMsg = syncItems.filter(r => Object.entries(WORK_ITEM_DIMS).some(([, v]) => v.label === r.name.trim())).length;
+        showToast(`✅ Đã thêm ${valid.length} hạng mục tùy chỉnh${syncMsg > 0 ? ` • ${syncMsg} đã sync → bảng giá` : ""}`);
+    }
 }
 
 function initWorkItemDatalist() {
@@ -4038,3 +4472,183 @@ function renderValidationBadge() {
         if (inp) inp.classList.add("cf-invalid");
     });
 }
+
+// ═══════════════════════════════════════════════════════════════
+// HỆ THỐNG THÔNG BÁO TỐI GIẢN — NOTIFICATION CENTER
+// ═══════════════════════════════════════════════════════════════
+let notifications = [];
+
+function initNotifications() {
+    const btn = document.getElementById("btnNotifications");
+    const dropdown = document.getElementById("notiDropdown");
+    const btnMarkAll = document.getElementById("btnNotiMarkAllRead");
+    const btnClearAll = document.getElementById("btnNotiClearAll");
+    const btnClose = document.getElementById("btnNotiClose");
+
+    if (!btn || !dropdown) return;
+
+    // Load or pre-populate
+    try {
+        const stored = localStorage.getItem("anlaa_notifications");
+        if (stored) {
+            notifications = JSON.parse(stored);
+        } else {
+            // Pre-populate with beautiful default notifications
+            notifications = [
+                {
+                    id: "noti-1",
+                    category: "success",
+                    title: "Dự án biệt thự A-01 phê duyệt",
+                    body: "Admin đã duyệt dự toán hoàn chỉnh của biệt thự A-01 và cập nhật bảng giá chính thức.",
+                    time: "5 phút trước",
+                    unread: true
+                },
+                {
+                    id: "noti-2",
+                    category: "warning",
+                    title: "Nhắc nhở: Đơn giá thép biến động",
+                    body: "Giá thép xây dựng Hòa Phát tăng nhẹ khoảng 1.2%. Vui lòng rà soát lại đơn giá trong bảng dự toán.",
+                    time: "2 giờ trước",
+                    unread: true
+                },
+                {
+                    id: "noti-3",
+                    category: "info",
+                    title: "Hệ thống nâng cấp UI Tối giản",
+                    body: "Chúng tôi vừa nâng cấp toàn bộ giao diện sang chuẩn Glassmorphism tối giản và tối ưu hóa không gian làm việc di động.",
+                    time: "1 ngày trước",
+                    unread: false
+                },
+                {
+                    id: "noti-4",
+                    category: "error",
+                    title: "Cảnh báo sai lệch khối lượng",
+                    body: "Phát hiện sai lệch lớn giữa thể tích xây thô và diện tích trát tường đứng ở khu vực tầng 2. Cần rà soát lại ngay.",
+                    time: "3 ngày trước",
+                    unread: true
+                }
+            ];
+            localStorage.setItem("anlaa_notifications", JSON.stringify(notifications));
+        }
+    } catch {
+        notifications = [];
+    }
+
+    // Toggle dropdown
+    btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const show = dropdown.style.display === "none";
+        dropdown.style.display = show ? "flex" : "none";
+        if (show) {
+            // Refresh icons inside dropdown when shown
+            if (typeof lucide !== "undefined") lucide.createIcons();
+        }
+    });
+
+    // Close on click outside
+    document.addEventListener("click", (e) => {
+        if (!e.target.closest(".noti-container")) {
+            dropdown.style.display = "none";
+        }
+    });
+
+    // Mark all as read
+    btnMarkAll?.addEventListener("click", () => {
+        notifications.forEach(n => n.unread = false);
+        saveNotifications();
+        renderNotifications();
+    });
+
+    // Clear all
+    btnClearAll?.addEventListener("click", () => {
+        if (confirm("Xóa toàn bộ thông báo hệ thống?")) {
+            notifications = [];
+            saveNotifications();
+            renderNotifications();
+        }
+    });
+
+    // Close button
+    btnClose?.addEventListener("click", () => {
+        dropdown.style.display = "none";
+    });
+
+    // Initial render
+    renderNotifications();
+}
+
+function saveNotifications() {
+    localStorage.setItem("anlaa_notifications", JSON.stringify(notifications));
+}
+
+function renderNotifications() {
+    const list = document.getElementById("notiList");
+    const badge = document.getElementById("notiBadgeCount");
+    if (!list) return;
+
+    // Unread count
+    const unreadCount = notifications.filter(n => n.unread).length;
+    if (badge) {
+        if (unreadCount > 0) {
+            badge.textContent = unreadCount;
+            badge.style.display = "flex";
+        } else {
+            badge.style.display = "none";
+        }
+    }
+
+    if (notifications.length === 0) {
+        list.innerHTML = `<div class="noti-empty">Không có thông báo mới</div>`;
+        return;
+    }
+
+    // Map categories to icons
+    const iconMap = {
+        success: "check-circle",
+        warning: "alert-triangle",
+        error: "shield-alert",
+        info: "info"
+    };
+
+    list.innerHTML = notifications.map(n => `
+        <div class="noti-item ${n.unread ? "unread" : ""} cat-${n.category}" data-id="${n.id}">
+            <div class="noti-item-icon">
+                <i data-lucide="${iconMap[n.category] || "bell"}"></i>
+            </div>
+            <div class="noti-item-content">
+                <span class="noti-item-title">${escapeHtml(n.title)}</span>
+                <span class="noti-item-body">${escapeHtml(n.body)}</span>
+                <span class="noti-item-time">${escapeHtml(n.time)}</span>
+            </div>
+            ${n.unread ? `<span class="noti-item-unread-dot"></span>` : ""}
+            <button class="noti-item-delete" data-id="${n.id}" title="Xóa thông báo">×</button>
+        </div>
+    `).join("");
+
+    // Wire events inside list
+    list.querySelectorAll(".noti-item").forEach(item => {
+        item.addEventListener("click", (e) => {
+            if (e.target.closest(".noti-item-delete")) return;
+            const notiId = item.dataset.id;
+            const noti = notifications.find(n => n.id === notiId);
+            if (noti && noti.unread) {
+                noti.unread = false;
+                saveNotifications();
+                renderNotifications();
+            }
+        });
+    });
+
+    list.querySelectorAll(".noti-item-delete").forEach(btn => {
+        btn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            const notiId = btn.dataset.id;
+            notifications = notifications.filter(n => n.id !== notiId);
+            saveNotifications();
+            renderNotifications();
+        });
+    });
+
+    if (typeof lucide !== "undefined") lucide.createIcons();
+}
+

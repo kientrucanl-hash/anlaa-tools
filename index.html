@@ -14,7 +14,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Montserrat:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <!-- Main Style -->
-    <link rel="stylesheet" href="css/styles.css?v=3.7">
+    <link rel="stylesheet" href="css/styles.css?v=3.12">
     <!-- Chart.js CDN -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <!-- html2canvas CDN -->
@@ -120,6 +120,12 @@
                         <a href="materials.html" class="tab-btn sb-nav-link">
                             <i data-lucide="package"></i> Vật tư cần mua
                         </a>
+                        <a href="pricing.html" class="tab-btn sb-nav-link">
+                            <i data-lucide="bar-chart-2"></i> Bảng Giá & NTP
+                        </a>
+                        <a href="contractors.html" class="tab-btn sb-nav-link">
+                            <i data-lucide="hard-hat"></i> Nhà thầu phụ
+                        </a>
                         <div class="sb-nav-separator"></div>
                         <a href="history.html" class="tab-btn sb-nav-link">
                             <i data-lucide="clock"></i> Lịch sử Dự toán
@@ -210,6 +216,28 @@
                         <i data-lucide="map-pin"></i> Hà Nội
                     </span>
                     <span id="userBadge" class="user-badge" title="Tài khoản đang đăng nhập"></span>
+                    
+                    <!-- HỆ THỐNG THÔNG BÁO -->
+                    <div class="noti-container no-print">
+                        <button id="btnNotifications" class="btn btn-secondary btn-sm noti-btn" title="Thông báo hệ thống">
+                            <i data-lucide="bell"></i>
+                            <span id="notiBadgeCount" class="noti-badge" style="display:none;">0</span>
+                        </button>
+                        <div id="notiDropdown" class="noti-dropdown" style="display:none;">
+                            <div class="noti-header">
+                                <h3>Thông báo</h3>
+                                <button id="btnNotiMarkAllRead" class="noti-mark-read-btn">Đọc tất cả</button>
+                            </div>
+                            <div id="notiList" class="noti-list">
+                                <div class="noti-empty">Không có thông báo mới</div>
+                            </div>
+                            <div class="noti-footer">
+                                <button id="btnNotiClearAll" class="noti-clear-all-btn">Xóa tất cả</button>
+                                <button id="btnNotiClose" class="noti-close-btn">Đóng</button>
+                            </div>
+                        </div>
+                    </div>
+
                     <a id="adminPanelBtn" href="/admin.html" class="btn btn-secondary btn-sm" title="Trang quản lý Admin" style="display:none;">
                         <i data-lucide="shield-check"></i> Quản lý
                     </a>
@@ -222,7 +250,20 @@
                 </div>
             </header>
 
-            
+            <!-- Desktop secondary nav -->
+            <div class="desktop-nav no-print">
+                <a href="index.html" class="dnav-active"><i data-lucide="calculator"></i> Bóc KL Vật tư</a>
+                <a href="estimate.html"><i data-lucide="file-spreadsheet"></i> Dự toán Chi phí</a>
+                <a href="materials.html"><i data-lucide="package"></i> Vật tư cần mua</a>
+                <div class="dnav-sep"></div>
+                <a href="pricing.html"><i data-lucide="bar-chart-2"></i> Bảng Giá & NTP</a>
+                <a href="contractors.html"><i data-lucide="hard-hat"></i> Nhà thầu phụ</a>
+                <div class="dnav-sep"></div>
+                <a href="history.html"><i data-lucide="clock"></i> Lịch sử</a>
+                <a href="help.html"><i data-lucide="book-open"></i> Hướng dẫn</a>
+            </div>
+
+
             <!-- TAB CONTENT CONTAINER -->
             <div class="tab-content-container no-print">
                 
@@ -914,12 +955,12 @@
     <div id="toastNotification" class="toast-notification"></div>
     
     <!-- Application Logic Modules -->
-    <script src="js/constants.js?v=3.7"></script>
-    <script src="js/calculator.js?v=3.7"></script>
-    <script src="js/dxf-parser.js?v=3.7"></script>
-    <script src="js/pdf-takeoff.js?v=3.7"></script>
-    <script src="js/api.js?v=3.7"></script>
-    <script src="js/auth.js?v=3.7"></script>
-    <script src="js/app.js?v=3.7"></script>
+    <script src="js/constants.js?v=3.12"></script>
+    <script src="js/calculator.js?v=3.12"></script>
+    <script src="js/dxf-parser.js?v=3.12"></script>
+    <script src="js/pdf-takeoff.js?v=3.12"></script>
+    <script src="js/api.js?v=3.12"></script>
+    <script src="js/auth.js?v=3.12"></script>
+    <script src="js/app.js?v=3.12"></script>
 </body>
 </html>

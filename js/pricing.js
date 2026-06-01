@@ -4,7 +4,9 @@
  */
 
 // ─── State ────────────────────────────────────────────────────────────────────
-let pricingItems = [];        // flat list of { id, name, unit, qty, workItemKey, costPrice, isSection, sectionName }
+let pricingItems = [];        // flat list of { id, name, unit, qty, workItemKey, costPrice, sectionName }
+let activeDataSource = "estimate"; // "estimate" | templateId — controls which items tabs 1&2 show
+
 let subState = {              // subcontractor comparison state
     names: ["Nhà thầu 1", "Nhà thầu 2", "Nhà thầu 3"],
     prices: [{}, {}, {}],     // prices[ntpIdx][itemId] = unitPrice
@@ -83,6 +85,100 @@ function loadPricingItems() {
             sectionName: currentSection,
             note: item.note || "",
         });
+    });
+}
+
+// Build pricingItems from a PROJECT_TEMPLATE (qty=0, id=workItemKey for state keying)
+function buildPricingItemsFromTemplate(tplId) {
+    const tpl = PROJECT_TEMPLATES.find(t => t.id === tplId);
+    if (!tpl) return;
+    const rawWorkPrices = JSON.parse(localStorage.getItem("anlaa_work_prices") || "{}");
+    pricingItems = [];
+    const seen = new Set(); // deduplicate by key within template
+    tpl.sections.forEach(sec => {
+        sec.items.forEach(item => {
+            const key = item.key || "custom";
+            const rowId = key === "custom" ? ("custom::" + item.name) : key;
+            if (seen.has(rowId)) return;
+            seen.add(rowId);
+            const dimDef = WORK_ITEM_DIMS[key];
+            const wip = DEFAULT_WORK_ITEM_PRICES[key];
+            const costPrice = rawWorkPrices[key] !== undefined
+                ? rawWorkPrices[key]
+                : (wip ? wip.price : (item.price || 0));
+            pricingItems.push({
+                id: rowId,           // use key as stable id for NTP/sell state
+                workItemKey: key,
+                name: item.name || (dimDef ? dimDef.label : key),
+                unit: item.unit || (dimDef ? dimDef.unit : "m²"),
+                qty: 0,              // no quantities — template is abstract
+                costPrice,
+                sectionName: sec.name,
+                note: "",
+            });
+        });
+    });
+}
+
+// ─── Data Source Bar ──────────────────────────────────────────────────────────
+function initSourceBar() {
+    const container = document.getElementById("prxSourceBtns");
+    if (!container) return;
+
+    // Add template buttons
+    PROJECT_TEMPLATES.forEach(tpl => {
+        const btn = document.createElement("button");
+        btn.className = "prx-source-btn";
+        btn.dataset.source = tpl.id;
+        btn.title = tpl.desc;
+        btn.innerHTML = `<i data-lucide="${tpl.icon}" style="width:12px;height:12px;"></i> ${tpl.name}`;
+        container.appendChild(btn);
+    });
+
+    container.addEventListener("click", e => {
+        const btn = e.target.closest(".prx-source-btn");
+        if (!btn) return;
+        setActiveSource(btn.dataset.source);
+    });
+
+    if (typeof lucide !== "undefined") lucide.createIcons();
+}
+
+function setActiveSource(sourceId) {
+    activeDataSource = sourceId;
+
+    // Update button styles
+    document.querySelectorAll(".prx-source-btn").forEach(b => {
+        b.classList.toggle("active", b.dataset.source === sourceId);
+    });
+
+    // Reload pricingItems
+    if (sourceId === "estimate") {
+        loadPricingItems();
+        const noteEl = document.getElementById("prxSourceNote");
+        if (noteEl) noteEl.textContent = `${pricingItems.length} hạng mục từ dự toán`;
+    } else {
+        buildPricingItemsFromTemplate(sourceId);
+        const tpl = PROJECT_TEMPLATES.find(t => t.id === sourceId);
+        const noteEl = document.getElementById("prxSourceNote");
+        if (noteEl) noteEl.textContent = `${pricingItems.length} hạng mục — ${tpl?.name || sourceId} (KL = 0, nhập đơn giá để so sánh)`;
+    }
+
+    // Re-render active panel
+    const activeTab = document.querySelector(".prx-tab.active")?.dataset.tab;
+    if (activeTab === "subcontractor") renderSubTable();
+    else if (activeTab === "selling") renderSellTable();
+    else if (activeTab === "templates") renderTemplateCatalog();
+
+    // Update NTP column headers in template tab
+    _syncTplNtpHeaders();
+}
+
+function _syncTplNtpHeaders() {
+    const n = subState.names || ["NTP1","NTP2","NTP3"];
+    ["tplThNtp1","tplThNtp2","tplThNtp3"].forEach((id, i) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = n[i] || `NTP${i+1}`;
     });
 }
 
@@ -258,17 +354,32 @@ function loadSellState() {
 }
 
 // ─── Tab switching ────────────────────────────────────────────────────────────
+function switchTab(tabName) {
+    document.querySelectorAll(".prx-tab").forEach(b => b.classList.remove("active"));
+    document.querySelectorAll(".prx-panel").forEach(p => p.classList.remove("active"));
+    const btn = document.querySelector(`.prx-tab[data-tab="${tabName}"]`);
+    if (btn) btn.classList.add("active");
+    document.getElementById("panel-" + tabName)?.classList.add("active");
+    if (tabName === "selling") renderSellTable();
+    if (tabName === "templates") renderTemplateCatalog();
+}
+
+// Switch tab then scroll to + highlight the row with matching data-work-key
+function switchToTabAndHighlight(tabName, workItemKey) {
+    switchTab(tabName);
+    // Wait for render then find and highlight
+    requestAnimationFrame(() => {
+        const row = document.querySelector(`[data-work-key="${CSS.escape(workItemKey)}"]`);
+        if (!row) return;
+        row.scrollIntoView({ behavior: "smooth", block: "center" });
+        row.classList.add("row-highlight-flash");
+        setTimeout(() => row.classList.remove("row-highlight-flash"), 1800);
+    });
+}
+
 function initTabs() {
     document.querySelectorAll(".prx-tab").forEach(btn => {
-        btn.addEventListener("click", () => {
-            document.querySelectorAll(".prx-tab").forEach(b => b.classList.remove("active"));
-            document.querySelectorAll(".prx-panel").forEach(p => p.classList.remove("active"));
-            btn.classList.add("active");
-            const panelId = "panel-" + btn.dataset.tab;
-            document.getElementById(panelId)?.classList.add("active");
-            if (btn.dataset.tab === "selling") renderSellTable();
-            if (btn.dataset.tab === "templates") renderTemplateCatalog();
-        });
+        btn.addEventListener("click", () => switchTab(btn.dataset.tab));
     });
 }
 
@@ -320,9 +431,13 @@ function renderSubTable() {
 
         const chosen = subState.chosen[item.id] !== undefined ? subState.chosen[item.id] : -1;
 
-        html += `<tr data-item-id="${item.id}">
+        const itemTplBadge = buildItemTemplateBadge(item.workItemKey);
+        html += `<tr data-item-id="${item.id}" data-work-key="${escHtml(item.workItemKey || "")}">
             <td class="td-stt">${stt}</td>
-            <td class="td-name">${escHtml(item.name)}</td>
+            <td class="td-name">
+                ${escHtml(item.name)}
+                ${itemTplBadge}
+            </td>
             <td class="td-unit">${escHtml(item.unit)}</td>
             <td class="td-qty">${qty > 0 ? qty.toFixed(2) : "—"}</td>`;
 
@@ -548,9 +663,13 @@ function renderSellTable() {
         totalCost += costTotal;
         totalSell += sellTotal;
 
-        html += `<tr data-item-id="${item.id}">
+        const sellTplBadge = buildItemTemplateBadge(item.workItemKey);
+        html += `<tr data-item-id="${item.id}" data-work-key="${escHtml(item.workItemKey || "")}">
             <td class="td-stt">${stt}</td>
-            <td class="td-name">${escHtml(item.name)}</td>
+            <td class="td-name">
+                ${escHtml(item.name)}
+                ${sellTplBadge}
+            </td>
             <td class="td-unit">${escHtml(item.unit)}</td>
             <td class="td-qty">${qty > 0 ? qty.toFixed(2) : "—"}</td>
             <td class="td-cost">${cost > 0 ? formatVND(cost) : "—"}</td>
@@ -771,6 +890,23 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (typeof lucide !== "undefined") lucide.createIcons();
 });
+
+// ─── Cross-tab helpers ────────────────────────────────────────────────────────
+
+// Build a small clickable badge showing which templates use this work item key
+// Clicking it navigates to Templates tab filtered to that template
+function buildItemTemplateBadge(workItemKey) {
+    if (!workItemKey || workItemKey === "custom") return "";
+    const itemTemplateMap = buildItemTemplateMap();
+    const usedIn = itemTemplateMap[workItemKey] || [];
+    if (usedIn.length === 0) return "";
+    const uniqueIds = [...new Set(usedIn.map(u => u.templateId))];
+    const count = uniqueIds.length;
+    const title = uniqueIds.map(id => PROJECT_TEMPLATES.find(t => t.id === id)?.name || id).join(", ");
+    return `<span class="cross-tab-badge"
+        onclick="switchToTabAndHighlight('templates','${workItemKey}')"
+        title="Xem trong Template: ${escHtml(title)}">${count} template</span>`;
+}
 
 // ─── Template Catalog (Panel 3) ───────────────────────────────────────────────
 
@@ -1035,9 +1171,26 @@ function buildCatalogRow(stt, row, savedPrices) {
         ? `<span class="tpl-unit-badge" style="background:rgba(255,255,255,0.05);color:var(--text-muted);">custom</span>`
         : `<span class="tpl-item-key">${escHtml(row.key)}</span>`;
 
-    return `<tr>
+    // Check if this key exists in current estimate (pricingItems)
+    const inEstimate = !row.isCustom && pricingItems.some(p => p.workItemKey === row.key);
+    const jumpLinks = !row.isCustom ? `
+        <span class="cross-tab-link ${inEstimate ? "" : "cross-tab-link-disabled"}"
+            onclick="${inEstimate ? `switchToTabAndHighlight('subcontractor','${row.key}')` : "showToast('Hạng mục này chưa có trong bảng dự toán hiện tại')"}"
+            title="${inEstimate ? "Xem trong bảng so sánh NTP" : "Chưa có trong dự toán hiện tại"}">
+            <i data-lucide="users" style="width:10px;height:10px;"></i> NTP
+        </span>
+        <span class="cross-tab-link ${inEstimate ? "" : "cross-tab-link-disabled"}"
+            onclick="${inEstimate ? `switchToTabAndHighlight('selling','${row.key}')` : "showToast('Hạng mục này chưa có trong bảng dự toán hiện tại')"}"
+            title="${inEstimate ? "Xem trong bảng giá bán" : "Chưa có trong dự toán hiện tại"}">
+            <i data-lucide="tag" style="width:10px;height:10px;"></i> Giá bán
+        </span>` : "";
+
+    return `<tr data-work-key="${escHtml(row.key)}">
         <td style="text-align:center;color:var(--text-muted);font-size:12px;">${stt}</td>
-        <td style="font-weight:500;color:var(--text-primary);">${escHtml(row.name)}</td>
+        <td style="font-weight:500;color:var(--text-primary);">
+            ${escHtml(row.name)}
+            <div class="cross-tab-links">${jumpLinks}</div>
+        </td>
         <td style="text-align:center;"><span class="tpl-unit-badge">${escHtml(row.unit)}</span></td>
         <td style="text-align:right;">
             <input class="tpl-price-input ${isModified ? "modified" : ""}"

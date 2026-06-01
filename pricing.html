@@ -326,6 +326,25 @@
         .tpl-price-changed-dot { display: inline-block; width: 5px; height: 5px; border-radius: 50%; background: #fbbf24; margin-left: 3px; vertical-align: middle; opacity: 0; transition: opacity 0.2s; }
         .tpl-price-changed-dot.visible { opacity: 1; }
 
+        /* ── Data source bar ── */
+        .prx-source-bar { display:flex; align-items:center; gap:8px; padding:8px 12px; background:rgba(0,242,254,0.03); border:1px solid rgba(0,242,254,0.1); border-radius:8px; margin-bottom:12px; flex-wrap:wrap; }
+        .prx-source-label { font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em; white-space:nowrap; }
+        .prx-source-btns { display:flex; gap:4px; flex-wrap:wrap; }
+        .prx-source-btn { padding:4px 12px; font-size:11px; font-weight:600; border-radius:5px; border:1px solid rgba(255,255,255,0.1); background:rgba(255,255,255,0.04); color:var(--text-muted); cursor:pointer; transition:all 0.15s; display:inline-flex; align-items:center; gap:4px; white-space:nowrap; }
+        .prx-source-btn:hover { color:var(--text-primary); border-color:rgba(255,255,255,0.2); }
+        .prx-source-btn.active { background:rgba(0,242,254,0.12); border-color:rgba(0,242,254,0.35); color:#00f2fe; }
+
+        /* ── Cross-tab navigation ── */
+        .cross-tab-badge { display: inline-block; font-size: 10px; padding: 1px 5px; border-radius: 3px; background: rgba(99,102,241,0.15); border: 1px solid rgba(99,102,241,0.3); color: #a5b4fc; cursor: pointer; margin-left: 5px; vertical-align: middle; font-weight: 600; transition: all 0.15s; white-space: nowrap; }
+        .cross-tab-badge:hover { background: rgba(99,102,241,0.3); color: #c4b5fd; }
+        .cross-tab-links { display: flex; gap: 4px; margin-top: 3px; }
+        .cross-tab-link { display: inline-flex; align-items: center; gap: 3px; font-size: 10px; padding: 1px 6px; border-radius: 3px; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.04); color: var(--text-muted); cursor: pointer; font-weight: 600; transition: all 0.15s; white-space: nowrap; }
+        .cross-tab-link:hover { background: rgba(0,242,254,0.1); border-color: rgba(0,242,254,0.3); color: #00f2fe; }
+        .cross-tab-link-disabled { opacity: 0.4; cursor: default; }
+        .cross-tab-link-disabled:hover { background: rgba(255,255,255,0.04) !important; border-color: rgba(255,255,255,0.1) !important; color: var(--text-muted) !important; }
+        @keyframes rowFlash { 0%{background:rgba(0,242,254,0.18);} 60%{background:rgba(0,242,254,0.08);} 100%{background:transparent;} }
+        .row-highlight-flash td { animation: rowFlash 1.8s ease-out forwards; }
+
         .tpl-stats-bar { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; padding: 10px 12px; background: rgba(0,242,254,0.03); border: 1px solid rgba(0,242,254,0.12); border-radius: 8px; margin-bottom: 14px; }
         .tpl-stat { display: flex; flex-direction: column; gap: 1px; }
         .tpl-stat-label { font-size: 9px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
@@ -415,6 +434,18 @@
                     <i data-lucide="printer"></i> In
                 </button>
             </div>
+        </div>
+
+        <!-- DATA SOURCE SELECTOR — shared across all tabs -->
+        <div class="prx-source-bar no-print" id="prxSourceBar">
+            <span class="prx-source-label">Xem theo:</span>
+            <div class="prx-source-btns" id="prxSourceBtns">
+                <button class="prx-source-btn active" data-source="estimate">
+                    <i data-lucide="file-spreadsheet" style="width:12px;height:12px;"></i> Dự toán hiện tại
+                </button>
+                <!-- Template buttons populated by JS -->
+            </div>
+            <span id="prxSourceNote" style="font-size:11px;color:var(--text-muted);margin-left:8px;"></span>
         </div>
 
         <!-- TAB SWITCHER -->
@@ -635,10 +666,13 @@
                             <tr>
                                 <th style="width:36px;text-align:center;">STT</th>
                                 <th>Tên hạng mục</th>
-                                <th style="width:80px;text-align:center;">ĐVT</th>
-                                <th class="text-right" style="width:130px;">Đơn giá mặc định <span class="tpl-price-changed-dot" id="tplPriceChangedDot" style="opacity:0;"></span></th>
-                                <th>Có trong template</th>
-                                <th style="width:50px;text-align:center;" title="Loại hạng mục: work item key hay custom">Loại</th>
+                                <th style="width:70px;text-align:center;">ĐVT</th>
+                                <th class="text-right" style="width:120px;">ĐG mặc định <span class="tpl-price-changed-dot" id="tplPriceChangedDot" style="opacity:0;"></span></th>
+                                <th class="text-right th-ntp1" style="width:110px;" id="tplThNtp1">NTP1</th>
+                                <th class="text-right th-ntp2" style="width:110px;" id="tplThNtp2">NTP2</th>
+                                <th class="text-right th-ntp3" style="width:110px;" id="tplThNtp3">NTP3</th>
+                                <th class="text-right" style="width:110px;color:#34d399;">Giá bán CT</th>
+                                <th style="width:160px;">Có trong template</th>
                             </tr>
                         </thead>
                         <tbody id="tplTableBody">
