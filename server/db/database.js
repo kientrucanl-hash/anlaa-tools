@@ -139,6 +139,38 @@ sqliteDb.exec(`
     CREATE INDEX IF NOT EXISTS idx_collabs_invitee ON project_collaborators(invitee_id);
     CREATE INDEX IF NOT EXISTS idx_access_req_project ON project_access_requests(project_id);
     CREATE INDEX IF NOT EXISTS idx_comments_project ON project_comments(project_id);
+
+    -- Persistent notifications: survives disconnect/refresh
+    CREATE TABLE IF NOT EXISTS notifications (
+        id          INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id     INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        type        TEXT    NOT NULL, -- 'collab_invite'|'collab_responded'|'access_request'|'access_approved'|'access_denied'|'project_approved'|'project_rejected'|'role_changed'|'system'
+        title       TEXT    NOT NULL,
+        body        TEXT    NOT NULL,
+        link        TEXT,             -- optional URL hint (e.g. estimate.html?id=5)
+        meta        TEXT    NOT NULL DEFAULT '{}', -- JSON: extra context (projectId, role, etc.)
+        is_read     INTEGER NOT NULL DEFAULT 0,
+        created_at  TEXT    NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_notif_user_id  ON notifications(user_id);
+    CREATE INDEX IF NOT EXISTS idx_notif_is_read  ON notifications(user_id, is_read);
+
+    -- Per-user price profile: overrides DEFAULT_WORK_ITEM_PRICES globally for that user
+    CREATE TABLE IF NOT EXISTS user_price_profiles (
+        id          INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id     INTEGER NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+        region      TEXT    NOT NULL DEFAULT 'hanoi',
+        prices      TEXT    NOT NULL DEFAULT '{}', -- JSON: { "masonry-110": 275000, ... }
+        updated_at  TEXT    NOT NULL
+    );
+
+    -- Per-project price overrides: takes precedence over user profile for that project
+    CREATE TABLE IF NOT EXISTS project_price_overrides (
+        id          INTEGER PRIMARY KEY AUTOINCREMENT,
+        project_id  INTEGER NOT NULL UNIQUE REFERENCES projects(id) ON DELETE CASCADE,
+        prices      TEXT    NOT NULL DEFAULT '{}', -- JSON: same key format
+        updated_at  TEXT    NOT NULL
+    );
 `);
 
 function now() {
@@ -151,6 +183,38 @@ function now() {
     if (!cols.includes('max_sessions')) {
         sqliteDb.exec('ALTER TABLE users ADD COLUMN max_sessions INTEGER NOT NULL DEFAULT 2');
     }
+    // These tables are created above via CREATE TABLE IF NOT EXISTS, but
+    // production DBs deployed before this version need explicit creation.
+    sqliteDb.exec(`
+        CREATE TABLE IF NOT EXISTS notifications (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            type TEXT NOT NULL,
+            title TEXT NOT NULL,
+            body TEXT NOT NULL,
+            link TEXT,
+            meta TEXT NOT NULL DEFAULT '{}',
+            is_read INTEGER NOT NULL DEFAULT 0,
+            created_at TEXT NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS idx_notif_user_id ON notifications(user_id);
+        CREATE INDEX IF NOT EXISTS idx_notif_is_read  ON notifications(user_id, is_read);
+
+        CREATE TABLE IF NOT EXISTS user_price_profiles (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+            region TEXT NOT NULL DEFAULT 'hanoi',
+            prices TEXT NOT NULL DEFAULT '{}',
+            updated_at TEXT NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS project_price_overrides (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            project_id INTEGER NOT NULL UNIQUE REFERENCES projects(id) ON DELETE CASCADE,
+            prices TEXT NOT NULL DEFAULT '{}',
+            updated_at TEXT NOT NULL
+        );
+    `);
 })();
 
 function parseProject(row) {
@@ -583,6 +647,82 @@ db.contractors = {
             FROM contractors
         `).get();
     }
+};
+
+// ── Notifications ─────────────────────────────────────────────────────────
+db.notifications = {
+    // Create a notification for a user
+    create({ user_id, type, title, body, link = null, meta = {} }) {
+        const result = sqliteDb.prepare(
+            'INSERT INTO notifications (user_id, type, title, body, link, meta, is_read, created_at) VALUES (?, ?, ?, ?, ?, ?, 0, ?)'
+        ).run(user_id, type, title, body, link || null, JSON.stringify(meta), now());
+        return sqliteDb.prepare('SELECT * FROM notifications WHERE id=?').get(result.lastInsertRowid);
+    },
+    // Get all notifications for a user (newest first, max 50)
+    byUser(user_id, limit = 50) {
+        return sqliteDb.prepare(
+            'SELECT * FROM notifications WHERE user_id=? ORDER BY created_at DESC LIMIT ?'
+        ).all(user_id, limit).map(r => ({ ...r, meta: JSON.parse(r.meta || '{}') }));
+    },
+    unreadCount(user_id) {
+        return sqliteDb.prepare('SELECT COUNT(*) as c FROM notifications WHERE user_id=? AND is_read=0').get(user_id).c;
+    },
+    markRead(id, user_id) {
+        sqliteDb.prepare('UPDATE notifications SET is_read=1 WHERE id=? AND user_id=?').run(id, user_id);
+    },
+    markAllRead(user_id) {
+        sqliteDb.prepare('UPDATE notifications SET is_read=1 WHERE user_id=?').run(user_id);
+    },
+    delete(id, user_id) {
+        sqliteDb.prepare('DELETE FROM notifications WHERE id=? AND user_id=?').run(id, user_id);
+    },
+    deleteAll(user_id) {
+        sqliteDb.prepare('DELETE FROM notifications WHERE user_id=?').run(user_id);
+    },
+    // Prune old read notifications beyond 100 per user
+    prune(user_id) {
+        sqliteDb.prepare(`
+            DELETE FROM notifications WHERE user_id=? AND is_read=1
+            AND id NOT IN (SELECT id FROM notifications WHERE user_id=? ORDER BY created_at DESC LIMIT 100)
+        `).run(user_id, user_id);
+    },
+};
+
+// ── Price Profiles ─────────────────────────────────────────────────────────
+db.priceProfiles = {
+    // Get user's global price profile (returns default structure if not set)
+    getByUser(user_id) {
+        const row = sqliteDb.prepare('SELECT * FROM user_price_profiles WHERE user_id=?').get(user_id);
+        if (!row) return { user_id, region: 'hanoi', prices: {} };
+        return { ...row, prices: JSON.parse(row.prices || '{}') };
+    },
+    // Upsert user price profile
+    upsertUser(user_id, region, prices) {
+        sqliteDb.prepare(`
+            INSERT INTO user_price_profiles (user_id, region, prices, updated_at)
+            VALUES (?, ?, ?, ?)
+            ON CONFLICT(user_id) DO UPDATE SET region=excluded.region, prices=excluded.prices, updated_at=excluded.updated_at
+        `).run(user_id, region || 'hanoi', JSON.stringify(prices || {}), now());
+        return db.priceProfiles.getByUser(user_id);
+    },
+    // Get project-level price overrides
+    getByProject(project_id) {
+        const row = sqliteDb.prepare('SELECT * FROM project_price_overrides WHERE project_id=?').get(project_id);
+        if (!row) return { project_id, prices: {} };
+        return { ...row, prices: JSON.parse(row.prices || '{}') };
+    },
+    // Upsert project price overrides
+    upsertProject(project_id, prices) {
+        sqliteDb.prepare(`
+            INSERT INTO project_price_overrides (project_id, prices, updated_at)
+            VALUES (?, ?, ?)
+            ON CONFLICT(project_id) DO UPDATE SET prices=excluded.prices, updated_at=excluded.updated_at
+        `).run(project_id, JSON.stringify(prices || {}), now());
+        return db.priceProfiles.getByProject(project_id);
+    },
+    deleteProject(project_id) {
+        sqliteDb.prepare('DELETE FROM project_price_overrides WHERE project_id=?').run(project_id);
+    },
 };
 
 module.exports = db;

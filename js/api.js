@@ -123,6 +123,36 @@ const API = {
 
     revokeSession: (sessionId) =>
         apiFetch(`/users/sessions/${sessionId}`, { method: 'DELETE' }),
+
+    // Notifications
+    getNotifications: () => apiFetch('/notifications'),
+
+    markNotificationRead: (id) =>
+        apiFetch(`/notifications/${id}/read`, { method: 'PUT' }),
+
+    markAllNotificationsRead: () =>
+        apiFetch('/notifications/read-all', { method: 'PUT' }),
+
+    deleteNotification: (id) =>
+        apiFetch(`/notifications/${id}`, { method: 'DELETE' }),
+
+    clearAllNotifications: () =>
+        apiFetch('/notifications', { method: 'DELETE' }),
+
+    // Price profiles
+    getMyPriceProfile: () => apiFetch('/prices/me'),
+
+    saveMyPriceProfile: (region, prices) =>
+        apiFetch('/prices/me', { method: 'PUT', body: JSON.stringify({ region, prices }) }),
+
+    getProjectPriceOverrides: (projectId) =>
+        apiFetch(`/prices/project/${projectId}`),
+
+    saveProjectPriceOverrides: (projectId, prices) =>
+        apiFetch(`/prices/project/${projectId}`, { method: 'PUT', body: JSON.stringify({ prices }) }),
+
+    deleteProjectPriceOverrides: (projectId) =>
+        apiFetch(`/prices/project/${projectId}`, { method: 'DELETE' }),
 };
 
 window.API = API;

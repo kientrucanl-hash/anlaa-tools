@@ -147,6 +147,9 @@ async function handleLogin(e) {
         if (typeof loadProjectsFromAPI === 'function') {
             await loadProjectsFromAPI();
         }
+        if (typeof loadPriceProfileFromServer === 'function') {
+            loadPriceProfileFromServer(); // async, no await — don't block login flow
+        }
     } catch (err) {
         errorEl.textContent = err.message;
         btn.disabled = false;

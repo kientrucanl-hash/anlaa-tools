@@ -64,15 +64,24 @@ router.post('/:projectId/invite', requireAuth, validate(Joi.object({
 
     const collab = db.collaborators.invite(projectId, req.user.id, invitee.id, req.body.role);
 
-    // Notify via socket if available
+    // Persist notification for invitee
+    const roleLabel = req.body.role === 'editor' ? 'Chỉnh sửa' : 'Chỉ xem';
+    db.notifications.create({
+        user_id: invitee.id,
+        type: 'collab_invite',
+        title: 'Lời mời cộng tác',
+        body: `${req.user.username} mời bạn vào dự án "${project.name}" với quyền ${roleLabel}.`,
+        link: `index.html`,
+        meta: { projectId, projectName: project.name, invitedBy: req.user.username, role: req.body.role },
+    });
+
     const io = req.app.get('io');
     if (io) {
         io.to(`user:${invitee.id}`).emit('collab:invited', {
-            projectId,
-            projectName: project.name,
-            invitedBy: req.user.username,
-            role: req.body.role,
+            projectId, projectName: project.name,
+            invitedBy: req.user.username, role: req.body.role,
         });
+        io.to(`user:${invitee.id}`).emit('notification:new', db.notifications.byUser(invitee.id, 1)[0]);
     }
 
     res.json({ message: `Đã mời ${invitee.username}`, collab });
@@ -96,14 +105,23 @@ router.put('/:projectId/invite/respond', requireAuth, validate(Joi.object({
         db.collaborators.deny(projectId, req.user.id);
     }
 
-    // Notify owner
+    // Persist notification for project owner
+    const actionLabel = req.body.action === 'accept' ? 'chấp nhận' : 'từ chối';
+    db.notifications.create({
+        user_id: collab.owner_id,
+        type: 'collab_responded',
+        title: `${req.user.username} ${actionLabel} lời mời`,
+        body: `${req.user.username} đã ${actionLabel} lời mời cộng tác vào dự án.`,
+        link: `index.html`,
+        meta: { projectId, action: req.body.action, username: req.user.username },
+    });
+
     const io = req.app.get('io');
     if (io) {
         io.to(`user:${collab.owner_id}`).emit('collab:responded', {
-            projectId,
-            username: req.user.username,
-            action: req.body.action,
+            projectId, username: req.user.username, action: req.body.action,
         });
+        io.to(`user:${collab.owner_id}`).emit('notification:new', db.notifications.byUser(collab.owner_id, 1)[0]);
         if (req.body.action === 'accept') {
             io.to(`project:${projectId}`).emit('collab:joined', { username: req.user.username });
         }
@@ -128,12 +146,20 @@ router.put('/:projectId/role', requireAuth, validate(Joi.object({
 
     db.collaborators.updateRole(projectId, req.body.inviteeId, req.body.role);
 
+    const newRoleLabel = req.body.role === 'editor' ? 'Chỉnh sửa' : 'Chỉ xem';
+    db.notifications.create({
+        user_id: req.body.inviteeId,
+        type: 'role_changed',
+        title: 'Quyền cộng tác thay đổi',
+        body: `Quyền của bạn trong dự án của ${req.user.username} đã thay đổi thành "${newRoleLabel}".`,
+        link: `index.html`,
+        meta: { projectId, role: req.body.role },
+    });
+
     const io = req.app.get('io');
     if (io) {
-        io.to(`user:${req.body.inviteeId}`).emit('collab:role_changed', {
-            projectId,
-            newRole: req.body.role,
-        });
+        io.to(`user:${req.body.inviteeId}`).emit('collab:role_changed', { projectId, newRole: req.body.role });
+        io.to(`user:${req.body.inviteeId}`).emit('notification:new', db.notifications.byUser(req.body.inviteeId, 1)[0]);
     }
 
     res.json({ message: 'Đã cập nhật quyền' });
@@ -180,18 +206,25 @@ router.post('/:projectId/request-access', requireAuth, validate(Joi.object({
 
     const accessReq = db.accessRequests.create(projectId, req.user.id, req.body.role, req.body.message);
 
-    // Notify project owner via socket
+    // Persist notification for project owner
+    const roleReqLabel = req.body.role === 'editor' ? 'Chỉnh sửa' : 'Chỉ xem';
+    db.notifications.create({
+        user_id: project.user_id,
+        type: 'access_request',
+        title: 'Yêu cầu truy cập dự án',
+        body: `${req.user.username} yêu cầu quyền ${roleReqLabel} dự án "${project.name}".${req.body.message ? ` Ghi chú: ${req.body.message}` : ''}`,
+        link: `index.html`,
+        meta: { projectId, projectName: project.name, requesterId: req.user.id, requesterUsername: req.user.username, role: req.body.role, requestId: accessReq.id },
+    });
+
     const io = req.app.get('io');
     if (io) {
         io.to(`user:${project.user_id}`).emit('collab:access_requested', {
-            projectId,
-            projectName: project.name,
-            requesterId: req.user.id,
-            requesterUsername: req.user.username,
-            role: req.body.role,
-            message: req.body.message,
-            requestId: accessReq.id,
+            projectId, projectName: project.name,
+            requesterId: req.user.id, requesterUsername: req.user.username,
+            role: req.body.role, message: req.body.message, requestId: accessReq.id,
         });
+        io.to(`user:${project.user_id}`).emit('notification:new', db.notifications.byUser(project.user_id, 1)[0]);
     }
 
     res.json({ message: 'Đã gửi yêu cầu quyền truy cập. Chờ chủ dự án xét duyệt.' });
@@ -220,10 +253,20 @@ router.put('/:projectId/request-access/:requestId', requireAuth, validate(Joi.ob
 
     if (req.body.action === 'approve') {
         db.accessRequests.approve(requestId, projectId, req.user.id, accessReq.requester_id, req.body.role);
+        const approvedRoleLabel = req.body.role === 'editor' ? 'Chỉnh sửa' : 'Chỉ xem';
+        db.notifications.create({
+            user_id: accessReq.requester_id,
+            type: 'access_approved',
+            title: 'Yêu cầu truy cập được chấp thuận',
+            body: `Bạn được cấp quyền ${approvedRoleLabel} dự án "${project.name}".`,
+            link: `index.html`,
+            meta: { projectId, projectName: project.name, role: req.body.role },
+        });
         if (io) {
             io.to(`user:${accessReq.requester_id}`).emit('collab:access_approved', {
                 projectId, projectName: project.name, role: req.body.role,
             });
+            io.to(`user:${accessReq.requester_id}`).emit('notification:new', db.notifications.byUser(accessReq.requester_id, 1)[0]);
             io.to(`project:${projectId}`).emit('collab:joined', {
                 userId: accessReq.requester_id, username: accessReq.requester_username,
             });
@@ -231,10 +274,19 @@ router.put('/:projectId/request-access/:requestId', requireAuth, validate(Joi.ob
         res.json({ message: `Đã cấp quyền ${req.body.role} cho ${accessReq.requester_username}` });
     } else {
         db.accessRequests.deny(requestId);
+        db.notifications.create({
+            user_id: accessReq.requester_id,
+            type: 'access_denied',
+            title: 'Yêu cầu truy cập bị từ chối',
+            body: `Yêu cầu truy cập dự án "${project.name}" của bạn bị từ chối.`,
+            link: null,
+            meta: { projectId, projectName: project.name },
+        });
         if (io) {
             io.to(`user:${accessReq.requester_id}`).emit('collab:access_denied', {
                 projectId, projectName: project.name,
             });
+            io.to(`user:${accessReq.requester_id}`).emit('notification:new', db.notifications.byUser(accessReq.requester_id, 1)[0]);
         }
         res.json({ message: `Đã từ chối yêu cầu của ${accessReq.requester_username}` });
     }

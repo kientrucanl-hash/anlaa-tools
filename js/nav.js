@@ -144,75 +144,113 @@ function renderSidebarHTML(activePage) {
     `;
 }
 
-function saveNotifications() {
-    localStorage.setItem("anlaa_notifications", JSON.stringify(notifications));
+const NAV_NOTIF_TYPE_MAP = {
+    project_approved: { icon: 'check-circle',   cat: 'success' },
+    project_rejected: { icon: 'x-circle',        cat: 'error'   },
+    collab_invite:    { icon: 'user-plus',        cat: 'info'    },
+    collab_responded: { icon: 'user-check',       cat: 'info'    },
+    access_request:   { icon: 'key',              cat: 'warning' },
+    access_approved:  { icon: 'unlock',           cat: 'success' },
+    access_denied:    { icon: 'lock',             cat: 'error'   },
+    role_changed:     { icon: 'shield',           cat: 'info'    },
+    system:           { icon: 'bell',             cat: 'info'    },
+};
+
+function escapeHtml(str) {
+    return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function formatNavNotifTime(ts) {
+    if (!ts) return '';
+    try {
+        const diff = Date.now() - new Date(ts).getTime();
+        const m = Math.floor(diff / 60000);
+        if (m < 1) return 'Vừa xong';
+        if (m < 60) return `${m} phút trước`;
+        const h = Math.floor(m / 60);
+        if (h < 24) return `${h} giờ trước`;
+        return `${Math.floor(h / 24)} ngày trước`;
+    } catch { return ts; }
+}
+
+function updateNavNotifBadge(count) {
+    const badge = document.getElementById("notiBadgeCount");
+    if (!badge) return;
+    if (count > 0) {
+        badge.textContent = count > 99 ? '99+' : count;
+        badge.style.display = "flex";
+    } else {
+        badge.style.display = "none";
+    }
+}
+
+async function loadNavNotificationsFromServer() {
+    const token = localStorage.getItem('anlaa_token');
+    if (!token) return;
+    try {
+        const res = await fetch('/api/notifications', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        notifications = data.notifications || [];
+        renderNotifications();
+    } catch {}
 }
 
 function renderNotifications() {
     const list = document.getElementById("notiList");
-    const badge = document.getElementById("notiBadgeCount");
     if (!list) return;
 
-    // Unread count
-    const unreadCount = notifications.filter(n => n.unread).length;
-    if (badge) {
-        if (unreadCount > 0) {
-            badge.textContent = unreadCount;
-            badge.style.display = "flex";
-        } else {
-            badge.style.display = "none";
-        }
-    }
+    const unreadCount = notifications.filter(n => !n.is_read).length;
+    updateNavNotifBadge(unreadCount);
 
     if (notifications.length === 0) {
         list.innerHTML = `<div class="noti-empty">Không có thông báo mới</div>`;
         return;
     }
 
-    // Map categories to icons
-    const iconMap = {
-        success: "check-circle",
-        warning: "alert-triangle",
-        error: "shield-alert",
-        info: "info"
-    };
-
-    list.innerHTML = notifications.map(n => `
-        <div class="noti-item ${n.unread ? "unread" : ""} cat-${n.category}" data-id="${n.id}">
-            <div class="noti-item-icon">
-                <i data-lucide="${iconMap[n.category] || "bell"}"></i>
-            </div>
+    list.innerHTML = notifications.map(n => {
+        const tm = NAV_NOTIF_TYPE_MAP[n.type] || NAV_NOTIF_TYPE_MAP.system;
+        return `
+        <div class="noti-item ${!n.is_read ? "unread" : ""} cat-${tm.cat}" data-id="${n.id}">
+            <div class="noti-item-icon"><i data-lucide="${tm.icon}"></i></div>
             <div class="noti-item-content">
                 <span class="noti-item-title">${escapeHtml(n.title)}</span>
                 <span class="noti-item-body">${escapeHtml(n.body)}</span>
-                <span class="noti-item-time">${escapeHtml(n.time)}</span>
+                <span class="noti-item-time">${formatNavNotifTime(n.created_at)}</span>
             </div>
-            ${n.unread ? `<span class="noti-item-unread-dot"></span>` : ""}
-            <button class="noti-item-delete" data-id="${n.id}" title="Xóa thông báo">×</button>
-        </div>
-    `).join("");
+            ${!n.is_read ? `<span class="noti-item-unread-dot"></span>` : ""}
+            <button class="noti-item-delete" data-id="${n.id}" title="Xóa">×</button>
+        </div>`;
+    }).join("");
 
-    // Wire events inside list
     list.querySelectorAll(".noti-item").forEach(item => {
-        item.addEventListener("click", (e) => {
+        item.addEventListener("click", async (e) => {
             if (e.target.closest(".noti-item-delete")) return;
-            const notiId = item.dataset.id;
-            const noti = notifications.find(n => n.id === notiId);
-            if (noti && noti.unread) {
-                noti.unread = false;
-                saveNotifications();
+            const id = parseInt(item.dataset.id);
+            const n = notifications.find(x => x.id === id);
+            if (n && !n.is_read) {
+                n.is_read = 1;
                 renderNotifications();
+                try {
+                    const token = localStorage.getItem('anlaa_token');
+                    await fetch(`/api/notifications/${id}/read`, { method: 'PUT', headers: { 'Authorization': `Bearer ${token}` } });
+                } catch {}
             }
         });
     });
 
     list.querySelectorAll(".noti-item-delete").forEach(btn => {
-        btn.addEventListener("click", (e) => {
+        btn.addEventListener("click", async (e) => {
             e.stopPropagation();
-            const notiId = btn.dataset.id;
-            notifications = notifications.filter(n => n.id !== notiId);
-            saveNotifications();
+            const id = parseInt(btn.dataset.id);
+            notifications = notifications.filter(n => n.id !== id);
             renderNotifications();
+            try {
+                const token = localStorage.getItem('anlaa_token');
+                await fetch(`/api/notifications/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
+            } catch {}
         });
     });
 
@@ -236,7 +274,7 @@ function initNotifications() {
                 <button id="btnNotiMarkAllRead" class="noti-mark-read-btn">Đọc tất cả</button>
             </div>
             <div id="notiList" class="noti-list" style="max-height: 280px; overflow-y: auto;">
-                <div class="noti-empty">Không có thông báo mới</div>
+                <div class="noti-empty">Đang tải...</div>
             </div>
             <div class="noti-footer">
                 <button id="btnNotiClearAll" class="noti-clear-all-btn">Xóa tất cả</button>
@@ -251,110 +289,75 @@ function initNotifications() {
     const btnClearAll = document.getElementById("btnNotiClearAll");
     const btnClose = document.getElementById("btnNotiClose");
 
-    // Load or pre-populate
-    try {
-        const stored = localStorage.getItem("anlaa_notifications");
-        if (stored) {
-            notifications = JSON.parse(stored);
-        } else {
-            // Pre-populate with beautiful default notifications
-            notifications = [
-                {
-                    id: "noti-1",
-                    category: "success",
-                    title: "Dự án biệt thự A-01 phê duyệt",
-                    body: "Admin đã duyệt dự toán hoàn chỉnh của biệt thự A-01 và cập nhật bảng giá chính thức.",
-                    time: "5 phút trước",
-                    unread: true
-                },
-                {
-                    id: "noti-2",
-                    category: "warning",
-                    title: "Nhắc nhở: Đơn giá thép biến động",
-                    body: "Giá thép xây dựng Hòa Phát tăng nhẹ khoảng 1.2%. Vui lòng rà soát lại đơn giá trong bảng dự toán.",
-                    time: "2 giờ trước",
-                    unread: true
-                },
-                {
-                    id: "noti-3",
-                    category: "info",
-                    title: "Hệ thống nâng cấp UI Tối giản",
-                    body: "Chúng tôi vừa nâng cấp toàn bộ giao diện sang chuẩn Glassmorphism tối giản và tối ưu hóa không gian làm việc di động.",
-                    time: "1 ngày trước",
-                    unread: false
-                },
-                {
-                    id: "noti-4",
-                    category: "error",
-                    title: "Cảnh báo sai lệch khối lượng",
-                    body: "Phát hiện sai lệch lớn giữa thể tích xây thô và diện tích trát tường đứng ở khu vực tầng 2. Cần rà soát lại ngay.",
-                    time: "3 ngày trước",
-                    unread: true
-                }
-            ];
-            localStorage.setItem("anlaa_notifications", JSON.stringify(notifications));
-        }
-    } catch {
-        notifications = [];
-    }
+    // Load from server
+    loadNavNotificationsFromServer();
 
-    // Toggle dropdown (fixed positioning dynamic aligning above the button)
+    // Toggle dropdown
     btn.addEventListener("click", (e) => {
         e.stopPropagation();
         const show = dropdown.style.display === "none" || dropdown.style.display === "";
         dropdown.style.display = show ? "flex" : "none";
-        
         if (show) {
-            // Align dropdown fixed position right above the bell button
             const rect = btn.getBoundingClientRect();
             dropdown.style.position = "fixed";
-            dropdown.style.left = Math.max(10, rect.left - 150) + "px";
-            
-            // If it is on mobile, place it near top of screen or relative to sidebar
             if (window.innerWidth <= 1200) {
                 dropdown.style.bottom = "60px";
                 dropdown.style.left = "16px";
                 dropdown.style.width = "calc(100vw - 32px)";
             } else {
+                dropdown.style.left = Math.max(10, rect.left - 150) + "px";
                 dropdown.style.bottom = (window.innerHeight - rect.top + 8) + "px";
                 dropdown.style.width = "340px";
             }
             dropdown.style.top = "auto";
             dropdown.style.right = "auto";
-            
+            loadNavNotificationsFromServer();
             if (typeof lucide !== "undefined") lucide.createIcons();
         }
     });
 
-    // Close on click outside
     document.addEventListener("click", (e) => {
         if (!e.target.closest(".noti-container") && !e.target.closest(".noti-dropdown")) {
             dropdown.style.display = "none";
         }
     });
 
-    // Mark all as read
-    btnMarkAll?.addEventListener("click", () => {
-        notifications.forEach(n => n.unread = false);
-        saveNotifications();
-        renderNotifications();
+    btnMarkAll?.addEventListener("click", async () => {
+        try {
+            const token = localStorage.getItem('anlaa_token');
+            await fetch('/api/notifications/read-all', { method: 'PUT', headers: { 'Authorization': `Bearer ${token}` } });
+            notifications.forEach(n => { n.is_read = 1; });
+            renderNotifications();
+        } catch {}
     });
 
-    // Clear all
-    btnClearAll?.addEventListener("click", () => {
-        if (confirm("Xóa toàn bộ thông báo hệ thống?")) {
-            notifications = [];
-            saveNotifications();
-            renderNotifications();
+    btnClearAll?.addEventListener("click", async () => {
+        if (confirm("Xóa toàn bộ thông báo?")) {
+            try {
+                const token = localStorage.getItem('anlaa_token');
+                await fetch('/api/notifications', { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
+                notifications = [];
+                renderNotifications();
+            } catch {}
         }
     });
 
-    // Close button
-    btnClose?.addEventListener("click", () => {
-        dropdown.style.display = "none";
-    });
+    btnClose?.addEventListener("click", () => { dropdown.style.display = "none"; });
 
-    // Initial render
+    // Real-time: listen on Socket.IO if available (pages that load socket.io.js)
+    if (typeof io !== 'undefined') {
+        try {
+            const _s = io({ auth: { token: localStorage.getItem('anlaa_token') }, transports: ['websocket', 'polling'] });
+            _s.on('notification:new', (notif) => {
+                if (!notif) return;
+                notifications.unshift({ ...notif, meta: notif.meta || {} });
+                if (notifications.length > 50) notifications.pop();
+                renderNotifications();
+            });
+            _s.on('notification:unread_count', ({ count }) => updateNavNotifBadge(count));
+        } catch {}
+    }
+
     renderNotifications();
 }
 

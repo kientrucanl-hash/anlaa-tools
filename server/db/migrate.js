@@ -103,6 +103,35 @@ CREATE TABLE IF NOT EXISTS quotations (
 );
 CREATE INDEX IF NOT EXISTS idx_quotations_user_id    ON quotations(user_id);
 CREATE INDEX IF NOT EXISTS idx_quotations_updated_at ON quotations(updated_at);
+
+CREATE TABLE IF NOT EXISTS notifications (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    type       TEXT    NOT NULL,
+    title      TEXT    NOT NULL,
+    body       TEXT    NOT NULL,
+    link       TEXT,
+    meta       TEXT    NOT NULL DEFAULT '{}',
+    is_read    INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT    NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_notif_user_id ON notifications(user_id);
+CREATE INDEX IF NOT EXISTS idx_notif_is_read ON notifications(user_id, is_read);
+
+CREATE TABLE IF NOT EXISTS user_price_profiles (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id    INTEGER NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+    region     TEXT    NOT NULL DEFAULT 'hanoi',
+    prices     TEXT    NOT NULL DEFAULT '{}',
+    updated_at TEXT    NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS project_price_overrides (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id INTEGER NOT NULL UNIQUE REFERENCES projects(id) ON DELETE CASCADE,
+    prices     TEXT    NOT NULL DEFAULT '{}',
+    updated_at TEXT    NOT NULL
+);
 `);
 console.log('[OK] All tables ready');
 

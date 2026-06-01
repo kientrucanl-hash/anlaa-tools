@@ -160,7 +160,21 @@ router.put('/:id/approve', requireAdmin, (req, res) => {
         return res.status(400).json({ error: 'Chỉ có thể duyệt project đang Chờ duyệt' });
     }
 
-    res.json(db.projects.update(id, { status: 'approved', admin_note: null }));
+    const updated = db.projects.update(id, { status: 'approved', admin_note: null });
+
+    // Notify project owner
+    db.notifications.create({
+        user_id: project.user_id,
+        type: 'project_approved',
+        title: 'Dự toán đã được duyệt',
+        body: `Dự toán "${project.name}" đã được Admin phê duyệt.`,
+        link: `index.html`,
+        meta: { projectId: id, projectName: project.name },
+    });
+    const io = req.app.get('io');
+    if (io) io.to(`user:${project.user_id}`).emit('notification:new', db.notifications.byUser(project.user_id, 1)[0]);
+
+    res.json(updated);
 });
 
 // PUT /api/projects/:id/reject — admin only
@@ -174,7 +188,22 @@ router.put('/:id/reject', requireAdmin, validate(rejectSchema), (req, res) => {
         return res.status(400).json({ error: 'Chỉ có thể từ chối project đang Chờ duyệt' });
     }
 
-    res.json(db.projects.update(id, { status: 'rejected', admin_note: req.body.note }));
+    const updated = db.projects.update(id, { status: 'rejected', admin_note: req.body.note });
+
+    // Notify project owner
+    const noteText = req.body.note ? ` Lý do: ${req.body.note}` : '';
+    db.notifications.create({
+        user_id: project.user_id,
+        type: 'project_rejected',
+        title: 'Dự toán bị từ chối',
+        body: `Dự toán "${project.name}" bị từ chối.${noteText}`,
+        link: `index.html`,
+        meta: { projectId: id, projectName: project.name, note: req.body.note },
+    });
+    const io = req.app.get('io');
+    if (io) io.to(`user:${project.user_id}`).emit('notification:new', db.notifications.byUser(project.user_id, 1)[0]);
+
+    res.json(updated);
 });
 
 // DELETE /api/projects/:id — admin only

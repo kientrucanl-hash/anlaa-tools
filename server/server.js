@@ -48,6 +48,13 @@ io.on('connection', (socket) => {
     // Join personal room for direct notifications
     socket.join(`user:${user.id}`);
 
+    // Send unread count on connect so badge updates immediately
+    try {
+        const db = require('./db/database');
+        const unread = db.notifications.unreadCount(user.id);
+        if (unread > 0) socket.emit('notification:unread_count', { count: unread });
+    } catch (_) {}
+
     // Join project room when user opens a project
     socket.on('project:join', ({ projectId }) => {
         if (!projectId) return;
@@ -169,6 +176,8 @@ app.use('/api/users', require('./routes/users'));
 app.use('/api/quotations', require('./routes/quotations'));
 app.use('/api/collaboration', require('./routes/collaboration'));
 app.use('/api/contractors', require('./routes/contractors'));
+app.use('/api/notifications', require('./routes/notifications'));
+app.use('/api/prices', require('./routes/prices'));
 
 // SPA fallback — serve index.html for non-API routes with explicit cache-control
 app.get('*', (req, res) => {
