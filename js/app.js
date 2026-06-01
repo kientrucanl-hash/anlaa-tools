@@ -1575,6 +1575,7 @@ function updateBOQSubtext() {
 function updateSidebarList() {
     const list = document.getElementById("itemsList");
     const countBadge = document.getElementById("itemsCount");
+    if (!list || !countBadge) return;
     
     list.innerHTML = "";
     countBadge.innerText = currentProject.items.length;
@@ -1584,14 +1585,15 @@ function updateSidebarList() {
         return;
     }
 
-    currentProject.items.forEach((item, index) => {
+    currentProject.items.forEach((item) => {
         const li = document.createElement("li");
+        li.className = `added-item-card cat-${item.type}`;
         
         let typeName = "";
         let metaText = "";
         
         if (item.type === "masonry") {
-            typeName = "Xây";
+            typeName = "Xây Xát";
             metaText = `S = ${item.results.netArea.toFixed(1)}m²`;
         } else if (item.type === "plastering") {
             typeName = "Cán nền";
@@ -1602,18 +1604,15 @@ function updateSidebarList() {
         }
 
         li.innerHTML = `
-            <div class="item-info" onclick="focusOnTab('${item.type}')">
-                <span class="item-name">${item.name}</span>
+            <div class="item-info" onclick="focusOnTab('${item.type}')" style="cursor:pointer;">
+                <span class="item-name">${escapeHtml(item.name)}</span>
                 <span class="item-meta">
-                    <span class="badge">${typeName}</span>
-                    <span>${metaText}</span>
+                    <strong>${typeName}</strong> • ${metaText}
                 </span>
             </div>
-            <div class="item-actions">
-                <button class="btn-delete-item" onclick="deleteItem('${item.id}', '${item.name}')" title="Xóa hạng mục này">
-                    <i data-lucide="x"></i>
-                </button>
-            </div>
+            <button class="btn-delete-item" onclick="deleteItem('${item.id}', '${item.name}')" title="Xóa hạng mục này">
+                ×
+            </button>
         `;
 
         list.appendChild(li);
@@ -2989,6 +2988,44 @@ function initConstructionCostSection() {
 
     document.getElementById("btnFromTemplate")?.addEventListener("click", renderTemplateModal);
 
+    document.getElementById("btnCloneProject")?.addEventListener("click", () => {
+        if (!confirm("Nhân đôi dự án này thành phương án B? Toàn bộ hạng mục + đơn giá sẽ được copy vào một dự án mới.")) return;
+        const cloneName = currentProject.name + " — Phương án B";
+        const cloneItems = JSON.parse(JSON.stringify(constructionItems));
+        const savedProject = JSON.parse(localStorage.getItem("anlaa_project") || "{}");
+        // Save clone as a named snapshot in localStorage
+        const snapshots = JSON.parse(localStorage.getItem("anlaa_project_snapshots") || "[]");
+        snapshots.push({
+            id: genId(),
+            name: cloneName,
+            createdAt: new Date().toISOString(),
+            items: cloneItems,
+            project: { ...savedProject, id: null, name: cloneName }
+        });
+        localStorage.setItem("anlaa_project_snapshots", JSON.stringify(snapshots));
+        showToast(`✅ Đã lưu phương án B: "${cloneName}" — mở trong cửa sổ mới?`);
+        setTimeout(() => {
+            if (confirm(`Mở phương án B trong tab mới?`)) {
+                localStorage.setItem("anlaa_clone_load", JSON.stringify({ name: cloneName, items: cloneItems }));
+                window.open("estimate.html?clone=1", "_blank");
+            }
+        }, 500);
+    });
+
+    // On load: check if this is a clone tab
+    const cloneLoad = localStorage.getItem("anlaa_clone_load");
+    if (new URLSearchParams(location.search).get("clone") === "1" && cloneLoad) {
+        localStorage.removeItem("anlaa_clone_load");
+        const cd = JSON.parse(cloneLoad);
+        currentProject = { id: null, status: "draft", name: cd.name, address: currentProject.address || "", items: [] };
+        constructionItems = cd.items;
+        localStorage.setItem("anlaa_project", JSON.stringify(currentProject));
+        saveConstructionItems();
+        const nameEl = document.getElementById("projectName");
+        if (nameEl) nameEl.value = cd.name;
+        showToast(`📋 Đã mở phương án B: ${cd.name}`);
+    }
+
     document.getElementById("btnTogglePaymentSchedule")?.addEventListener("click", () => {
         const panel = document.getElementById("paymentSchedulePanel");
         if (!panel) return;
@@ -3005,6 +3042,7 @@ function initConstructionCostSection() {
 
     loadNamedRanges();
     renderNamedRangesPanel();
+    loadPaymentSchedule();
     updateConstructionCostSection();
 }
 
@@ -3704,6 +3742,120 @@ function syncAutoConstructionItems() {
     const customItems = constructionItems.filter(i => !i.isAuto);
     constructionItems = [...newAutoItems, ...customItems];
     saveConstructionItems();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// PAYMENT SCHEDULE — chia đợt thanh toán theo tiến độ
+// ═══════════════════════════════════════════════════════════════
+
+let paymentSchedule = []; // [{ id, label, pct, amount, note, usePct }]
+
+function loadPaymentSchedule() {
+    try { paymentSchedule = JSON.parse(localStorage.getItem("anlaa_payment_schedule") || "[]"); } catch { paymentSchedule = []; }
+}
+
+function savePaymentSchedule() {
+    localStorage.setItem("anlaa_payment_schedule", JSON.stringify(paymentSchedule));
+}
+
+function renderPaymentSchedule() {
+    const list = document.getElementById("paymentList");
+    if (!list) return;
+
+    // Get current grand total
+    let grandTotal = 0;
+    constructionItems.forEach(item => {
+        if (item.isSection) return;
+        grandTotal += calcItemTotalQty(item) * getItemUnitPrice(item);
+    });
+    const contingency = contingencyEnabled ? grandTotal * (contingencyPct / 100) : 0;
+    const beforeVat = grandTotal + contingency;
+    const vatAmt = vatEnabled ? beforeVat * (vatPct / 100) : 0;
+    const total = beforeVat + vatAmt;
+
+    list.innerHTML = paymentSchedule.length === 0
+        ? '<p class="ps-empty">Chưa có đợt. Nhấn "+ Thêm đợt" để thiết lập tiến độ thanh toán.</p>'
+        : paymentSchedule.map((p, idx) => {
+            const amt = p.usePct ? Math.round(total * (p.pct / 100)) : (p.amount || 0);
+            return `
+            <div class="ps-row" data-id="${p.id}">
+                <span class="ps-idx">Đợt ${idx + 1}</span>
+                <input class="ps-label-input detail-input" type="text" placeholder="Tên đợt (VD: Xong phần thô)"
+                    value="${escapeHtml(p.label)}" data-id="${p.id}" data-field="label">
+                <div class="ps-amount-group">
+                    <select class="ps-mode-sel contingency-input" data-id="${p.id}" style="width:60px">
+                        <option value="pct" ${p.usePct?"selected":""}>%</option>
+                        <option value="amt" ${!p.usePct?"selected":""}>VNĐ</option>
+                    </select>
+                    <input class="ps-val-input detail-input" type="number"
+                        value="${p.usePct ? p.pct : p.amount}" min="0"
+                        step="${p.usePct ? 5 : 1000000}" placeholder="0" data-id="${p.id}">
+                </div>
+                <span class="ps-computed">${formatVND(roundPrice(amt, vatEnabled))}</span>
+                <input class="ps-note-input detail-input" type="text" placeholder="Ghi chú đợt..."
+                    value="${escapeHtml(p.note||"")}" data-id="${p.id}" data-field="note">
+                <button class="ps-del btn btn-xs btn-danger" data-id="${p.id}">×</button>
+            </div>`;
+        }).join("");
+
+    // Footer: allocated sum
+    const allocated = paymentSchedule.reduce((s, p) => {
+        return s + (p.usePct ? Math.round(total * (p.pct / 100)) : (p.amount || 0));
+    }, 0);
+    const allocPct = total > 0 ? ((allocated / total) * 100).toFixed(1) : "0";
+    const remaining = total - allocated;
+    const allocEl = document.getElementById("psAllocated");
+    const remEl = document.getElementById("psRemaining");
+    if (allocEl) allocEl.innerText = `${formatVND(allocated)} / ${allocPct}%`;
+    if (remEl) {
+        remEl.innerText = remaining === 0 ? "✓ Đã phân bổ đủ 100%"
+            : remaining > 0 ? `Còn lại: ${formatVND(remaining)}`
+            : `Vượt: ${formatVND(Math.abs(remaining))}`;
+        remEl.style.color = remaining === 0 ? "#34d399" : remaining > 0 ? "#fbbf24" : "#f87171";
+    }
+
+    wirePaymentScheduleEvents(list);
+}
+
+function wirePaymentScheduleEvents(list) {
+    list.querySelectorAll(".ps-del").forEach(btn => {
+        btn.addEventListener("click", () => {
+            paymentSchedule = paymentSchedule.filter(p => p.id !== btn.dataset.id);
+            savePaymentSchedule();
+            renderPaymentSchedule();
+        });
+    });
+    list.querySelectorAll(".ps-label-input").forEach(input => {
+        input.addEventListener("input", function() {
+            const p = paymentSchedule.find(x => x.id === this.dataset.id);
+            if (p) { p.label = this.value; savePaymentSchedule(); }
+        });
+    });
+    list.querySelectorAll(".ps-note-input").forEach(input => {
+        input.addEventListener("input", function() {
+            const p = paymentSchedule.find(x => x.id === this.dataset.id);
+            if (p) { p.note = this.value; savePaymentSchedule(); }
+        });
+    });
+    list.querySelectorAll(".ps-mode-sel").forEach(sel => {
+        sel.addEventListener("change", function() {
+            const p = paymentSchedule.find(x => x.id === this.dataset.id);
+            if (!p) return;
+            p.usePct = this.value === "pct";
+            savePaymentSchedule();
+            renderPaymentSchedule();
+        });
+    });
+    list.querySelectorAll(".ps-val-input").forEach(input => {
+        input.addEventListener("input", function() {
+            const p = paymentSchedule.find(x => x.id === this.dataset.id);
+            if (!p) return;
+            const v = parseFloat(this.value) || 0;
+            if (p.usePct) p.pct = v; else p.amount = v;
+            savePaymentSchedule();
+            renderPaymentSchedule();
+        });
+    });
 }
 
 // ═══════════════════════════════════════════════════════════════

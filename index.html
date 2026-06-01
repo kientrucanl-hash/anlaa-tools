@@ -14,7 +14,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Montserrat:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <!-- Main Style -->
-    <link rel="stylesheet" href="css/styles.css?v=3.0">
+    <link rel="stylesheet" href="css/styles.css?v=3.7">
     <!-- Chart.js CDN -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <!-- html2canvas CDN -->
@@ -52,135 +52,139 @@
 
     <div id="appContainer" class="app-container">
         
-        <!-- SIDEBAR LEFT: Project & Items Management -->
+        <!-- SIDEBAR LEFT -->
         <aside id="appSidebar" class="app-sidebar no-print">
-            <div class="sidebar-header-wrapper">
-                <div class="sidebar-brand">
-                    <div class="brand-icon">
-                        <img src="logo-tool-anlc.webp" alt="Dự toán ANLAA" class="sidebar-logo-img" style="width: 26px; height: 26px; object-fit: contain;">
-                    </div>
-                    <div class="brand-text">
-                        <h1>Dự toán ANLAA</h1>
-                        <span>Mecalc v2.0</span>
+
+            <!-- HEADER: brand + close -->
+            <div class="sb-header">
+                <div class="sb-brand">
+                    <img src="logo-tool-anlc.webp" alt="ANLAA" class="sb-logo">
+                    <div class="sb-brand-text">
+                        <span class="sb-title">Dự toán ANLAA</span>
+                        <span class="sb-version">Mecalc v2.0</span>
                     </div>
                 </div>
-                <button id="sidebarClose" class="sidebar-close-btn" title="Đóng Menu">
+                <button id="sidebarClose" class="sb-close-btn" title="Đóng">
                     <i data-lucide="x"></i>
                 </button>
             </div>
-            
-            <!-- SCROLLABLE MENU AREA -->
-            <div class="sidebar-menu-scroll">
-                
-                <!-- MENU 1: MODULES TÍNH TOÁN (DẠNG ACCORDION THẢ) -->
-                <details class="sidebar-accordion" open>
-                    <summary class="accordion-header">
-                        <span class="header-title">
-                            <i data-lucide="layout-grid"></i> Module tính toán
-                        </span>
-                        <i data-lucide="chevron-down" class="chevron-icon"></i>
-                    </summary>
-                    <div class="accordion-content">
-                        <nav class="sidebar-tab-nav">
-                            <button class="tab-btn active" data-tab="masonry">
-                                <i data-lucide="brick"></i> Xây & Trát
-                            </button>
-                            <button class="tab-btn" data-tab="plastering">
-                                <i data-lucide="layers"></i> Cán nền
-                            </button>
-                            <button class="tab-btn" data-tab="tiling">
-                                <i data-lucide="grid-3x3"></i> Ốp lát gạch
-                            </button>
-                            <button class="tab-btn" data-tab="unit-prices">
-                                <i data-lucide="coins"></i> Đơn giá Vật tư
-                            </button>
-                            <button class="tab-btn" data-tab="work-prices">
-                                <i data-lucide="hard-hat"></i> Đơn giá Thi công
-                            </button>
-                        </nav>
-                    </div>
-                </details>
 
-                <!-- MENU 2: THÔNG TIN DỰ ÁN (DẠNG ACCORDION THẢ) -->
-                <details class="sidebar-accordion">
-                    <summary class="accordion-header">
-                        <span class="header-title">
-                            <i data-lucide="folder-kanban"></i> Thông tin dự án
-                        </span>
-                        <i data-lucide="chevron-down" class="chevron-icon"></i>
-                    </summary>
-                    <div class="accordion-content">
-                        <div class="project-info-compact">
-                            <div class="info-group">
-                                <label for="projectName">Tên dự án</label>
-                                <input type="text" id="projectName" placeholder="Cải tạo Căn hộ 902 - Goldmark..." value="Cải tạo Căn hộ Chung cư">
-                            </div>
-                            <div class="info-group">
-                                <label for="projectAddress">Địa chỉ</label>
-                                <input type="text" id="projectAddress" placeholder="Cầu Giấy, Hà Nội..." value="Hà Nội">
-                            </div>
-                        </div>
-                    </div>
-                </details>
+            <!-- SCROLLABLE BODY -->
+            <div class="sb-body">
 
-                <!-- MENU 3: DANH SÁCH HẠNG MỤC (DẠNG ACCORDION THẢ) -->
-                <details class="sidebar-accordion" open>
-                    <summary class="accordion-header">
-                        <span class="header-title">
-                            <i data-lucide="list-todo"></i> Hạng mục dự toán
-                        </span>
-                        <span id="itemsCount" class="badge">0</span>
-                        <i data-lucide="chevron-down" class="chevron-icon"></i>
-                    </summary>
-                    <div class="accordion-content">
-                        <div class="items-manager-compact">
-                            <div class="items-list-container">
-                                <ul id="itemsList" class="items-list">
-                                    <!-- Dynamic items will be added here -->
-                                    <li class="empty-list-msg">Chưa có hạng mục nào được&nbsp;thêm</li>
-                                </ul>
-                            </div>
-                        </div>
+                <!-- GROUP 1: DỰ ÁN HIỆN TẠI (always visible) -->
+                <div class="sb-section">
+                    <p class="sb-section-label">Dự án</p>
+                    <div class="info-group">
+                        <input type="text" id="projectName" class="sb-input" placeholder="Tên dự án..." value="Cải tạo Căn hộ Chung cư">
                     </div>
-                </details>
+                    <div class="info-group" style="margin-top:6px;">
+                        <input type="text" id="projectAddress" class="sb-input" placeholder="Địa chỉ..." value="Hà Nội">
+                    </div>
+                </div>
+
+                <div class="sb-divider"></div>
+
+                <!-- GROUP 2: MODULE TÍNH TOÁN (nav thuần, không accordion) -->
+                <div class="sb-section">
+                    <p class="sb-section-label">Tính toán</p>
+                    <nav class="sb-nav">
+                        <button class="tab-btn active" data-tab="masonry">
+                            <i data-lucide="brick"></i> Xây &amp; Trát
+                        </button>
+                        <button class="tab-btn" data-tab="plastering">
+                            <i data-lucide="layers"></i> Cán nền
+                        </button>
+                        <button class="tab-btn" data-tab="tiling">
+                            <i data-lucide="grid-3x3"></i> Ốp lát gạch
+                        </button>
+                        <div class="sb-nav-separator"></div>
+                        <button class="tab-btn" data-tab="unit-prices">
+                            <i data-lucide="coins"></i> Đơn giá Vật tư
+                        </button>
+                        <button class="tab-btn" data-tab="work-prices">
+                            <i data-lucide="hard-hat"></i> Đơn giá Thi công
+                        </button>
+                    </nav>
+                </div>
+
+                <div class="sb-divider"></div>
+
+                <!-- GROUP 2b: ĐIỀU HƯỚNG -->
+                <div class="sb-section">
+                    <p class="sb-section-label">Điều hướng</p>
+                    <nav class="sb-nav">
+                        <a href="estimate.html" class="tab-btn sb-nav-link">
+                            <i data-lucide="file-spreadsheet"></i> Dự toán Chi phí
+                        </a>
+                        <a href="materials.html" class="tab-btn sb-nav-link">
+                            <i data-lucide="package"></i> Vật tư cần mua
+                        </a>
+                        <div class="sb-nav-separator"></div>
+                        <a href="history.html" class="tab-btn sb-nav-link">
+                            <i data-lucide="clock"></i> Lịch sử Dự toán
+                        </a>
+                        <a href="settings.html" class="tab-btn sb-nav-link">
+                            <i data-lucide="settings"></i> Cài đặt Tài khoản
+                        </a>
+                        <a href="help.html" class="tab-btn sb-nav-link">
+                            <i data-lucide="book-open"></i> Hướng dẫn sử dụng
+                        </a>
+                        <a id="adminNavBtn" href="admin.html" class="tab-btn sb-nav-link sb-nav-admin" style="display:none;">
+                            <i data-lucide="shield-check"></i> Quản lý Admin
+                        </a>
+                    </nav>
+                </div>
+
+
 
             </div>
-            
-            <!-- USER PROFILE CARD MINI -->
-            <div class="sidebar-user-card">
-                <div class="user-avatar-wrapper">
-                    <div class="user-avatar">
+
+            <!-- FOOTER: user + actions -->
+            <div class="sb-footer">
+                <!-- User card -->
+                <div class="sb-user-row">
+                    <div class="sb-user-avatar">
                         <i data-lucide="user"></i>
+                        <span class="sb-user-dot"></span>
                     </div>
-                    <div class="user-status-dot"></div>
-                </div>
-                <div class="user-info-text">
-                    <span id="sidebarUserName" class="user-name">Đang tải...</span>
-                    <span class="user-role">KTS / Người dự toán</span>
-                </div>
-                <button id="sidebarLogoutBtn" class="sidebar-logout-btn" title="Đăng xuất tài khoản">
-                    <i data-lucide="log-out"></i>
-                </button>
-            </div>
-            
-            <!-- FIXED FOOTER -->
-            <div class="sidebar-footer">
-                <div class="btn-grid-2">
-                    <button id="btnSaveProject" class="btn btn-secondary btn-sm" title="Lưu toàn bộ dự án thành file JSON">
-                        <i data-lucide="download"></i> Lưu JSON
+                    <div class="sb-user-info">
+                        <span id="sidebarUserName" class="sb-user-name">Đang tải...</span>
+                        <span class="sb-user-role">KTS / Người dự toán</span>
+                    </div>
+                    <button id="sidebarLogoutBtn" class="sb-icon-btn sb-logout-btn" title="Đăng xuất">
+                        <i data-lucide="log-out"></i>
                     </button>
-                    <button id="btnLoadProjectTrigger" class="btn btn-secondary btn-sm" title="Tải dự án cũ từ file JSON">
-                        <i data-lucide="upload"></i> Tải JSON
-                    </button>
-                    <input type="file" id="btnLoadProject" accept=".json" style="display: none;">
                 </div>
-                <button id="btnSubmitProject" class="btn btn-success btn-sm w-full mt-2" title="Nộp dự án cho Admin duyệt">
-                    <i data-lucide="send"></i> Nộp duyệt
-                </button>
-                <button id="btnResetProject" class="btn btn-danger btn-sm w-full mt-2" title="Xóa toàn bộ dữ liệu dự án">
-                    <i data-lucide="trash-2"></i> Xóa hết dữ liệu
-                </button>
+
+                <!-- Actions -->
+                <div class="sb-actions">
+                    <div class="sb-actions-row">
+                        <button id="btnSaveProject" class="btn btn-secondary btn-sm sb-action-btn" title="Lưu dự án thành file JSON">
+                            <i data-lucide="download"></i> Lưu JSON
+                        </button>
+                        <button id="btnLoadProjectTrigger" class="btn btn-secondary btn-sm sb-action-btn" title="Tải dự án từ file JSON">
+                            <i data-lucide="upload"></i> Tải JSON
+                        </button>
+                        <input type="file" id="btnLoadProject" accept=".json" style="display:none;">
+                        <!-- More menu -->
+                        <div class="sb-more-wrap">
+                            <button id="btnMoreActions" class="btn btn-secondary btn-sm sb-icon-btn" title="Thêm">
+                                <i data-lucide="more-horizontal"></i>
+                            </button>
+                            <div id="sbMoreMenu" class="sb-more-menu" style="display:none;">
+                                <button id="btnResetProject" class="sb-more-item sb-more-danger">
+                                    <i data-lucide="trash-2"></i> Xóa hết dữ liệu
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <button id="btnSubmitProject" class="btn btn-success btn-sm w-full" title="Nộp dự án cho Admin duyệt">
+                        <i data-lucide="send"></i> Nộp duyệt
+                    </button>
+                </div>
             </div>
+
         </aside>
         <div id="sidebarOverlay" class="sidebar-overlay"></div>
         
@@ -206,14 +210,11 @@
                         <i data-lucide="map-pin"></i> Hà Nội
                     </span>
                     <span id="userBadge" class="user-badge" title="Tài khoản đang đăng nhập"></span>
-                    <a href="history.html" class="btn btn-secondary btn-sm" title="Lịch sử dự toán">
-                        <i data-lucide="clock"></i>
-                    </a>
-                    <a href="settings.html" class="btn btn-secondary btn-sm" title="Cài đặt tài khoản">
-                        <i data-lucide="settings"></i>
-                    </a>
                     <a id="adminPanelBtn" href="/admin.html" class="btn btn-secondary btn-sm" title="Trang quản lý Admin" style="display:none;">
                         <i data-lucide="shield-check"></i> Quản lý
+                    </a>
+                    <a href="help.html" class="btn btn-secondary btn-sm" title="Hướng dẫn sử dụng" style="text-decoration:none;">
+                        <i data-lucide="book-open"></i>
                     </a>
                     <button id="logoutBtn" class="btn btn-secondary btn-sm" title="Đăng xuất">
                         <i data-lucide="log-out"></i>
@@ -684,6 +685,19 @@
 
             </div>
 
+            <!-- ADDED ITEMS DASHBOARD (DANH SÁCH HẠNG MỤC ĐÃ THÊM NGOÀI TRANG CHÍNH - TỐI GIẢN) -->
+            <div class="added-items-container no-print" id="addedItemsDashboard">
+                <div class="added-items-header">
+                    <h3><i data-lucide="list-todo"></i> Hạng mục dự toán đã thêm <span id="itemsCount" class="badge badge-success">0</span></h3>
+                    <span class="text-xs text-muted">Bấm dấu × để xóa nhanh hạng mục khỏi dự toán</span>
+                </div>
+                <div class="added-items-wrapper">
+                    <ul id="itemsList" class="added-items-list">
+                        <li class="empty-list-msg">Chưa có hạng mục nào được&nbsp;thêm</li>
+                    </ul>
+                </div>
+            </div>
+
             <!-- TOTAL AGGREGATION & BOQ BUIDLER (KẾT QUẢ TỔNG HỢP & IN ẤN) -->
             <section class="boq-section" id="boq-report-area">
                 
@@ -872,16 +886,40 @@
         </main>
     </div>
     
+    <!-- BOTTOM TAB BAR (mobile only) -->
+    <nav class="bottom-tab-bar no-print" aria-label="Điều hướng chính">
+        <a href="index.html" class="btab-item btab-active">
+            <i data-lucide="calculator"></i>
+            <span>Bóc KL</span>
+        </a>
+        <a href="estimate.html" class="btab-item">
+            <i data-lucide="file-spreadsheet"></i>
+            <span>Dự toán</span>
+        </a>
+        <a href="materials.html" class="btab-item">
+            <i data-lucide="package"></i>
+            <span>Vật tư</span>
+        </a>
+        <a href="pricing.html" class="btab-item">
+            <i data-lucide="bar-chart-2"></i>
+            <span>Giá</span>
+        </a>
+        <a href="help.html" class="btab-item">
+            <i data-lucide="book-open"></i>
+            <span>Help</span>
+        </a>
+    </nav>
+
     <!-- Loading overlay or generic popups if needed -->
     <div id="toastNotification" class="toast-notification"></div>
     
     <!-- Application Logic Modules -->
-    <script src="js/constants.js?v=3.0"></script>
-    <script src="js/calculator.js?v=3.0"></script>
-    <script src="js/dxf-parser.js?v=3.0"></script>
-    <script src="js/pdf-takeoff.js?v=3.0"></script>
-    <script src="js/api.js?v=3.0"></script>
-    <script src="js/auth.js?v=3.0"></script>
-    <script src="js/app.js?v=3.0"></script>
+    <script src="js/constants.js?v=3.7"></script>
+    <script src="js/calculator.js?v=3.7"></script>
+    <script src="js/dxf-parser.js?v=3.7"></script>
+    <script src="js/pdf-takeoff.js?v=3.7"></script>
+    <script src="js/api.js?v=3.7"></script>
+    <script src="js/auth.js?v=3.7"></script>
+    <script src="js/app.js?v=3.7"></script>
 </body>
 </html>
