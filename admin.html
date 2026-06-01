@@ -41,45 +41,35 @@
 </div>
 
 <!-- Admin Dashboard -->
-<div id="appContainer" class="admin-container" style="display:none;">
+<div id="appContainer" class="app-container" style="display:none;">
 
-    <!-- Sidebar -->
-    <aside class="admin-sidebar">
-        <div class="sidebar-brand">
-            <div class="brand-icon"><i data-lucide="shield-check"></i></div>
-            <div class="brand-text">
-                <h1>Dự toán ANLAA</h1>
-                <span>Admin Dashboard</span>
-            </div>
-        </div>
-
-        <nav class="admin-nav">
-            <button class="admin-nav-btn active" data-view="projects">
-                <i data-lucide="folder-open"></i> Quản lý Project
-            </button>
-            <button class="admin-nav-btn" data-view="users">
-                <i data-lucide="users"></i> Người dùng
-            </button>
-            <a href="/index.html" class="admin-nav-btn" style="text-decoration:none;">
-                <i data-lucide="calculator"></i> Công cụ Dự toán
-            </a>
-        </nav>
-
-        <div class="admin-sidebar-footer">
-            <div id="userBadge" class="user-badge-admin"></div>
-            <button id="logoutBtn" class="btn btn-secondary btn-sm w-full">
-                <i data-lucide="log-out"></i> Đăng xuất
-            </button>
-        </div>
-    </aside>
+    <!-- SIDEBAR LEFT -->
+    <aside id="appSidebar" class="app-sidebar no-print"></aside>
 
     <!-- Main Content -->
     <main class="admin-main">
 
+        <!-- TAB SWITCHER -->
+        <div class="prx-tabs no-print" style="margin-left: 2rem; margin-top: 1.5rem; margin-bottom: 0.5rem; width: fit-content; display: flex; gap: 4px; background: rgba(255, 255, 255, 0.02); padding: 3px; border-radius: 8px; border: 1px solid var(--border-glass);">
+            <button class="prx-tab admin-nav-btn active" data-view="projects">
+                <i data-lucide="folder-open" style="width:14px;height:14px;vertical-align:middle;margin-right:5px;"></i>
+                Quản lý Dự án
+            </button>
+            <button class="prx-tab admin-nav-btn" data-view="users">
+                <i data-lucide="users" style="width:14px;height:14px;vertical-align:middle;margin-right:5px;"></i>
+                Quản lý Người dùng
+            </button>
+        </div>
+
         <!-- Projects View -->
         <section id="view-projects" class="admin-view active">
             <div class="admin-toolbar">
-                <h2>Danh sách Project</h2>
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <button id="sidebarToggle" class="sidebar-toggle-btn" title="Mở Menu">
+                        <i data-lucide="menu"></i>
+                    </button>
+                    <h2>Danh sách Project</h2>
+                </div>
                 <div class="toolbar-actions">
                     <select id="filterStatus" class="filter-select">
                         <option value="">Tất cả trạng thái</option>
@@ -117,7 +107,12 @@
         <!-- Users View -->
         <section id="view-users" class="admin-view">
             <div class="admin-toolbar">
-                <h2>Danh sách Người dùng</h2>
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <button id="sidebarToggle" class="sidebar-toggle-btn" title="Mở Menu">
+                        <i data-lucide="menu"></i>
+                    </button>
+                    <h2>Danh sách Người dùng</h2>
+                </div>
             </div>
             <div class="admin-table-wrap">
                 <table class="admin-table">
@@ -235,6 +230,15 @@
 </script>
 <script src="js/api.js"></script>
 <script src="js/auth.js"></script>
+<script src="js/nav.js?v=3.13"></script>
 <script src="js/admin.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const user = getCurrentUser();
+        if (user && user.role === 'admin') {
+            initAppSidebar({ activePage: 'admin' });
+        }
+    });
+</script>
 </body>
 </html>

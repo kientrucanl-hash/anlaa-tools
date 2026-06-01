@@ -14,7 +14,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Montserrat:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <!-- Main Style -->
-    <link rel="stylesheet" href="css/styles.css?v=3.12">
+    <link rel="stylesheet" href="css/styles.css?v=3.13">
     <!-- Chart.js CDN -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <!-- html2canvas CDN -->
@@ -57,13 +57,13 @@
 
             <!-- HEADER: brand + close -->
             <div class="sb-header">
-                <div class="sb-brand">
+                <a href="home.html" class="sb-brand" style="text-decoration:none;">
                     <img src="logo-tool-anlc.webp" alt="ANLAA" class="sb-logo">
                     <div class="sb-brand-text">
                         <span class="sb-title">Dự toán ANLAA</span>
                         <span class="sb-version">Mecalc v2.0</span>
                     </div>
-                </div>
+                </a>
                 <button id="sidebarClose" class="sb-close-btn" title="Đóng">
                     <i data-lucide="x"></i>
                 </button>
@@ -114,6 +114,9 @@
                 <div class="sb-section">
                     <p class="sb-section-label">Điều hướng</p>
                     <nav class="sb-nav">
+                        <a href="home.html" class="tab-btn sb-nav-link">
+                            <i data-lucide="home"></i> Trang chủ Landing
+                        </a>
                         <a href="estimate.html" class="tab-btn sb-nav-link">
                             <i data-lucide="file-spreadsheet"></i> Dự toán Chi phí
                         </a>
@@ -955,12 +958,12 @@
     <div id="toastNotification" class="toast-notification"></div>
     
     <!-- Application Logic Modules -->
-    <script src="js/constants.js?v=3.12"></script>
-    <script src="js/calculator.js?v=3.12"></script>
-    <script src="js/dxf-parser.js?v=3.12"></script>
-    <script src="js/pdf-takeoff.js?v=3.12"></script>
-    <script src="js/api.js?v=3.12"></script>
-    <script src="js/auth.js?v=3.12"></script>
-    <script src="js/app.js?v=3.12"></script>
+    <script src="js/constants.js?v=3.13"></script>
+    <script src="js/calculator.js?v=3.13"></script>
+    <script src="js/dxf-parser.js?v=3.13"></script>
+    <script src="js/pdf-takeoff.js?v=3.13"></script>
+    <script src="js/api.js?v=3.13"></script>
+    <script src="js/auth.js?v=3.13"></script>
+    <script src="js/app.js?v=3.13"></script>
 </body>
 </html>

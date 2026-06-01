@@ -11,7 +11,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Montserrat:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/styles.css?v=3.0">
+    <link rel="stylesheet" href="css/styles.css?v=3.13">
     <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
@@ -81,32 +81,22 @@
     </div>
 </div>
 
-<div id="appContainer" class="mat-container">
+<div id="appContainer" class="app-container">
 
-    <nav class="mat-topbar no-print">
-        <div class="brand">
-            <img src="logo-tool-anlc.webp" alt="ANLAA">
-            <h1>Dự toán ANLAA</h1>
-        </div>
-        <div class="est-breadcrumb">
-            <a href="index.html"><i data-lucide="calculator" style="width:14px;height:14px;vertical-align:middle;"></i> Bóc KL Vật tư</a>
-            <span class="sep">›</span>
-            <a href="estimate.html"><i data-lucide="file-spreadsheet" style="width:14px;height:14px;vertical-align:middle;"></i> Dự toán Chi phí</a>
-            <span class="sep">›</span>
-            <span class="active"><i data-lucide="package" style="width:14px;height:14px;vertical-align:middle;"></i> Vật tư cần mua</span>
-        </div>
-        <div style="display:flex;align-items:center;gap:8px;">
-            <span id="userBadge" class="badge" style="font-size:12px;"></span>
-            <button id="logoutBtn" class="btn btn-secondary btn-sm">Đăng xuất</button>
-        </div>
-    </nav>
+    <!-- SIDEBAR LEFT -->
+    <aside id="appSidebar" class="app-sidebar no-print"></aside>
 
     <main class="mat-main">
         <div class="mat-page-header">
-            <div>
-                <h2>BẢNG VẬT TƯ CẦN MUA</h2>
-                <p>Tổng hợp từ bảng dự toán đã duyệt. Số lượng đã làm tròn lên theo đơn vị mua.</p>
-                <p class="timestamp-note" id="approvedTimestamp"></p>
+            <div style="display:flex; align-items:center; gap:10px;">
+                <button id="sidebarToggle" class="sidebar-toggle-btn" title="Mở Menu">
+                    <i data-lucide="menu"></i>
+                </button>
+                <div>
+                    <h2>BẢNG VẬT TƯ CẦN MUA</h2>
+                    <p>Tổng hợp từ bảng dự toán đã duyệt. Số lượng đã làm tròn lên theo đơn vị mua.</p>
+                    <p class="timestamp-note" id="approvedTimestamp"></p>
+                </div>
             </div>
             <div class="mat-actions">
                 <button id="btnBackToEstimate" class="btn btn-secondary btn-sm no-print">
@@ -160,11 +150,41 @@
     </main>
 </div>
 
+<!-- BOTTOM TAB BAR (mobile only) -->
+<nav class="bottom-tab-bar no-print" aria-label="Điều hướng chính">
+    <a href="index.html" class="btab-item">
+        <i data-lucide="calculator"></i>
+        <span>Bóc KL</span>
+    </a>
+    <a href="estimate.html" class="btab-item">
+        <i data-lucide="file-spreadsheet"></i>
+        <span>Dự toán</span>
+    </a>
+    <a href="materials.html" class="btab-item btab-active">
+        <i data-lucide="package"></i>
+        <span>Vật tư</span>
+    </a>
+    <a href="pricing.html" class="btab-item">
+        <i data-lucide="bar-chart-2"></i>
+        <span>Giá</span>
+    </a>
+    <a href="contractors.html" class="btab-item">
+        <i data-lucide="hard-hat"></i>
+        <span>NTP</span>
+    </a>
+</nav>
+
 <div id="toastNotification" class="toast-notification"></div>
 
-<script src="js/constants.js?v=3.0"></script>
-<script src="js/api.js?v=3.0"></script>
-<script src="js/auth.js?v=3.0"></script>
-<script src="js/materials.js?v=3.0"></script>
+<script src="js/constants.js?v=3.13"></script>
+<script src="js/api.js?v=3.13"></script>
+<script src="js/auth.js?v=3.13"></script>
+<script src="js/nav.js?v=3.13"></script>
+<script src="js/materials.js?v=3.13"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        initAppSidebar({ activePage: 'materials' });
+    });
+</script>
 </body>
 </html>

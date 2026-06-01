@@ -11,7 +11,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Montserrat:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/styles.css?v=3.12">
+    <link rel="stylesheet" href="css/styles.css?v=3.13">
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         .prx-container { display: flex; flex-direction: column; min-height: 100vh; background: var(--bg-main); }
@@ -377,51 +377,22 @@
     </div>
 </div>
 
-<div id="appContainer" class="prx-container">
+<div id="appContainer" class="app-container">
 
-    <nav class="prx-topbar no-print">
-        <div class="brand">
-            <img src="logo-tool-anlc.webp" alt="ANLAA">
-            <h1>Dự toán ANLAA</h1>
-        </div>
-        <div class="est-breadcrumb">
-            <a href="index.html"><i data-lucide="calculator" style="width:14px;height:14px;vertical-align:middle;"></i> Bóc KL</a>
-            <span class="sep">›</span>
-            <a href="estimate.html"><i data-lucide="file-spreadsheet" style="width:14px;height:14px;vertical-align:middle;"></i> Dự toán</a>
-            <span class="sep">›</span>
-            <span class="active"><i data-lucide="bar-chart-2" style="width:14px;height:14px;vertical-align:middle;"></i> Bảng Giá</span>
-        </div>
-        <div style="display:flex;align-items:center;gap:8px;">
-            <span id="userBadge" class="badge" style="font-size:12px;"></span>
-            <a href="contractors.html" class="btn btn-secondary btn-sm" style="text-decoration:none;" title="Danh sách nhà thầu phụ">
-                <i data-lucide="hard-hat" style="width:14px;height:14px;"></i>
-            </a>
-            <a href="estimate.html" class="btn btn-secondary btn-sm" style="text-decoration:none;">
-                <i data-lucide="arrow-left" style="width:14px;height:14px;"></i> Về dự toán
-            </a>
-            <button id="logoutBtn" class="btn btn-secondary btn-sm">Đăng xuất</button>
-        </div>
-    </nav>
-
-    <!-- Desktop secondary nav -->
-    <div class="desktop-nav no-print">
-        <a href="index.html"><i data-lucide="calculator"></i> Bóc KL Vật tư</a>
-        <a href="estimate.html"><i data-lucide="file-spreadsheet"></i> Dự toán Chi phí</a>
-        <a href="materials.html"><i data-lucide="package"></i> Vật tư cần mua</a>
-        <div class="dnav-sep"></div>
-        <a href="pricing.html" class="dnav-active"><i data-lucide="bar-chart-2"></i> Bảng Giá & NTP</a>
-        <a href="contractors.html"><i data-lucide="hard-hat"></i> Nhà thầu phụ</a>
-        <div class="dnav-sep"></div>
-        <a href="history.html"><i data-lucide="clock"></i> Lịch sử</a>
-        <a href="help.html"><i data-lucide="book-open"></i> Hướng dẫn</a>
-    </div>
+    <!-- SIDEBAR LEFT -->
+    <aside id="appSidebar" class="app-sidebar no-print"></aside>
 
     <main class="prx-main">
 
         <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px;">
-            <div>
-                <h2 style="font-size:22px;font-weight:800;color:var(--text-primary);">BẢNG GIÁ & NHÀ THẦU PHỤ</h2>
-                <p style="font-size:13px;color:var(--text-muted);margin-top:4px;">So sánh báo giá các nhà thầu phụ • Bảng giá bán của công ty</p>
+            <div style="display:flex; align-items:center; gap:10px;">
+                <button id="sidebarToggle" class="sidebar-toggle-btn" title="Mở Menu">
+                    <i data-lucide="menu"></i>
+                </button>
+                <div>
+                    <h2 style="font-size:22px;font-weight:800;color:var(--text-primary);margin:0;">BẢNG GIÁ & NHÀ THẦU PHỤ</h2>
+                    <p style="font-size:13px;color:var(--text-muted);margin-top:4px;">So sánh báo giá các nhà thầu phụ • Bảng giá bán của công ty</p>
+                </div>
             </div>
             <div class="prx-actions">
                 <button id="btnExportSubCSV" class="btn btn-secondary btn-sm no-print">
@@ -705,9 +676,15 @@
     </a>
 </nav>
 
-<script src="js/constants.js?v=3.12"></script>
-<script src="js/api.js?v=3.12"></script>
-<script src="js/auth.js?v=3.12"></script>
-<script src="js/pricing.js?v=3.12"></script>
+<script src="js/constants.js?v=3.13"></script>
+<script src="js/api.js?v=3.13"></script>
+<script src="js/auth.js?v=3.13"></script>
+<script src="js/nav.js?v=3.13"></script>
+<script src="js/pricing.js?v=3.13"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        initAppSidebar({ activePage: 'pricing' });
+    });
+</script>
 </body>
 </html>

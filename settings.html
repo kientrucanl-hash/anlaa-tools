@@ -12,7 +12,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Montserrat:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/styles.css?v=3.1">
+    <link rel="stylesheet" href="css/styles.css?v=3.13">
     <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 <body>
@@ -41,15 +41,22 @@
     </div>
 </div>
 
-<div id="appContainer" class="spage-container">
+<div id="appContainer" class="app-container">
 
-    <!-- Shared nav placeholder -->
-    <div id="sharedNavPlaceholder"></div>
+    <!-- SIDEBAR LEFT -->
+    <aside id="appSidebar" class="app-sidebar no-print"></aside>
 
     <main class="spage-main">
         <div class="spage-header">
-            <h2>Cài đặt Tài khoản</h2>
-            <p>Thông tin cá nhân và bảo mật</p>
+            <div style="display:flex; align-items:center; gap:10px;">
+                <button id="sidebarToggle" class="sidebar-toggle-btn" title="Mở Menu">
+                    <i data-lucide="menu"></i>
+                </button>
+                <div>
+                    <h2 style="margin:0;">Cài đặt Tài khoản</h2>
+                    <p style="margin-top:4px;">Thông tin cá nhân và bảo mật</p>
+                </div>
+            </div>
         </div>
 
         <!-- Profile card -->
@@ -103,7 +110,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const ok = await initAuth();
     if (!ok) return;
 
-    initNav({ activePage: 'settings' });
+    initAppSidebar({ activePage: 'settings' });
     lucide.createIcons();
 
     // Fill profile info

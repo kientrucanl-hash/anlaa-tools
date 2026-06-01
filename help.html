@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <link rel="icon" type="image/x-icon" href="favicon.ico">
+    <title>Hướng dẫn sử dụng — ANLAA Mecalc</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Montserrat:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/styles.css?v=3.13">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        .help-container { display: flex; flex-direction: column; min-height: 100vh; background: var(--bg-main); }
+        .help-topbar {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 12px 24px; background: rgba(17,19,29,0.95);
+            border-bottom: 1px solid var(--border-glass);
+            position: sticky; top: 0; z-index: 100; backdrop-filter: blur(12px);
+        }
+        .help-topbar .brand { display: flex; align-items: center; gap: 10px; }
+        .help-topbar .brand img { width: 28px; height: 28px; object-fit: contain; }
+        .help-topbar .brand h1 { font-size: 16px; font-weight: 700; background: var(--gradient-primary); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .help-layout { display: flex; max-width: 1200px; margin: 0 auto; width: 100%; padding: 32px 24px; gap: 32px; }
+        .help-toc {
+            width: 220px; flex-shrink: 0; position: sticky; top: 72px; align-self: flex-start;
+            background: rgba(22,25,37,0.6); border: 1px solid var(--border-glass); border-radius: 12px; padding: 16px;
+        }
+        .help-toc h3 { font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 12px; }
+        .help-toc a { display: block; font-size: 13px; color: var(--text-secondary); text-decoration: none; padding: 6px 8px; border-radius: 6px; margin-bottom: 2px; transition: all 0.15s; }
+        .help-toc a:hover, .help-toc a.active { color: var(--text-primary); background: rgba(0,242,254,0.08); }
+        .help-toc .toc-sub { padding-left: 16px; font-size: 12px; color: var(--text-muted); }
+        .help-body { flex: 1; min-width: 0; }
+        .help-section { background: rgba(22,25,37,0.5); border: 1px solid var(--border-glass); border-radius: 12px; padding: 28px; margin-bottom: 24px; scroll-margin-top: 80px; }
+        .help-section h2 { font-size: 18px; font-weight: 800; color: var(--text-primary); margin-bottom: 8px; display: flex; align-items: center; gap: 10px; }
+        .help-section h2 .section-icon { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px; }
+        .help-section h3 { font-size: 14px; font-weight: 700; color: var(--text-secondary); margin: 20px 0 10px; }
+        .help-section p, .help-section li { font-size: 13px; color: var(--text-secondary); line-height: 1.7; }
+        .help-section ul, .help-section ol { padding-left: 20px; }
+        .help-section li { margin-bottom: 6px; }
+        .help-section strong { color: var(--text-primary); }
+        .help-section .note { background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.25); border-radius: 8px; padding: 12px 16px; margin: 12px 0; font-size: 12px; color: #fbbf24; }
+        .help-section .tip { background: rgba(0,242,254,0.06); border: 1px solid rgba(0,242,254,0.2); border-radius: 8px; padding: 12px 16px; margin: 12px 0; font-size: 12px; color: #00f2fe; }
+        /* Keyboard shortcut table */
+        .kbd-table { width: 100%; border-collapse: collapse; font-size: 13px; margin: 12px 0; }
+        .kbd-table th { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); padding: 8px 12px; text-align: left; border-bottom: 1px solid var(--border-glass); }
+        .kbd-table td { padding: 8px 12px; border-bottom: 1px solid rgba(255,255,255,0.04); color: var(--text-secondary); vertical-align: middle; }
+        .kbd-table td kbd { display: inline-block; padding: 2px 7px; font-size: 11px; color: var(--text-primary); background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.18); border-radius: 4px; box-shadow: 0 1px 0 rgba(255,255,255,0.12); white-space: nowrap; }
+        .kbd-table tr:hover td { background: rgba(255,255,255,0.02); }
+        /* Flow diagram */
+        .flow-steps { display: flex; align-items: center; gap: 0; margin: 16px 0; flex-wrap: wrap; }
+        .flow-step { background: rgba(0,242,254,0.08); border: 1px solid rgba(0,242,254,0.2); border-radius: 8px; padding: 10px 16px; font-size: 12px; font-weight: 600; color: #00f2fe; text-align: center; min-width: 120px; }
+        .flow-arrow { font-size: 18px; color: var(--text-muted); padding: 0 8px; }
+        /* Formula highlight */
+        .formula { font-family: 'Courier New', monospace; font-size: 12px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; padding: 10px 14px; margin: 8px 0; color: #a0f0a0; }
+        /* Breadcrumb in topbar */
+        .est-breadcrumb { display: flex; align-items: center; gap: 6px; font-size: 13px; }
+        .est-breadcrumb a { color: var(--text-muted); text-decoration: none; padding: 4px 10px; border-radius: 6px; transition: var(--transition-smooth); }
+        .est-breadcrumb a:hover { color: var(--text-primary); background: var(--border-glass); }
+        .est-breadcrumb .active { color: var(--text-primary); font-weight: 600; padding: 4px 10px; background: rgba(0,242,254,0.1); border-radius: 6px; border: 1px solid rgba(0,242,254,0.2); }
+        .est-breadcrumb .sep { color: var(--text-muted); }
+        @media (max-width: 768px) {
+            .help-layout { flex-direction: column; padding: 16px; gap: 16px; }
+            .help-toc { width: 100%; position: static; }
+        }
+    </style>
+</head>
+<body>
+
+<div id="appContainer" class="app-container">
+
+    <!-- SIDEBAR LEFT -->
+    <aside id="appSidebar" class="app-sidebar no-print"></aside>
+
+    <div class="help-layout">
+
+        <!-- TABLE OF CONTENTS -->
+        <nav class="help-toc" id="helpToc">
+            <h3>Mục lục</h3>
+            <a href="#workflow" class="active">Quy trình làm việc</a>
+            <a href="#masonry">Xây &amp; Trát tường</a>
+            <a class="toc-sub" href="#masonry-input">Nhập liệu</a>
+            <a class="toc-sub" href="#masonry-formula">Công thức</a>
+            <a href="#screed">Cán nền</a>
+            <a href="#tiling">Ốp lát gạch</a>
+            <a class="toc-sub" href="#tiling-method">Phương pháp dán</a>
+            <a class="toc-sub" href="#tiling-formula">Công thức chà ron</a>
+            <a href="#estimate">Bảng dự toán</a>
+            <a class="toc-sub" href="#shortcuts">Phím tắt Excel</a>
+            <a href="#materials">Vật tư cần mua</a>
+            <a href="#prices">Đơn giá</a>
+            <a href="#tips">Mẹo &amp; Lưu ý</a>
+        </nav>
+
+        <!-- CONTENT -->
+        <div class="help-body">
+
+            <!-- WORKFLOW -->
+            <section class="help-section" id="workflow">
+                <h2><span class="section-icon" style="background:rgba(0,242,254,0.1);">🔄</span> Quy trình làm việc</h2>
+                <p>ANLAA Mecalc gồm 3 trang liên kết nhau theo luồng một chiều:</p>
+                <div class="flow-steps">
+                    <div class="flow-step">1. Bóc KL Vật tư<br><small style="color:var(--text-muted);font-weight:400">index.html</small></div>
+                    <span class="flow-arrow">→</span>
+                    <div class="flow-step">2. Dự toán Chi phí<br><small style="color:var(--text-muted);font-weight:400">estimate.html</small></div>
+                    <span class="flow-arrow">→</span>
+                    <div class="flow-step">3. Vật tư cần mua<br><small style="color:var(--text-muted);font-weight:400">materials.html</small></div>
+                </div>
+                <ol>
+                    <li><strong>Bóc KL Vật tư</strong> — Chọn loại công việc (Xây/Trát, Cán nền, Ốp lát), nhập kích thước, nhấn "Thêm vào danh sách".</li>
+                    <li><strong>Dự toán Chi phí</strong> — Hạng mục tự động chuyển sang. Thêm chi tiết kích thước, gán đơn giá, nhấn "Duyệt".</li>
+                    <li><strong>Vật tư cần mua</strong> — Bảng tổng hợp số lượng vật tư cần mua theo từng hạng mục, xuất PDF/ảnh.</li>
+                </ol>
+                <div class="tip">Dữ liệu được lưu tự động vào localStorage của trình duyệt — không cần đăng nhập lại mỗi lần.</div>
+            </section>
+
+            <!-- MASONRY -->
+            <section class="help-section" id="masonry">
+                <h2><span class="section-icon" style="background:rgba(245,158,11,0.1);">🧱</span> Xây &amp; Trát tường</h2>
+                <p>Tính vật tư xây tường gạch đỏ đặc hoặc gạch rỗng 2 lỗ miền Bắc (6.5×10.5×22 cm), kèm trát hoàn thiện.</p>
+
+                <h3 id="masonry-input">Nhập liệu</h3>
+                <p>Có 2 chế độ nhập:</p>
+                <ul>
+                    <li><strong>Chi tiết (mặc định)</strong> — Nhập từng đoạn tường (Dài × Cao × Loại) và khấu trừ cửa. Phù hợp khi cần báo cáo chi tiết.</li>
+                    <li><strong>Nhập nhanh BOQ</strong> — Nhập trực tiếp tổng diện tích. Dùng khi đã có số liệu tổng hợp sẵn.</li>
+                </ul>
+                <div class="note">Bật chế độ "Trát hoàn thiện" để tính cả xi măng + cát trát 1 lần với xây. Chiều dày trát mặc định 1.5 cm.</div>
+
+                <h3 id="masonry-formula">Công thức tính</h3>
+                <div class="formula">Diện tích tường thực = Tổng (Dài × Cao × Hệ số) − Tổng diện tích cửa</div>
+                <div class="formula">Thể tích tường = Diện tích × Bề dày (0.11 m hoặc 0.22 m)</div>
+                <div class="formula">Số gạch lý thuyết = Thể tích × 550 viên/m³ (tường 110) hoặc × 540 (tường 220)</div>
+                <div class="formula">Số gạch mua = Math.ceil(Lý thuyết × (1 + %hao hụt/100))</div>
+                <div class="formula">Thể tích vữa xây = Thể tích tường × 23%</div>
+                <p>Cấp phối vữa theo mác:</p>
+                <ul>
+                    <li><strong>M50</strong>: 230 kg xi măng + 1.12 m³ cát mịn / 1 m³ vữa</li>
+                    <li><strong>M75</strong>: 320 kg xi măng + 1.09 m³ cát mịn / 1 m³ vữa</li>
+                    <li><strong>M100</strong>: 415 kg xi măng + 1.06 m³ cát mịn / 1 m³ vữa</li>
+                </ul>
+                <div class="tip">Số bao xi măng PC40 luôn làm tròn lên (Math.ceil). Bao 50 kg.</div>
+            </section>
+
+            <!-- SCREED -->
+            <section class="help-section" id="screed">
+                <h2><span class="section-icon" style="background:rgba(79,172,254,0.1);">🏗️</span> Cán nền</h2>
+                <p>Tính vữa cán nền xi măng cát cho sàn phẳng.</p>
+                <div class="formula">Thể tích vữa = Diện tích (m²) × Chiều dày (cm) / 100</div>
+                <div class="formula">Xi măng (kg) = Thể tích × Lượng xi măng theo mác × (1 + %hao hụt/100)</div>
+                <ul>
+                    <li>Chiều dày thông thường: 3–5 cm</li>
+                    <li>Mác vữa cán nền: thường dùng M75 hoặc M100</li>
+                    <li>Hao hụt mặc định: 5%</li>
+                </ul>
+            </section>
+
+            <!-- TILING -->
+            <section class="help-section" id="tiling">
+                <h2><span class="section-icon" style="background:rgba(0,230,118,0.1);">🪟</span> Ốp lát gạch</h2>
+                <p>Tính gạch, keo dán, keo chà ron và phụ kiện (ke chữ thập, ke cân bằng, nêm).</p>
+
+                <h3 id="tiling-method">Phương pháp dán</h3>
+                <ul>
+                    <li><strong>Keo thuần (Pure)</strong> — Chỉ dùng keo dán chuyên dụng. Gạch ≤ 60×60: 5 kg/m². Gạch lớn hơn: 6 kg/m².</li>
+                    <li><strong>Keo trộn xi măng (Mixed)</strong> — Phổ biến tại Hà Nội. Tổng hỗn hợp khô 7 kg/m², chia tỉ lệ keo:xi măng theo lựa chọn (1:1, 2:1, 1:2).</li>
+                </ul>
+                <div class="note">Gạch ≤ 60×60 không cần ke cân bằng (Clips + Wedges). Gạch lớn hơn thì cần.</div>
+
+                <h3 id="tiling-formula">Công thức tính chà ron</h3>
+                <div class="formula">Keo chà ron (kg/m²) = [(W + L) / (W × L)] × Dày gạch (mm) × Khe ron (mm) × 1.4</div>
+                <p>Trong đó W và L là chiều rộng/dài viên gạch tính bằng <strong>mm</strong>.</p>
+                <p>Ví dụ gạch 60×60, dày 10mm, khe ron 2mm:</p>
+                <div class="formula">[(600+600)/(600×600)] × 10 × 2 × 1.4 = 0.0467 kg/m²</div>
+            </section>
+
+            <!-- ESTIMATE -->
+            <section class="help-section" id="estimate">
+                <h2><span class="section-icon" style="background:rgba(100,100,255,0.15);">📊</span> Bảng dự toán chi phí</h2>
+                <p>Trang estimate.html là bảng dự toán theo mẫu G8 — gồm hạng mục, diễn giải kích thước, đơn giá và thành tiền.</p>
+                <ul>
+                    <li>Hạng mục <strong>tự động</strong> (màu cyan) — được chuyển từ kết quả tính toán ở trang 1.</li>
+                    <li>Hạng mục <strong>nhập tay</strong> (màu xanh) — thêm thủ công bằng nút "+ Thêm hạng mục".</li>
+                    <li>Mỗi hạng mục có nhiều <strong>dòng diễn giải</strong>: Diễn giải | Dài | Rộng | Cao | n | Hệ số.</li>
+                    <li>Khối lượng dòng = Dài × Rộng × Cao × n × Hệ số (bỏ chiều nào không dùng thì để trống).</li>
+                    <li>Hệ số <strong>−</strong> để trừ (khấu trừ cửa, lỗ mở...).</li>
+                </ul>
+                <div class="tip">Nhập công thức toán vào ô số, ví dụ: <strong>3.5*2.4</strong> hoặc <strong>(5+2)/3</strong> — sẽ tự tính khi blur.</div>
+
+                <h3 id="shortcuts">Phím tắt (Excel-like)</h3>
+                <table class="kbd-table">
+                    <thead><tr><th>Phím tắt</th><th>Chức năng</th></tr></thead>
+                    <tbody>
+                        <tr><td><kbd>Enter</kbd></td><td>Thêm dòng mới phía dưới</td></tr>
+                        <tr><td><kbd>Tab</kbd></td><td>Sang ô kế tiếp / tạo dòng mới ở cuối</td></tr>
+                        <tr><td><kbd>↑</kbd> <kbd>↓</kbd></td><td>Di chuyển lên/xuống dòng (cùng cột)</td></tr>
+                        <tr><td><kbd>←</kbd> <kbd>→</kbd></td><td>Di chuyển trái/phải giữa các ô (khi cursor ở đầu/cuối)</td></tr>
+                        <tr><td><kbd>Shift</kbd>+<kbd>↑↓</kbd></td><td>Mở rộng vùng chọn nhiều dòng</td></tr>
+                        <tr><td><kbd>Ctrl</kbd>+<kbd>D</kbd></td><td>Fill down — copy dữ liệu từ dòng trên xuống</td></tr>
+                        <tr><td><kbd>Ctrl</kbd>+<kbd>Enter</kbd></td><td>Nhân đôi (duplicate) dòng hiện tại</td></tr>
+                        <tr><td><kbd>Ctrl</kbd>+<kbd>Delete</kbd></td><td>Xóa dòng đang focus (hoặc tất cả dòng đang chọn)</td></tr>
+                        <tr><td><kbd>Ctrl</kbd>+<kbd>C</kbd> / <kbd>V</kbd></td><td>Copy / Paste giá trị ô số đơn</td></tr>
+                        <tr><td><kbd>Ctrl</kbd>+<kbd>V</kbd></td><td>Paste nhiều dòng từ Excel (Tab-separated)</td></tr>
+                        <tr><td><kbd>Ctrl</kbd>+<kbd>Z</kbd> / <kbd>Y</kbd></td><td>Hoàn tác / Làm lại (30 cấp)</td></tr>
+                        <tr><td><kbd>F2</kbd></td><td>Từ header hạng mục → nhảy vào dòng đầu tiên</td></tr>
+                        <tr><td><kbd>Esc</kbd></td><td>Bỏ chọn nhiều dòng / blur ô hiện tại</td></tr>
+                        <tr><td>Kéo <kbd>⠿</kbd></td><td>Kéo thả để đổi thứ tự dòng</td></tr>
+                        <tr><td>Click <kbd>⠿</kbd></td><td>Chọn dòng (+ Ctrl để chọn nhiều, Shift để chọn range)</td></tr>
+                    </tbody>
+                </table>
+                <div class="tip">Paste từ Excel: copy nhiều ô trong Excel → click vào ô "Diễn giải" trong bảng → Ctrl+V. Dữ liệu sẽ điền vào các cột Diễn giải, Dài, Rộng, Cao, n tự động.</div>
+            </section>
+
+            <!-- MATERIALS -->
+            <section class="help-section" id="materials">
+                <h2><span class="section-icon" style="background:rgba(0,230,118,0.1);">📦</span> Vật tư cần mua</h2>
+                <p>Trang materials.html tổng hợp tất cả vật tư cần mua từ các hạng mục đã duyệt.</p>
+                <ul>
+                    <li>Số lượng mua = tổng hợp từ <strong>định mức TCVN</strong> × khối lượng từng hạng mục.</li>
+                    <li>Gạch, xi măng làm tròn lên (Math.ceil).</li>
+                    <li>Cát tính theo m³ không làm tròn.</li>
+                    <li>Có thể <strong>chỉnh sửa số lượng mua</strong> trực tiếp trên bảng nếu muốn điều chỉnh.</li>
+                </ul>
+                <div class="note">Bảng vật tư chỉ hiển thị sau khi nhấn "Duyệt" ở trang Dự toán Chi phí.</div>
+            </section>
+
+            <!-- PRICES -->
+            <section class="help-section" id="prices">
+                <h2><span class="section-icon" style="background:rgba(245,158,11,0.1);">💰</span> Đơn giá vật tư &amp; thi công</h2>
+                <p>Đơn giá mặc định theo thị trường Hà Nội Q1/2025. Có thể chỉnh sửa trong tab "Đơn giá Vật tư" và "Đơn giá Thi công" trên sidebar.</p>
+                <ul>
+                    <li>Giá xi măng PC40: <strong>90.000 đ/bao 50kg</strong></li>
+                    <li>Giá cát vàng/mịn: <strong>280.000 đ/m³</strong></li>
+                    <li>Giá keo dán gạch: <strong>350.000 đ/bao 25kg</strong></li>
+                    <li>Gạch đặc đỏ: <strong>1.500 đ/viên</strong></li>
+                    <li>Gạch rỗng 2 lỗ: <strong>1.400 đ/viên</strong></li>
+                    <li>Gạch AAC: <strong>22.000 đ/viên</strong></li>
+                </ul>
+                <div class="tip">Các thay đổi đơn giá được lưu vào localStorage và không mất khi tải lại trang. Nhấn "Khôi phục mặc định" để reset về giá Hà Nội.</div>
+            </section>
+
+            <!-- TIPS -->
+            <section class="help-section" id="tips">
+                <h2><span class="section-icon" style="background:rgba(160,100,255,0.1);">💡</span> Mẹo &amp; Lưu ý</h2>
+                <h3>Nhập nhanh từ bản vẽ</h3>
+                <ul>
+                    <li>Dùng tính năng <strong>Đo từ PDF</strong> — tải file bản vẽ lên, click vào 2 điểm để lấy kích thước tự động điền vào ô đang focus.</li>
+                    <li>Hoặc dùng <strong>Clipboard paste</strong> — copy số từ phần mềm CAD, click ô input, Ctrl+V.</li>
+                </ul>
+                <h3>Tiêu chuẩn gạch miền Bắc</h3>
+                <ul>
+                    <li>Kích thước: <strong>6.5 × 10.5 × 22 cm</strong> (khác miền Nam).</li>
+                    <li>Tường 110 (đơn) = <strong>60 viên/m²</strong> diện tích.</li>
+                    <li>Tường 220 (đôi) = <strong>120 viên/m²</strong> diện tích.</li>
+                </ul>
+                <h3>Xuất báo cáo</h3>
+                <ul>
+                    <li><strong>Xuất ảnh PNG</strong> — chụp màn hình bảng dự toán bằng html2canvas.</li>
+                    <li><strong>Xuất Excel CSV</strong> — tải file .csv mở được trong Excel.</li>
+                    <li><strong>In trang (Ctrl+P)</strong> — các phần tô màu và nút bấm sẽ ẩn đi khi in.</li>
+                </ul>
+                <h3>Đồng bộ dự án</h3>
+                <ul>
+                    <li>Nhấn <strong>"Lưu dự án"</strong> để sync lên server (cần đăng nhập).</li>
+                    <li>Dự án được lưu ở trạng thái draft/pending/approved — Admin có thể duyệt.</li>
+                    <li>Xem lịch sử các dự án đã lưu tại trang <a href="history.html" style="color:#00f2fe;">Lịch sử Dự toán</a>.</li>
+                </ul>
+                <div class="note">Tất cả tính toán chạy hoàn toàn phía client (trình duyệt). Không có dữ liệu nào gửi lên server trừ khi bạn chủ động nhấn "Lưu dự án".</div>
+            </section>
+
+        </div><!-- /help-body -->
+    </div><!-- /help-layout -->
+
+</div><!-- /appContainer -->
+
+<script src="js/auth.js"></script>
+<script src="js/nav.js?v=3.13"></script>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    initAppSidebar({ activePage: 'help' });
+
+    if (typeof lucide !== "undefined") lucide.createIcons();
+
+    // TOC active highlight on scroll
+    const sections = document.querySelectorAll(".help-section");
+    const tocLinks = document.querySelectorAll(".help-toc a");
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                tocLinks.forEach(a => a.classList.remove("active"));
+                const active = document.querySelector(`.help-toc a[href="#${entry.target.id}"]`);
+                if (active) active.classList.add("active");
+            }
+        });
+    }, { rootMargin: "-20% 0px -70% 0px" });
+    sections.forEach(s => observer.observe(s));
+});
+</script>
+
+<!-- BOTTOM TAB BAR (mobile only) -->
+<nav class="bottom-tab-bar no-print" aria-label="Điều hướng chính">
+    <a href="index.html" class="btab-item"><i data-lucide="calculator"></i><span>Bóc KL</span></a>
+    <a href="estimate.html" class="btab-item"><i data-lucide="file-spreadsheet"></i><span>Dự toán</span></a>
+    <a href="materials.html" class="btab-item"><i data-lucide="package"></i><span>Vật tư</span></a>
+    <a href="pricing.html" class="btab-item"><i data-lucide="bar-chart-2"></i><span>Giá</span></a>
+    <a href="contractors.html" class="btab-item"><i data-lucide="hard-hat"></i><span>NTP</span></a>
+</nav>
+</body>
+</html>
