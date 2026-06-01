@@ -152,17 +152,26 @@
             <!-- FOOTER: user + actions -->
             <div class="sb-footer">
                 <!-- User card -->
-                <div class="sb-user-row">
+                <div class="sb-user-row" style="position: relative;">
                     <div class="sb-user-avatar">
                         <i data-lucide="user"></i>
                         <span class="sb-user-dot"></span>
                     </div>
-                    <div class="sb-user-info">
-                        <span id="sidebarUserName" class="sb-user-name">Đang tải...</span>
-                        <span class="sb-user-role">KTS / Người dự toán</span>
+                    <div class="sb-user-info" style="flex: 1; min-width: 0; margin-right: 8px;">
+                        <span id="sidebarUserName" class="sb-user-name" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block;">Đang tải...</span>
+                        <span class="sb-user-role" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block;">KTS / Người dự toán</span>
                     </div>
-                    <button id="sidebarLogoutBtn" class="sb-icon-btn sb-logout-btn" title="Đăng xuất">
-                        <i data-lucide="log-out"></i>
+                    
+                    <!-- UNIFIED NOTIFICATION BELL (placed beautifully in sidebar footer) -->
+                    <div class="noti-container no-print" style="margin-right: 8px; display: inline-flex;">
+                        <button id="btnNotifications" class="sb-icon-btn noti-btn" title="Thông báo hệ thống" style="position: relative; width: 32px; height: 32px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; color: var(--text-secondary); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: var(--transition-smooth);">
+                            <i data-lucide="bell" style="width: 16px; height: 16px;"></i>
+                            <span id="notiBadgeCount" class="noti-badge" style="display:none; position: absolute; top: -3px; right: -3px; background: #ff5252; color: #ffffff; font-size: 8px; font-weight: 800; width: 14px; height: 14px; border-radius: 50%; border: 1px solid var(--bg-main); display: flex; align-items: center; justify-content: center; animation: pulse-noti 2s infinite;">0</span>
+                        </button>
+                    </div>
+
+                    <button id="sidebarLogoutBtn" class="sb-icon-btn sb-logout-btn" title="Đăng xuất" style="width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; color: var(--text-secondary); cursor: pointer; transition: var(--transition-smooth);">
+                        <i data-lucide="log-out" style="width: 16px; height: 16px;"></i>
                     </button>
                 </div>
 
@@ -219,27 +228,6 @@
                         <i data-lucide="map-pin"></i> Hà Nội
                     </span>
                     <span id="userBadge" class="user-badge" title="Tài khoản đang đăng nhập"></span>
-                    
-                    <!-- HỆ THỐNG THÔNG BÁO -->
-                    <div class="noti-container no-print">
-                        <button id="btnNotifications" class="btn btn-secondary btn-sm noti-btn" title="Thông báo hệ thống">
-                            <i data-lucide="bell"></i>
-                            <span id="notiBadgeCount" class="noti-badge" style="display:none;">0</span>
-                        </button>
-                        <div id="notiDropdown" class="noti-dropdown" style="display:none;">
-                            <div class="noti-header">
-                                <h3>Thông báo</h3>
-                                <button id="btnNotiMarkAllRead" class="noti-mark-read-btn">Đọc tất cả</button>
-                            </div>
-                            <div id="notiList" class="noti-list">
-                                <div class="noti-empty">Không có thông báo mới</div>
-                            </div>
-                            <div class="noti-footer">
-                                <button id="btnNotiClearAll" class="noti-clear-all-btn">Xóa tất cả</button>
-                                <button id="btnNotiClose" class="noti-close-btn">Đóng</button>
-                            </div>
-                        </div>
-                    </div>
 
                     <a id="adminPanelBtn" href="/admin.html" class="btn btn-secondary btn-sm" title="Trang quản lý Admin" style="display:none;">
                         <i data-lucide="shield-check"></i> Quản lý
@@ -965,5 +953,6 @@
     <script src="js/api.js?v=3.13"></script>
     <script src="js/auth.js?v=3.13"></script>
     <script src="js/app.js?v=3.13"></script>
+    <script src="js/nav.js?v=3.13"></script>
 </body>
 </html>

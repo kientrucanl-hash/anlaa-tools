@@ -1,8 +1,10 @@
 /**
- * Shared App Sidebar Navigation for all MECALC pages (Unified Dashboard Layout).
+ * Shared App Sidebar Navigation and Unified Notification Center for all MECALC pages (Unified Dashboard Layout).
  * Call initAppSidebar({ activePage }) after DOMContentLoaded.
  * Requires: api.js, auth.js, and lucide icons library loaded.
  */
+
+let notifications = [];
 
 function renderSidebarHTML(activePage) {
     const user = getCurrentUser();
@@ -106,24 +108,251 @@ function renderSidebarHTML(activePage) {
 
         </div>
 
-        <!-- FOOTER: user + actions -->
+        <!-- FOOTER: user + actions + notification -->
         <div class="sb-footer">
             <!-- User card -->
-            <div class="sb-user-row">
+            <div class="sb-user-row" style="position: relative;">
                 <div class="sb-user-avatar">
                     <i data-lucide="user"></i>
                     <span class="sb-user-dot"></span>
                 </div>
-                <div class="sb-user-info">
-                    <span id="sidebarUserName" class="sb-user-name">${userName}</span>
-                    <span class="sb-user-role">${userRole}</span>
+                <div class="sb-user-info" style="flex: 1; min-width: 0; margin-right: 8px;">
+                    <span id="sidebarUserName" class="sb-user-name" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block;">${userName}</span>
+                    <span class="sb-user-role" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block;">${userRole}</span>
                 </div>
-                <button id="sidebarLogoutBtn" class="sb-icon-btn sb-logout-btn" title="Đăng xuất">
-                    <i data-lucide="log-out"></i>
+                
+                <!-- UNIFIED NOTIFICATION BELL (placed beautifully in sidebar footer) -->
+                <div class="noti-container no-print" style="margin-right: 8px; display: inline-flex;">
+                    <button id="btnNotifications" class="sb-icon-btn noti-btn" title="Thông báo hệ thống" style="position: relative; width: 32px; height: 32px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; color: var(--text-secondary); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: var(--transition-smooth);">
+                        <i data-lucide="bell" style="width: 16px; height: 16px;"></i>
+                        <span id="notiBadgeCount" class="noti-badge" style="display:none; position: absolute; top: -3px; right: -3px; background: #ff5252; color: #ffffff; font-size: 8px; font-weight: 800; width: 14px; height: 14px; border-radius: 50%; border: 1px solid var(--bg-main); display: flex; align-items: center; justify-content: center; animation: pulse-noti 2s infinite;">0</span>
+                    </button>
+                </div>
+
+                <button id="sidebarLogoutBtn" class="sb-icon-btn sb-logout-btn" title="Đăng xuất" style="width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; color: var(--text-secondary); cursor: pointer; transition: var(--transition-smooth);">
+                    <i data-lucide="log-out" style="width: 16px; height: 16px;"></i>
                 </button>
             </div>
         </div>
     `;
+}
+
+function saveNotifications() {
+    localStorage.setItem("anlaa_notifications", JSON.stringify(notifications));
+}
+
+function renderNotifications() {
+    const list = document.getElementById("notiList");
+    const badge = document.getElementById("notiBadgeCount");
+    if (!list) return;
+
+    // Unread count
+    const unreadCount = notifications.filter(n => n.unread).length;
+    if (badge) {
+        if (unreadCount > 0) {
+            badge.textContent = unreadCount;
+            badge.style.display = "flex";
+        } else {
+            badge.style.display = "none";
+        }
+    }
+
+    if (notifications.length === 0) {
+        list.innerHTML = `<div class="noti-empty">Không có thông báo mới</div>`;
+        return;
+    }
+
+    // Map categories to icons
+    const iconMap = {
+        success: "check-circle",
+        warning: "alert-triangle",
+        error: "shield-alert",
+        info: "info"
+    };
+
+    list.innerHTML = notifications.map(n => `
+        <div class="noti-item ${n.unread ? "unread" : ""} cat-${n.category}" data-id="${n.id}">
+            <div class="noti-item-icon">
+                <i data-lucide="${iconMap[n.category] || "bell"}"></i>
+            </div>
+            <div class="noti-item-content">
+                <span class="noti-item-title">${escapeHtml(n.title)}</span>
+                <span class="noti-item-body">${escapeHtml(n.body)}</span>
+                <span class="noti-item-time">${escapeHtml(n.time)}</span>
+            </div>
+            ${n.unread ? `<span class="noti-item-unread-dot"></span>` : ""}
+            <button class="noti-item-delete" data-id="${n.id}" title="Xóa thông báo">×</button>
+        </div>
+    `).join("");
+
+    // Wire events inside list
+    list.querySelectorAll(".noti-item").forEach(item => {
+        item.addEventListener("click", (e) => {
+            if (e.target.closest(".noti-item-delete")) return;
+            const notiId = item.dataset.id;
+            const noti = notifications.find(n => n.id === notiId);
+            if (noti && noti.unread) {
+                noti.unread = false;
+                saveNotifications();
+                renderNotifications();
+            }
+        });
+    });
+
+    list.querySelectorAll(".noti-item-delete").forEach(btn => {
+        btn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            const notiId = btn.dataset.id;
+            notifications = notifications.filter(n => n.id !== notiId);
+            saveNotifications();
+            renderNotifications();
+        });
+    });
+
+    if (typeof lucide !== "undefined") lucide.createIcons();
+}
+
+function initNotifications() {
+    const btn = document.getElementById("btnNotifications");
+    if (!btn) return;
+
+    let dropdown = document.getElementById("notiDropdown");
+    if (!dropdown) {
+        dropdown = document.createElement("div");
+        dropdown.id = "notiDropdown";
+        dropdown.className = "noti-dropdown no-print";
+        dropdown.style.display = "none";
+        dropdown.style.zIndex = "9999";
+        dropdown.innerHTML = `
+            <div class="noti-header">
+                <h3>Thông báo</h3>
+                <button id="btnNotiMarkAllRead" class="noti-mark-read-btn">Đọc tất cả</button>
+            </div>
+            <div id="notiList" class="noti-list" style="max-height: 280px; overflow-y: auto;">
+                <div class="noti-empty">Không có thông báo mới</div>
+            </div>
+            <div class="noti-footer">
+                <button id="btnNotiClearAll" class="noti-clear-all-btn">Xóa tất cả</button>
+                <button id="btnNotiClose" class="noti-close-btn">Đóng</button>
+            </div>
+        `;
+        const container = document.getElementById('appContainer') || document.body;
+        container.appendChild(dropdown);
+    }
+
+    const btnMarkAll = document.getElementById("btnNotiMarkAllRead");
+    const btnClearAll = document.getElementById("btnNotiClearAll");
+    const btnClose = document.getElementById("btnNotiClose");
+
+    // Load or pre-populate
+    try {
+        const stored = localStorage.getItem("anlaa_notifications");
+        if (stored) {
+            notifications = JSON.parse(stored);
+        } else {
+            // Pre-populate with beautiful default notifications
+            notifications = [
+                {
+                    id: "noti-1",
+                    category: "success",
+                    title: "Dự án biệt thự A-01 phê duyệt",
+                    body: "Admin đã duyệt dự toán hoàn chỉnh của biệt thự A-01 và cập nhật bảng giá chính thức.",
+                    time: "5 phút trước",
+                    unread: true
+                },
+                {
+                    id: "noti-2",
+                    category: "warning",
+                    title: "Nhắc nhở: Đơn giá thép biến động",
+                    body: "Giá thép xây dựng Hòa Phát tăng nhẹ khoảng 1.2%. Vui lòng rà soát lại đơn giá trong bảng dự toán.",
+                    time: "2 giờ trước",
+                    unread: true
+                },
+                {
+                    id: "noti-3",
+                    category: "info",
+                    title: "Hệ thống nâng cấp UI Tối giản",
+                    body: "Chúng tôi vừa nâng cấp toàn bộ giao diện sang chuẩn Glassmorphism tối giản và tối ưu hóa không gian làm việc di động.",
+                    time: "1 ngày trước",
+                    unread: false
+                },
+                {
+                    id: "noti-4",
+                    category: "error",
+                    title: "Cảnh báo sai lệch khối lượng",
+                    body: "Phát hiện sai lệch lớn giữa thể tích xây thô và diện tích trát tường đứng ở khu vực tầng 2. Cần rà soát lại ngay.",
+                    time: "3 ngày trước",
+                    unread: true
+                }
+            ];
+            localStorage.setItem("anlaa_notifications", JSON.stringify(notifications));
+        }
+    } catch {
+        notifications = [];
+    }
+
+    // Toggle dropdown (fixed positioning dynamic aligning above the button)
+    btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const show = dropdown.style.display === "none" || dropdown.style.display === "";
+        dropdown.style.display = show ? "flex" : "none";
+        
+        if (show) {
+            // Align dropdown fixed position right above the bell button
+            const rect = btn.getBoundingClientRect();
+            dropdown.style.position = "fixed";
+            dropdown.style.left = Math.max(10, rect.left - 150) + "px";
+            
+            // If it is on mobile, place it near top of screen or relative to sidebar
+            if (window.innerWidth <= 1200) {
+                dropdown.style.bottom = "60px";
+                dropdown.style.left = "16px";
+                dropdown.style.width = "calc(100vw - 32px)";
+            } else {
+                dropdown.style.bottom = (window.innerHeight - rect.top + 8) + "px";
+                dropdown.style.width = "340px";
+            }
+            dropdown.style.top = "auto";
+            dropdown.style.right = "auto";
+            
+            if (typeof lucide !== "undefined") lucide.createIcons();
+        }
+    });
+
+    // Close on click outside
+    document.addEventListener("click", (e) => {
+        if (!e.target.closest(".noti-container") && !e.target.closest(".noti-dropdown")) {
+            dropdown.style.display = "none";
+        }
+    });
+
+    // Mark all as read
+    btnMarkAll?.addEventListener("click", () => {
+        notifications.forEach(n => n.unread = false);
+        saveNotifications();
+        renderNotifications();
+    });
+
+    // Clear all
+    btnClearAll?.addEventListener("click", () => {
+        if (confirm("Xóa toàn bộ thông báo hệ thống?")) {
+            notifications = [];
+            saveNotifications();
+            renderNotifications();
+        }
+    });
+
+    // Close button
+    btnClose?.addEventListener("click", () => {
+        dropdown.style.display = "none";
+    });
+
+    // Initial render
+    renderNotifications();
+}
+
+function escapeHtml(str) {
+    return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
 function initAppSidebar({ activePage = '' } = {}) {
@@ -147,10 +376,38 @@ function initAppSidebar({ activePage = '' } = {}) {
         }
     }
 
+    // Dynamic inject absolute dropdown outside the sidebar to prevent scroll limits
+    let dropdown = document.getElementById('notiDropdown');
+    if (!dropdown) {
+        dropdown = document.createElement("div");
+        dropdown.id = "notiDropdown";
+        dropdown.className = "noti-dropdown no-print";
+        dropdown.style.display = "none";
+        dropdown.style.zIndex = "9999";
+        dropdown.innerHTML = `
+            <div class="noti-header">
+                <h3>Thông báo</h3>
+                <button id="btnNotiMarkAllRead" class="noti-mark-read-btn">Đọc tất cả</button>
+            </div>
+            <div id="notiList" class="noti-list" style="max-height: 280px; overflow-y: auto;">
+                <div class="noti-empty">Không có thông báo mới</div>
+            </div>
+            <div class="noti-footer">
+                <button id="btnNotiClearAll" class="noti-clear-all-btn">Xóa tất cả</button>
+                <button id="btnNotiClose" class="noti-close-btn">Đóng</button>
+            </div>
+        `;
+        const container = document.getElementById('appContainer') || document.body;
+        container.appendChild(dropdown);
+    }
+
     // Initialize Lucide Icons
     if (typeof lucide !== 'undefined') {
         lucide.createIcons();
     }
+
+    // Initialize Notification System
+    initNotifications();
 
     // Register mobile off-canvas toggle events
     const sidebarToggle = document.getElementById('sidebarToggle');
