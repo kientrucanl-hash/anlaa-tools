@@ -3,7 +3,7 @@ services:
     build: .
     restart: unless-stopped
     ports:
-      - "4000:4000"
+      - "127.0.0.1:4000:4000"
     environment:
       - PORT=4000
       - JWT_SECRET=${JWT_SECRET}
