@@ -11,7 +11,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Outfit:wght@100..900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/styles.css?v=3.13">
+    <link rel="stylesheet" href="css/styles.css?v=3.15">
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         .prx-container { display: flex; flex-direction: column; min-height: 100vh; background: var(--bg-main); }
@@ -177,6 +177,9 @@
         }
         .prx-table th.text-right { text-align: right; }
         .prx-table th.text-center { text-align: center; }
+        /* Two-row thead group headers */
+        .prx-table thead tr:first-child th[colspan] { border-bottom: none; padding-bottom: 5px; }
+        .prx-table thead tr:last-child th { font-size: 9px; opacity: 0.75; padding-top: 3px; padding-bottom: 5px; }
         .prx-table td { padding: 6px 10px; border-bottom: 1px solid rgba(255, 255, 255, 0.04); vertical-align: middle; }
         .prx-table tbody tr:hover td { background: rgba(255, 255, 255, 0.02); }
         .prx-table .td-stt { color: var(--text-muted); font-size: 11px; width: 30px; text-align: center; }
@@ -499,15 +502,23 @@
                     <table class="prx-table" id="subTable">
                         <thead>
                             <tr>
-                                <th class="td-stt">STT</th>
-                                <th>Hạng mục</th>
-                                <th class="text-center">ĐVT</th>
-                                <th class="text-right">KL</th>
-                                <th class="th-ntp1 text-right" colspan="2">ĐG / Thành tiền NTP1</th>
-                                <th class="th-ntp2 text-right" colspan="2">ĐG / Thành tiền NTP2</th>
-                                <th class="th-ntp3 text-right" colspan="2">ĐG / Thành tiền NTP3</th>
-                                <th class="text-center" style="width:70px;">Chọn</th>
-                                <th class="td-note">Ghi chú</th>
+                                <th class="td-stt" rowspan="2">STT</th>
+                                <th rowspan="2">Hạng mục</th>
+                                <th class="text-center" rowspan="2">ĐVT</th>
+                                <th class="text-right" rowspan="2">KL</th>
+                                <th class="th-ntp1 text-center" colspan="2" id="thNtp1Group" style="border-bottom:1px solid rgba(96,165,250,0.25);">Nhà thầu 1</th>
+                                <th class="th-ntp2 text-center" colspan="2" id="thNtp2Group" style="border-bottom:1px solid rgba(52,211,153,0.25);">Nhà thầu 2</th>
+                                <th class="th-ntp3 text-center" colspan="2" id="thNtp3Group" style="border-bottom:1px solid rgba(245,158,11,0.25);">Nhà thầu 3</th>
+                                <th class="text-center" rowspan="2" style="width:70px;">Chọn</th>
+                                <th class="td-note" rowspan="2">Ghi chú</th>
+                            </tr>
+                            <tr>
+                                <th class="th-ntp1 text-right" style="width:90px;">Đơn giá</th>
+                                <th class="th-ntp1 text-right" style="width:100px;">Thành tiền</th>
+                                <th class="th-ntp2 text-right" style="width:90px;">Đơn giá</th>
+                                <th class="th-ntp2 text-right" style="width:100px;">Thành tiền</th>
+                                <th class="th-ntp3 text-right" style="width:90px;">Đơn giá</th>
+                                <th class="th-ntp3 text-right" style="width:100px;">Thành tiền</th>
                             </tr>
                         </thead>
                         <tbody id="subTableBody">
@@ -676,11 +687,11 @@
     </a>
 </nav>
 
-<script src="js/constants.js?v=3.13"></script>
-<script src="js/api.js?v=3.13"></script>
-<script src="js/auth.js?v=3.13"></script>
-<script src="js/nav.js?v=3.13"></script>
-<script src="js/pricing.js?v=3.13"></script>
+<script src="js/constants.js?v=3.14"></script>
+<script src="js/api.js?v=3.14"></script>
+<script src="js/auth.js?v=3.14"></script>
+<script src="js/nav.js?v=3.15"></script>
+<script src="js/pricing.js?v=3.14"></script>
 <script>
     document.addEventListener('DOMContentLoaded', () => {
         initAppSidebar({ activePage: 'pricing' });
