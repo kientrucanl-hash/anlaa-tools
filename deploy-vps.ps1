@@ -47,9 +47,22 @@ ssh -o StrictHostKeyChecking=no $SERVER $dockerCmd
 Write-Host "Khoi dong Docker Container trên VPS thanh cong!" -ForegroundColor Green
 
 Write-Host "[4b] Chay DB migration..." -ForegroundColor Yellow
-$migrateCmd = "cd $REMOTE_DIR && docker compose exec -T anlc node server/db/migrate.js"
+# Convert CRLF->LF truoc khi upload de tranh truncation tren Linux
+$dbJsContent = Get-Content "server\db\database.js" -Raw
+$dbJsContent = $dbJsContent -replace "`r`n", "`n"
+[System.IO.File]::WriteAllText("$env:TEMP\database_lf.js", $dbJsContent, [System.Text.Encoding]::UTF8)
+$migrateContent = Get-Content "server\db\migrate.js" -Raw
+$migrateContent = $migrateContent -replace "`r`n", "`n"
+[System.IO.File]::WriteAllText("$env:TEMP\migrate_lf.js", $migrateContent, [System.Text.Encoding]::UTF8)
+scp -o StrictHostKeyChecking=no "$env:TEMP\database_lf.js" "${SERVER}:/tmp/database_new.js"
+scp -o StrictHostKeyChecking=no "$env:TEMP\migrate_lf.js" "${SERVER}:/tmp/migrate_new.js"
+$migrateCmd = "sudo cp /tmp/database_new.js /var/lib/docker/volumes/anlaa-tools_anlc_data/_data/database.js && docker cp /tmp/migrate_new.js anlaa-tools-anlc-1:/app/server/db/migrate.js && docker exec anlaa-tools-anlc-1 node /app/server/db/migrate.js"
 ssh -o StrictHostKeyChecking=no $SERVER $migrateCmd
 Write-Host "Migration hoan tat!" -ForegroundColor Green
+
+Write-Host "[4c] Restart container sau migration..." -ForegroundColor Yellow
+ssh -o StrictHostKeyChecking=no $SERVER "cd $REMOTE_DIR && docker compose restart"
+Write-Host "Restart hoan tat!" -ForegroundColor Green
 
 # 5. Clean up local archive
 Write-Host "[5/5] Don dep tep tam local..." -ForegroundColor Yellow
