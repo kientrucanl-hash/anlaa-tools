@@ -19,22 +19,19 @@ echo "[$(date)] Khoi dong tien trinh backup..."
 # 1. Tao thu muc backup tren VPS neu chua co
 mkdir -p "$BACKUP_DIR"
 
-# 2. Chay lenh backup an toan ben trong Docker container su dung sqlite3 .backup
-echo "Dang tao ban sao luu an toan (atomic backup) trong container..."
-docker exec "$CONTAINER_NAME" sqlite3 "$DB_PATH_IN_CONTAINER" ".backup ${TEMP_BACKUP_IN_CONTAINER}"
+# 2. Tao thu muc tam tren VPS Host
+TEMP_DIR="/tmp/mecalc_backup_temp"
+rm -rf "$TEMP_DIR"
+mkdir -p "$TEMP_DIR"
 
-# 3. Sao chep ban sao luu tu container ra VPS Host
-echo "Dang sao chep ban sao luu ra VPS Host..."
-docker cp "${CONTAINER_NAME}:${TEMP_BACKUP_IN_CONTAINER}" "/tmp/anlaa_backup_temp.db"
+# 3. Sao chep truc tiep cac tep database tu container ra thu muc tam tren VPS Host
+echo "Dang sao chep cac tep database tu container..."
+docker cp "${CONTAINER_NAME}:/app/server/db/." "$TEMP_DIR/"
 
-# 4. Nen file backup va xoa file tam
-echo "Dang nen ban sao luu..."
-tar -czf "$BACKUP_FILE" -C /tmp anlaa_backup_temp.db
-rm -f /tmp/anlaa_backup_temp.db
-
-# 5. Xoa file tam trong Docker container
-echo "Dang don dep tep tam trong container..."
-docker exec "$CONTAINER_NAME" rm -f "$TEMP_BACKUP_IN_CONTAINER"
+# 4. Nen thu muc backup va xoa thu muc tam
+echo "Dang nen cac tep sao luu..."
+tar -czf "$BACKUP_FILE" -C "$TEMP_DIR" .
+rm -rf "$TEMP_DIR"
 
 # 6. Giu lai toi da 30 ban sao luu gan nhat (tu dong xoa ban cu)
 echo "Dang don dep cac ban sao luu cu (giu lai 30 ban gan nhat)..."
