@@ -3222,7 +3222,21 @@ input:checked + .slider:before {
     font-weight: 600;
     color: var(--text-primary);
     margin-bottom: 5px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
 }
+
+.collab-role-badge {
+    font-size: 10px;
+    font-weight: 600;
+    padding: 2px 7px;
+    border-radius: 4px;
+    white-space: nowrap;
+}
+.collab-role-badge.role-editor { background: rgba(167,139,250,0.15); color: #a78bfa; border: 1px solid rgba(167,139,250,0.3); }
+.collab-role-badge.role-viewer { background: rgba(0,242,254,0.08); color: #00f2fe; border: 1px solid rgba(0,242,254,0.2); }
 
 .hcard-meta {
     display: flex;
@@ -4267,6 +4281,204 @@ input:checked + .slider:before {
     background: rgba(255,255,255,0.96);
     box-shadow: 0 16px 60px rgba(0,0,0,0.15);
     border-color: rgba(0,0,0,0.08);
+}
+
+/* Input grid table (bảng tính sidebar) */
+[data-theme="light"] .input-grid-table {
+    background: rgba(255,255,255,0.80);
+}
+[data-theme="light"] .input-grid-table th {
+    background: rgba(0,0,0,0.04);
+    color: var(--text-muted);
+}
+
+/* Cost detail rows trong bảng tính */
+[data-theme="light"] .cost-detail-row td {
+    background: rgba(241,245,249,0.80);
+    border-color: rgba(0,0,0,0.07);
+}
+[data-theme="light"] .cost-detail-row:nth-child(even) td {
+    background: rgba(255,255,255,0.90) !important;
+}
+[data-theme="light"] .cost-detail-row:hover td {
+    background: rgba(0,119,204,0.05) !important;
+}
+[data-theme="light"] .cost-detail-row.row-focused td {
+    background: rgba(0,119,204,0.10) !important;
+    border-color: rgba(0,119,204,0.25) !important;
+}
+
+/* Accordion items list (sidebar) */
+[data-theme="light"] .sb-accordion .items-list-container {
+    background: rgba(255,255,255,0.70);
+}
+
+/* Takeoff control panel */
+[data-theme="light"] .takeoff-control-panel {
+    background: rgba(241,245,249,0.85);
+}
+[data-theme="light"] .takeoff-tool-group {
+    background: rgba(255,255,255,0.70);
+    border-color: rgba(0,0,0,0.10);
+}
+
+/* History card hover */
+[data-theme="light"] .history-card:hover {
+    background: rgba(255,255,255,0.95);
+    border-color: rgba(0,119,204,0.30);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+}
+
+/* Toast notification */
+[data-theme="light"] .toast-notification {
+    background: rgba(255,255,255,0.96);
+    color: var(--text-primary);
+    border-color: #0077cc;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+}
+
+/* Collab modal & floats */
+[data-theme="light"] .collab-modal {
+    background: rgba(255,255,255,0.98);
+}
+[data-theme="light"] .collab-toast {
+    background: rgba(255,255,255,0.97);
+    color: var(--text-primary);
+}
+[data-theme="light"] .collab-request-access-banner {
+    background: rgba(255,255,255,0.96);
+    color: var(--text-primary);
+}
+[data-theme="light"] .collab-invite-notif {
+    background: rgba(255,255,255,0.98);
+    border-color: rgba(0,119,204,0.30);
+}
+[data-theme="light"] .collab-input,
+[data-theme="light"] .collab-select,
+[data-theme="light"] .collab-select-sm {
+    background: rgba(0,0,0,0.04);
+    border-color: rgba(0,0,0,0.15);
+    color: var(--text-primary);
+}
+[data-theme="light"] .collab-member-row,
+[data-theme="light"] .collab-request-row {
+    border-color: rgba(0,0,0,0.08);
+}
+[data-theme="light"] .collab-avatar {
+    background: rgba(0,119,204,0.10);
+    border-color: rgba(0,119,204,0.25);
+    color: #0055cc;
+}
+[data-theme="light"] .collab-toast a { color: #0055cc; }
+
+/* Login overlay backdrop */
+[data-theme="light"] .login-overlay {
+    background: rgba(240,244,248,0.97);
+}
+
+/* Header welcome heading: white gradient → dark on light bg */
+[data-theme="light"] .header-welcome h2 {
+    background: linear-gradient(135deg, #0f172a 0%, #334155 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+/* Tab nav bar: dark glass → soft light */
+[data-theme="light"] .tab-nav {
+    background: rgba(241,245,249,0.85);
+    border-color: rgba(0,0,0,0.10);
+}
+
+/* Tab btn hover: almost-invisible white → visible gray */
+[data-theme="light"] .tab-btn:hover {
+    background: rgba(0,0,0,0.05);
+    color: var(--text-primary);
+}
+
+/* Preview container: dark glass → white card */
+[data-theme="light"] .preview-container {
+    background: rgba(255,255,255,0.90);
+    border-color: rgba(0,0,0,0.10);
+    box-shadow: var(--shadow-glass);
+}
+
+/* Preview total box: neon-on-dark → blue-on-white */
+[data-theme="light"] .preview-total {
+    background: rgba(0,119,204,0.06);
+    border-color: rgba(0,119,204,0.20);
+}
+[data-theme="light"] .preview-total .cost-value {
+    color: #0f172a;
+}
+[data-theme="light"] .preview-total .cost-label {
+    color: #0077cc;
+}
+
+/* BOQ section heading: hardcoded white → dark */
+[data-theme="light"] .boq-title-block h2 {
+    color: var(--text-primary);
+}
+
+/* Chart wrapper: dark glass → light */
+[data-theme="light"] .chart-container-wrapper {
+    background: rgba(241,245,249,0.85);
+    box-shadow: none;
+}
+
+/* Items list container: dark tint → white tint */
+[data-theme="light"] .items-list-container {
+    background: rgba(255,255,255,0.70);
+}
+[data-theme="light"] .items-list li:hover {
+    background: rgba(0,0,0,0.04);
+}
+
+/* Prices table row hover: neon tint → blue tint */
+[data-theme="light"] .boq-table tbody tr:hover,
+[data-theme="light"] .prices-table tbody tr:hover {
+    background: rgba(0,119,204,0.06) !important;
+    box-shadow: inset 4px 0 0 #0077cc;
+}
+
+/* Table zebra: flip for light bg */
+[data-theme="light"] .boq-table tbody tr:nth-child(even),
+[data-theme="light"] .prices-table tbody tr:nth-child(even) {
+    background: rgba(241,245,249,0.70);
+}
+[data-theme="light"] .boq-table tbody tr:nth-child(odd),
+[data-theme="light"] .prices-table tbody tr:nth-child(odd) {
+    background: rgba(255,255,255,0.90);
+}
+
+/* Numeric color codes: neon cyan → darker readable blue */
+[data-theme="light"] .text-final {
+    color: #0055cc !important;
+}
+[data-theme="light"] .text-cost {
+    color: #b34500 !important;
+}
+
+/* Secondary button: invisible white → visible outline */
+[data-theme="light"] .btn-secondary {
+    background: rgba(0,0,0,0.04);
+    border-color: rgba(0,0,0,0.18);
+    color: var(--text-primary);
+}
+[data-theme="light"] .btn-secondary:hover {
+    background: rgba(0,0,0,0.09);
+    border-color: rgba(0,0,0,0.30);
+}
+
+/* prices-table row hover */
+[data-theme="light"] .prices-table tr:hover {
+    background: rgba(0,119,204,0.04) !important;
+}
+
+/* Location badge: neon tint → blue tint */
+[data-theme="light"] .location-badge {
+    background: rgba(0,119,204,0.08);
+    border-color: rgba(0,119,204,0.25);
+    color: #005fa3;
 }
 
 /* ==========================================================================

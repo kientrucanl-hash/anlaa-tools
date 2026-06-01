@@ -1,18 +1,16 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-    <meta http-equiv="Pragma" content="no-cache">
-    <meta http-equiv="Expires" content="0">
-    <link rel="icon" type="image/x-icon" href="favicon.ico">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">    <link rel="icon" type="image/x-icon" href="favicon.ico">
     <link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
     <title>Lịch sử Dự toán — ANLAA Mecalc</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Outfit:wght@100..900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/styles.css?v=3.15">
+    <!-- Anti-FOUC: apply saved theme before first paint -->
+    <script>document.documentElement.setAttribute('data-theme', localStorage.getItem('anlaa_theme') || 'dark');</script>
+    <link rel="stylesheet" href="css/styles.css?v=3.22">
     <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 <body>
@@ -121,7 +119,7 @@
 
 <script src="js/api.js"></script>
 <script src="js/auth.js"></script>
-<script src="js/nav.js?v=3.15"></script>
+<script src="js/nav.js?v=3.18"></script>
 <script>
 const STATUS_LABELS = {
     draft:    { text: 'Bản nháp',  cls: 'badge-draft' },
@@ -166,9 +164,15 @@ function renderList() {
 
     list.innerHTML = filtered.map(p => {
         const itemCount = Array.isArray(p.data) ? p.data.length : 0;
+        const isShared = p.my_role && p.my_role !== 'owner';
+        const sharedBadge = isShared
+            ? `<span class="collab-role-badge role-${p.my_role}" title="Dự án của ${p.owner_name || 'người khác'}">
+                   ${p.my_role === 'editor' ? '✏️ Chỉnh sửa' : '👁 Chỉ xem'} · ${p.owner_name || '?'}
+               </span>`
+            : '';
         return `<div class="history-card" data-id="${p.id}">
             <div class="hcard-main">
-                <div class="hcard-title">${p.name || 'Chưa đặt tên'}</div>
+                <div class="hcard-title">${p.name || 'Chưa đặt tên'}${sharedBadge}</div>
                 <div class="hcard-meta">
                     <span><i data-lucide="map-pin" style="width:12px;height:12px;vertical-align:middle;"></i> ${p.address || 'Chưa có địa chỉ'}</span>
                     <span><i data-lucide="list" style="width:12px;height:12px;vertical-align:middle;"></i> ${itemCount} hạng mục</span>
@@ -240,8 +244,9 @@ function openDetail(id) {
 function openInCalculator(id) {
     const project = allProjects.find(p => p.id === id);
     if (!project) return;
-    // Store selected project id to be picked up by index.html
     localStorage.setItem('anlaa_open_project_id', project.id);
+    if (project.my_role) localStorage.setItem('anlaa_open_project_role', project.my_role);
+    if (project.owner_name) localStorage.setItem('anlaa_open_project_owner', project.owner_name);
     window.location.href = 'index.html';
 }
 
@@ -271,3 +276,5 @@ document.addEventListener('DOMContentLoaded', async () => {
 </script>
 </body>
 </html>
+
+

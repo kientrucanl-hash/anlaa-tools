@@ -1,17 +1,15 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-    <meta http-equiv="Pragma" content="no-cache">
-    <meta http-equiv="Expires" content="0">
-    <link rel="icon" type="image/x-icon" href="favicon.ico">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">    <link rel="icon" type="image/x-icon" href="favicon.ico">
     <title>Dự toán Chi phí — ANLAA Mecalc</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Outfit:wght@100..900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/styles.css?v=3.15">
+    <!-- Anti-FOUC: apply saved theme before first paint -->
+    <script>document.documentElement.setAttribute('data-theme', localStorage.getItem('anlaa_theme') || 'dark');</script>
+    <link rel="stylesheet" href="css/styles.css?v=3.22">
     <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
@@ -38,9 +36,6 @@
         .est-actions { display: flex; gap: 8px; flex-wrap: wrap; }
         .approve-btn { background: linear-gradient(135deg, #00e676, #00b0ff); color: #000; font-weight: 700; }
         .approve-btn:hover { opacity: 0.9; transform: translateY(-1px); }
-        .work-prices-panel { background: rgba(22,25,37,0.6); border: 1px solid var(--border-glass); border-radius: 12px; padding: 20px; margin-bottom: 24px; }
-        .work-prices-panel summary { cursor: pointer; font-size: 13px; font-weight: 600; color: var(--text-secondary); user-select: none; }
-        .work-prices-panel summary:hover { color: var(--text-primary); }
         .sync-badge { font-size: 11px; padding: 2px 8px; border-radius: 12px; margin-left: 8px; background: rgba(0,230,118,0.15); color: #00e676; border: 1px solid rgba(0,230,118,0.3); }
         .sync-badge.syncing { background: rgba(245,158,11,0.15); color: #fbbf24; border-color: rgba(245,158,11,0.3); }
     </style>
@@ -241,21 +236,7 @@
             </div>
         </div>
 
-        <!-- WORK PRICES ACCORDION -->
-        <details class="work-prices-panel no-print mt-4">
-            <summary>Bảng đơn giá thi công (Hà Nội) — click để xem / chỉnh sửa</summary>
-            <div class="mt-3">
-                <div class="table-responsive">
-                    <table class="prices-table" id="workPricesTable">
-                        <thead><tr><th>Hạng mục</th><th>ĐVT</th><th class="text-right">Đơn giá (VNĐ)</th></tr></thead>
-                        <tbody id="workPricesBody"></tbody>
-                    </table>
-                </div>
-                <button id="btnResetWorkPrices" class="btn btn-secondary btn-sm mt-2">Khôi phục mặc định Hà Nội</button>
-            </div>
-        </details>
-
-        <div class="boq-disclaimer mt-3">
+<div class="boq-disclaimer mt-3">
             <p><strong>⚠️ KHUYẾN CÁO:</strong> Bảng dự toán chi phí được tính tự động theo định mức tiêu chuẩn. Cần khảo sát thực tế và trao đổi với đội thi công trước khi ký kết hợp đồng.</p>
         </div>
     </main>
@@ -288,13 +269,13 @@
 <div id="toastNotification" class="toast-notification"></div>
 
 <script src="/socket.io/socket.io.js"></script>
-<script src="js/constants.js?v=3.14"></script>
-<script src="js/calculator.js?v=3.14"></script>
-<script src="js/api.js?v=3.14"></script>
-<script src="js/auth.js?v=3.14"></script>
-<script src="js/collab.js?v=3.14"></script>
-<script src="js/nav.js?v=3.15"></script>
-<script src="js/app.js?v=3.14"></script>
+<script src="js/constants.js?v=3.18"></script>
+<script src="js/calculator.js?v=3.18"></script>
+<script src="js/api.js?v=3.18"></script>
+<script src="js/auth.js?v=3.18"></script>
+<script src="js/collab.js?v=3.22"></script>
+<script src="js/nav.js?v=3.18"></script>
+<script src="js/app.js?v=3.22"></script>
 <script>
     document.addEventListener('DOMContentLoaded', () => {
         initAppSidebar({ activePage: 'estimate' });
@@ -302,3 +283,5 @@
 </script>
 </body>
 </html>
+
+

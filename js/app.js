@@ -411,6 +411,7 @@ function debouncedApiSave() {
 async function syncProjectToAPI() {
     if (!localStorage.getItem('anlaa_token')) return;
     if (currentProject.status === 'approved') return; // locked
+    if (currentProject.my_role === 'viewer') return; // read-only collaborator
 
     try {
         if (currentProject.id) {
@@ -426,6 +427,36 @@ async function syncProjectToAPI() {
         }
     } catch (err) {
         console.warn('API sync error:', err.message);
+    }
+}
+
+/**
+ * Called by collab.js when a remote collaborator makes a change.
+ * Merges remote patch into currentProject if user has no pending unsaved edits.
+ */
+function updateRemoteProjectData(patch) {
+    if (!currentProject) return;
+    let changed = false;
+    if (patch.name && patch.name !== currentProject.name) {
+        currentProject.name = patch.name;
+        const nameEl = document.getElementById('projectName');
+        if (nameEl) nameEl.value = patch.name;
+        changed = true;
+    }
+    if (patch.address && patch.address !== currentProject.address) {
+        currentProject.address = patch.address;
+        const addrEl = document.getElementById('projectAddress');
+        if (addrEl) addrEl.value = patch.address;
+        changed = true;
+    }
+    if (patch.data && Array.isArray(patch.data)) {
+        currentProject.items = patch.data;
+        changed = true;
+    }
+    if (changed) {
+        localStorage.setItem('anlaa_project', JSON.stringify(currentProject));
+        updateSidebarList();
+        updateBOQTable();
     }
 }
 
@@ -2667,8 +2698,14 @@ async function loadProjectsFromAPI() {
 
         // If history page requested a specific project, open it
         const requestedId = parseInt(localStorage.getItem('anlaa_open_project_id') || '0');
+        const requestedRole = localStorage.getItem('anlaa_open_project_role') || null;
+        const requestedOwner = localStorage.getItem('anlaa_open_project_owner') || null;
         localStorage.removeItem('anlaa_open_project_id');
+        localStorage.removeItem('anlaa_open_project_role');
+        localStorage.removeItem('anlaa_open_project_owner');
         const requested = requestedId ? projects.find(p => p.id === requestedId) : null;
+        if (requested && requestedRole) { requested.my_role = requestedRole; }
+        if (requested && requestedOwner) { requested.owner_name = requestedOwner; }
 
         // Load most recent draft or rejected project (or requested project)
         const active = requested || projects.find(p => ['draft', 'rejected'].includes(p.status)) || projects[0];
@@ -2679,7 +2716,9 @@ async function loadProjectsFromAPI() {
                 status: active.status,
                 name: active.name,
                 address: active.address || 'Hà Nội',
-                items: Array.isArray(active.data) ? active.data : []
+                items: Array.isArray(active.data) ? active.data : [],
+                my_role: active.my_role || 'owner',
+                owner_name: active.owner_name || null,
             };
         } else {
             // Create fresh project on API
@@ -2740,6 +2779,35 @@ function updateProjectStatusUI() {
         const b = badgeMap[currentProject.status] || badgeMap.draft;
         badge.innerHTML = b.text;
         badge.className = `status-badge ${b.class}`;
+    }
+
+    // Viewer-only: hide submit button, show shared-from banner
+    const myRole = currentProject.my_role;
+    if (myRole === 'viewer') {
+        if (btn) { btn.style.display = 'none'; }
+        let sharedBanner = document.getElementById('sharedProjectBanner');
+        if (!sharedBanner) {
+            sharedBanner = document.createElement('div');
+            sharedBanner.id = 'sharedProjectBanner';
+            sharedBanner.className = 'collab-viewer-banner no-print';
+            const header = document.querySelector('.est-topbar') || document.querySelector('.app-header');
+            if (header) header.after(sharedBanner);
+        }
+        sharedBanner.innerHTML = `<i data-lucide="eye"></i> <span>Dự án của <strong>${currentProject.owner_name || 'người dùng khác'}</strong> — bạn đang ở chế độ <strong>Chỉ xem</strong>.</span>`;
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+    } else if (myRole === 'editor' && currentProject.owner_name) {
+        // Editor viewing shared project
+        let sharedBanner = document.getElementById('sharedProjectBanner');
+        if (!sharedBanner) {
+            sharedBanner = document.createElement('div');
+            sharedBanner.id = 'sharedProjectBanner';
+            sharedBanner.className = 'collab-viewer-banner no-print';
+            const header = document.querySelector('.est-topbar') || document.querySelector('.app-header');
+            if (header) header.after(sharedBanner);
+        }
+        sharedBanner.style.borderColor = 'rgba(167,139,250,0.3)';
+        sharedBanner.innerHTML = `<i data-lucide="edit-3"></i> <span>Dự án của <strong>${currentProject.owner_name}</strong> — bạn có quyền <strong>Chỉnh sửa</strong>.</span>`;
+        if (typeof lucide !== 'undefined') lucide.createIcons();
     }
 }
 
