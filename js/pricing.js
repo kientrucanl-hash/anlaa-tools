@@ -396,11 +396,13 @@ function renderSubTable() {
         return;
     }
 
-    // Update table headers with NTP names
-    const thNtp = document.querySelectorAll(".th-ntp1, .th-ntp2, .th-ntp3");
-    if (thNtp[0]) thNtp[0].textContent = `ĐG / T.Tiền — ${subState.names[0]}`;
-    if (thNtp[1]) thNtp[1].textContent = `ĐG / T.Tiền — ${subState.names[1]}`;
-    if (thNtp[2]) thNtp[2].textContent = `ĐG / T.Tiền — ${subState.names[2]}`;
+    // Update table group headers with NTP names
+    const g1 = document.getElementById("thNtp1Group");
+    const g2 = document.getElementById("thNtp2Group");
+    const g3 = document.getElementById("thNtp3Group");
+    if (g1) g1.textContent = subState.names[0] || "Nhà thầu 1";
+    if (g2) g2.textContent = subState.names[1] || "Nhà thầu 2";
+    if (g3) g3.textContent = subState.names[2] || "Nhà thầu 3";
 
     let html = "";
     let stt = 0;
@@ -885,7 +887,15 @@ document.addEventListener("DOMContentLoaded", () => {
     // Render initial table
     renderSubTable();
 
-    // Template catalog
+    // Data source bar (must run before renderSubTable so template buttons exist)
+    initSourceBar();
+    // Update source note for initial estimate source
+    const initNoteEl = document.getElementById("prxSourceNote");
+    if (initNoteEl) initNoteEl.textContent = `${pricingItems.length} hạng mục từ dự toán`;
+    _syncTplNtpHeaders();
+
+    // Region selector + Template catalog
+    initRegionSelector();
     initTemplateCatalog();
 
     if (typeof lucide !== "undefined") lucide.createIcons();
@@ -985,9 +995,73 @@ function buildCatalogRows() {
 let tplActiveFilter = "all";
 let tplCatalogRows = [];
 let tplModifiedPrices = {}; // key → new price (before saving)
+let activeRegion = localStorage.getItem("anlaa_region") || DEFAULT_REGION;
+
+function initRegionSelector() {
+    const container = document.getElementById("tplRegionBtns");
+    if (!container || typeof REGION_PRICES === "undefined") return;
+
+    Object.entries(REGION_PRICES).forEach(([regionId, regionDef]) => {
+        const btn = document.createElement("button");
+        btn.className = "tpl-region-btn" + (regionId === activeRegion ? " active" : "");
+        btn.dataset.region = regionId;
+        btn.textContent = regionDef.label;
+        btn.title = regionDef.note;
+        container.appendChild(btn);
+    });
+
+    container.addEventListener("click", e => {
+        const btn = e.target.closest(".tpl-region-btn");
+        if (!btn) return;
+        const regionId = btn.dataset.region;
+        if (regionId === activeRegion) return;
+        activeRegion = regionId;
+        localStorage.setItem("anlaa_region", regionId);
+        container.querySelectorAll(".tpl-region-btn").forEach(b => b.classList.toggle("active", b.dataset.region === regionId));
+        _applyRegionPrices(regionId);
+    });
+
+    _updateRegionNote();
+}
+
+function _applyRegionPrices(regionId) {
+    const regionDef = REGION_PRICES[regionId];
+    if (!regionDef) return;
+    // Load region prices into workItemPrices (only keys not manually overridden by user)
+    const saved = JSON.parse(localStorage.getItem("anlaa_work_prices") || "{}");
+    const merged = { ...regionDef.prices, ...saved };
+    // Reset to pure region prices (discard previous user overrides) so region switch is clean
+    localStorage.setItem("anlaa_work_prices", JSON.stringify(regionDef.prices));
+    tplModifiedPrices = {};
+    tplCatalogRows = buildCatalogRows();
+    renderTemplateCatalog();
+    updateTplModifiedCount();
+    _updateRegionNote();
+    showToast(`Đã tải đơn giá khu vực: ${regionDef.label}`);
+}
+
+function _updateRegionNote() {
+    const noteEl = document.getElementById("tplRegionNote");
+    if (!noteEl || typeof REGION_PRICES === "undefined") return;
+    const regionDef = REGION_PRICES[activeRegion];
+    if (!regionDef) return;
+    const parts = [regionDef.note];
+    if (regionDef.quarter) parts.push(`• Cập nhật ${regionDef.quarter}`);
+    noteEl.innerHTML = parts.join(" ");
+}
 
 function initTemplateCatalog() {
     tplCatalogRows = buildCatalogRows();
+
+    // Show updated-at badge in card desc
+    const descEl = document.querySelector("#panel-templates .prx-card-desc");
+    if (descEl && typeof REGION_PRICES !== "undefined") {
+        const regionDef = REGION_PRICES[activeRegion];
+        if (regionDef?.updatedAt) {
+            const [y, m, d] = regionDef.updatedAt.split("-");
+            descEl.innerHTML += ` &nbsp;<span style="font-size:10px;padding:1px 6px;border-radius:3px;background:rgba(52,211,153,0.12);border:1px solid rgba(52,211,153,0.25);color:#34d399;font-weight:700;">✓ Cập nhật ${d}/${m}/${y}</span>`;
+        }
+    }
 
     // Build filter buttons
     const filterContainer = document.getElementById("tplFilterBtns");
@@ -1061,7 +1135,7 @@ function renderTemplateCatalog() {
     const savedPrices = JSON.parse(localStorage.getItem("anlaa_work_prices") || "{}");
 
     if (rows.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" class="empty-boq-msg">Không tìm thấy hạng mục nào.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="9" class="empty-boq-msg">Không tìm thấy hạng mục nào.</td></tr>`;
         return;
     }
 
@@ -1076,7 +1150,7 @@ function renderTemplateCatalog() {
             if (tplRows.length === 0) return;
 
             html += `<tr class="tpl-template-header">
-                <td colspan="6">
+                <td colspan="9">
                     <i data-lucide="${tpl.icon}" style="width:14px;height:14px;vertical-align:middle;margin-right:6px;"></i>
                     ${escHtml(tpl.name)} — ${escHtml(tpl.desc)}
                     <span style="font-size:11px;color:rgba(0,242,254,0.6);margin-left:8px;font-weight:500;">${tplRows.length} hạng mục</span>
@@ -1091,7 +1165,7 @@ function renderTemplateCatalog() {
             });
 
             sectionsInThisTemplate.forEach(({ sec, rows: secRows }) => {
-                html += `<tr class="tpl-section-row"><td colspan="6">${escHtml(sec.name)}</td></tr>`;
+                html += `<tr class="tpl-section-row"><td colspan="9">${escHtml(sec.name)}</td></tr>`;
                 secRows.forEach(row => {
                     stt++;
                     html += buildCatalogRow(stt, row, savedPrices);
@@ -1102,7 +1176,7 @@ function renderTemplateCatalog() {
         // Custom items not yet shown (those only in custom)
         const customRows = rows.filter(r => r.isCustom);
         if (customRows.length > 0) {
-            html += `<tr class="tpl-template-header"><td colspan="6">
+            html += `<tr class="tpl-template-header"><td colspan="9">
                 <i data-lucide="wrench" style="width:14px;height:14px;vertical-align:middle;margin-right:6px;"></i>
                 Hạng mục Custom (đơn lẻ, không có định mức)
             </td></tr>`;
@@ -1118,7 +1192,7 @@ function renderTemplateCatalog() {
             tpl.sections.forEach(sec => {
                 const secRows = rows.filter(r => r.usedIn.some(u => u.templateId === tpl.id && u.sectionName === sec.name));
                 if (secRows.length === 0) return;
-                html += `<tr class="tpl-section-row"><td colspan="6">${escHtml(sec.name)}</td></tr>`;
+                html += `<tr class="tpl-section-row"><td colspan="9">${escHtml(sec.name)}</td></tr>`;
                 secRows.forEach(row => {
                     stt++;
                     html += buildCatalogRow(stt, row, savedPrices);
@@ -1167,21 +1241,42 @@ function buildCatalogRow(stt, row, savedPrices) {
         return `<span class="tpl-badge tpl-badge-${escHtml(tid)}" title="${escHtml(tpl.desc)}">${escHtml(tpl.name)}</span>`;
     }).join("");
 
-    const typeLabel = row.isCustom
-        ? `<span class="tpl-unit-badge" style="background:rgba(255,255,255,0.05);color:var(--text-muted);">custom</span>`
-        : `<span class="tpl-item-key">${escHtml(row.key)}</span>`;
+    // NTP prices for this work item key — look up across all pricingItems with matching key
+    const ntpCells = [0,1,2].map(i => {
+        if (row.isCustom) return `<td style="text-align:right;color:var(--text-muted);font-size:11px;">—</td>`;
+        // Find best price for this key from subState (keyed by item.id = key when template source)
+        const matchingItem = pricingItems.find(p => p.workItemKey === row.key);
+        const itemId = matchingItem ? matchingItem.id : row.key;
+        const p = parseFloat(subState.prices[i]?.[itemId]) || 0;
+        return `<td style="text-align:right;font-size:11px;color:${p > 0 ? "#e2e8f0" : "var(--text-muted)"};">${p > 0 ? formatVND(p) : "—"}</td>`;
+    }).join("");
 
-    // Check if this key exists in current estimate (pricingItems)
-    const inEstimate = !row.isCustom && pricingItems.some(p => p.workItemKey === row.key);
+    // Sell price for this key from sellState
+    let sellCell = `<td style="text-align:right;font-size:11px;color:var(--text-muted);">—</td>`;
+    if (!row.isCustom) {
+        const defMargin = sellState.defaultMargin || 1.15;
+        const matchingItem = pricingItems.find(p => p.workItemKey === row.key);
+        const itemId = matchingItem ? matchingItem.id : row.key;
+        const sellOverride = sellState.overrideSell?.[itemId];
+        const margin = sellState.margins?.[itemId] !== undefined ? parseFloat(sellState.margins[itemId]) : defMargin;
+        const sellVal = sellOverride != null
+            ? parseFloat(sellOverride) || 0
+            : effectivePrice * margin;
+        sellCell = sellVal > 0
+            ? `<td style="text-align:right;font-weight:700;font-size:11px;color:#34d399;">${formatVND(sellVal)}</td>`
+            : `<td style="text-align:right;font-size:11px;color:var(--text-muted);">—</td>`;
+    }
+
+    // Jump links
     const jumpLinks = !row.isCustom ? `
-        <span class="cross-tab-link ${inEstimate ? "" : "cross-tab-link-disabled"}"
-            onclick="${inEstimate ? `switchToTabAndHighlight('subcontractor','${row.key}')` : "showToast('Hạng mục này chưa có trong bảng dự toán hiện tại')"}"
-            title="${inEstimate ? "Xem trong bảng so sánh NTP" : "Chưa có trong dự toán hiện tại"}">
+        <span class="cross-tab-link"
+            onclick="switchToTabAndHighlight('subcontractor','${row.key}')"
+            title="Xem/nhập giá NTP cho hạng mục này">
             <i data-lucide="users" style="width:10px;height:10px;"></i> NTP
         </span>
-        <span class="cross-tab-link ${inEstimate ? "" : "cross-tab-link-disabled"}"
-            onclick="${inEstimate ? `switchToTabAndHighlight('selling','${row.key}')` : "showToast('Hạng mục này chưa có trong bảng dự toán hiện tại')"}"
-            title="${inEstimate ? "Xem trong bảng giá bán" : "Chưa có trong dự toán hiện tại"}">
+        <span class="cross-tab-link"
+            onclick="switchToTabAndHighlight('selling','${row.key}')"
+            title="Xem giá bán công ty cho hạng mục này">
             <i data-lucide="tag" style="width:10px;height:10px;"></i> Giá bán
         </span>` : "";
 
@@ -1200,8 +1295,9 @@ function buildCatalogRow(stt, row, savedPrices) {
                 placeholder="${fmt(row.defaultPrice) || "—"}"
                 type="text" inputmode="numeric">
         </td>
+        ${ntpCells}
+        ${sellCell}
         <td><div class="tpl-badge-wrap">${templateBadges}</div></td>
-        <td style="text-align:center;">${typeLabel}</td>
     </tr>`;
 }
 

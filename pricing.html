@@ -1,17 +1,15 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-    <meta http-equiv="Pragma" content="no-cache">
-    <meta http-equiv="Expires" content="0">
-    <link rel="icon" type="image/x-icon" href="favicon.ico">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">    <link rel="icon" type="image/x-icon" href="favicon.ico">
     <title>Bảng Giá & Nhà Thầu — ANLAA Mecalc</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Outfit:wght@100..900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/styles.css?v=3.15">
+    <!-- Anti-FOUC: apply saved theme before first paint -->
+    <script>document.documentElement.setAttribute('data-theme', localStorage.getItem('anlaa_theme') || 'dark');</script>
+    <link rel="stylesheet" href="css/styles.css?v=3.22">
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         .prx-container { display: flex; flex-direction: column; min-height: 100vh; background: var(--bg-main); }
@@ -348,6 +346,14 @@
         @keyframes rowFlash { 0%{background:rgba(0,242,254,0.18);} 60%{background:rgba(0,242,254,0.08);} 100%{background:transparent;} }
         .row-highlight-flash td { animation: rowFlash 1.8s ease-out forwards; }
 
+        /* Region selector bar */
+        .tpl-region-bar { display:flex; align-items:center; gap:8px; padding:8px 12px; background:rgba(167,139,250,0.04); border:1px solid rgba(167,139,250,0.15); border-radius:8px; margin-bottom:12px; flex-wrap:wrap; }
+        .tpl-region-label { font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em; white-space:nowrap; }
+        .tpl-region-btns { display:flex; gap:4px; flex-wrap:wrap; }
+        .tpl-region-btn { padding:4px 12px; font-size:11px; font-weight:600; border-radius:5px; border:1px solid rgba(255,255,255,0.1); background:rgba(255,255,255,0.04); color:var(--text-muted); cursor:pointer; transition:all 0.15s; white-space:nowrap; }
+        .tpl-region-btn:hover { color:var(--text-primary); border-color:rgba(167,139,250,0.3); }
+        .tpl-region-btn.active { background:rgba(167,139,250,0.15); border-color:rgba(167,139,250,0.4); color:#a78bfa; }
+
         .tpl-stats-bar { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; padding: 10px 12px; background: rgba(0,242,254,0.03); border: 1px solid rgba(0,242,254,0.12); border-radius: 8px; margin-bottom: 14px; }
         .tpl-stat { display: flex; flex-direction: column; gap: 1px; }
         .tpl-stat-label { font-size: 9px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
@@ -624,6 +630,15 @@
                     </div>
                 </div>
 
+                <!-- Region selector -->
+                <div class="tpl-region-bar no-print" id="tplRegionBar">
+                    <span class="tpl-region-label">Khu vực giá:</span>
+                    <div class="tpl-region-btns" id="tplRegionBtns">
+                        <!-- Populated by JS from REGION_PRICES -->
+                    </div>
+                    <span id="tplRegionNote" style="font-size:11px;color:var(--text-muted);margin-left:8px;"></span>
+                </div>
+
                 <!-- Stats bar -->
                 <div class="tpl-stats-bar" id="tplStatsBar">
                     <div class="tpl-stat"><span class="tpl-stat-label">Tổng hạng mục</span><span class="tpl-stat-value" id="tplStatTotal">—</span></div>
@@ -687,11 +702,11 @@
     </a>
 </nav>
 
-<script src="js/constants.js?v=3.14"></script>
-<script src="js/api.js?v=3.14"></script>
-<script src="js/auth.js?v=3.14"></script>
-<script src="js/nav.js?v=3.15"></script>
-<script src="js/pricing.js?v=3.14"></script>
+<script src="js/constants.js?v=3.18"></script>
+<script src="js/api.js?v=3.18"></script>
+<script src="js/auth.js?v=3.18"></script>
+<script src="js/nav.js?v=3.18"></script>
+<script src="js/pricing.js?v=3.18"></script>
 <script>
     document.addEventListener('DOMContentLoaded', () => {
         initAppSidebar({ activePage: 'pricing' });
@@ -699,3 +714,5 @@
 </script>
 </body>
 </html>
+
+

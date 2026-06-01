@@ -1,17 +1,15 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-    <meta http-equiv="Pragma" content="no-cache">
-    <meta http-equiv="Expires" content="0">
-    <link rel="icon" type="image/x-icon" href="favicon.ico">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">    <link rel="icon" type="image/x-icon" href="favicon.ico">
     <title>Vật tư cần mua — ANLAA Mecalc</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Outfit:wght@100..900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/styles.css?v=3.15">
+    <!-- Anti-FOUC: apply saved theme before first paint -->
+    <script>document.documentElement.setAttribute('data-theme', localStorage.getItem('anlaa_theme') || 'dark');</script>
+    <link rel="stylesheet" href="css/styles.css?v=3.22">
     <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
@@ -176,11 +174,11 @@
 
 <div id="toastNotification" class="toast-notification"></div>
 
-<script src="js/constants.js?v=3.14"></script>
-<script src="js/api.js?v=3.14"></script>
-<script src="js/auth.js?v=3.14"></script>
-<script src="js/nav.js?v=3.15"></script>
-<script src="js/materials.js?v=3.14"></script>
+<script src="js/constants.js?v=3.18"></script>
+<script src="js/api.js?v=3.18"></script>
+<script src="js/auth.js?v=3.18"></script>
+<script src="js/nav.js?v=3.18"></script>
+<script src="js/materials.js?v=3.18"></script>
 <script>
     document.addEventListener('DOMContentLoaded', () => {
         initAppSidebar({ activePage: 'materials' });
@@ -188,3 +186,5 @@
 </script>
 </body>
 </html>
+
+

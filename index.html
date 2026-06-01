@@ -1,10 +1,10 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">    <link rel="icon" type="image/x-icon" href="favicon.ico">
     <link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
-    <title>Dự toán ANLAA — Tool Tính Vật tư Xây - Trát - Ốp lát miền Bắc</title>
+    <title>Dá»± toÃ¡n ANLAA â€” Tool TÃ­nh Váº­t tÆ° XÃ¢y - TrÃ¡t - á»p lÃ¡t miá»n Báº¯c</title>
     <!-- Google Fonts: Inter & Outfit -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -12,7 +12,7 @@
     <!-- Anti-FOUC: apply saved theme before first paint -->
     <script>document.documentElement.setAttribute('data-theme', localStorage.getItem('anlaa_theme') || 'dark');</script>
     <!-- Main Style -->
-    <link rel="stylesheet" href="css/styles.css?v=3.20">
+    <link rel="stylesheet" href="css/styles.css?v=3.22">
     <!-- Chart.js CDN -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <!-- html2canvas CDN -->
@@ -28,22 +28,22 @@
 <div id="loginOverlay" class="login-overlay" style="display:none;">
     <div class="login-card">
         <div class="login-brand">
-            <img src="logo-tool-anlc.webp" alt="Dự toán ANLAA" class="login-logo">
+            <img src="logo-tool-anlc.webp" alt="Dá»± toÃ¡n ANLAA" class="login-logo">
         </div>
         <form id="loginForm" autocomplete="off">
             <div class="login-field">
-                <label for="loginUsername">Tên đăng nhập</label>
-                <input type="text" id="loginUsername" placeholder="Nhập tên đăng nhập" required autocomplete="username">
+                <label for="loginUsername">TÃªn Ä‘Äƒng nháº­p</label>
+                <input type="text" id="loginUsername" placeholder="Nháº­p tÃªn Ä‘Äƒng nháº­p" required autocomplete="username">
             </div>
             <div class="login-field">
-                <label for="loginPassword">Mật khẩu</label>
+                <label for="loginPassword">Máº­t kháº©u</label>
                 <div class="pwd-wrapper">
-                    <input type="password" id="loginPassword" placeholder="••••••••" required autocomplete="current-password">
-                    <button type="button" id="togglePassword" class="toggle-pwd">👁</button>
+                    <input type="password" id="loginPassword" placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢" required autocomplete="current-password">
+                    <button type="button" id="togglePassword" class="toggle-pwd">ðŸ‘</button>
                 </div>
             </div>
             <p id="loginError" class="login-error"></p>
-            <button type="submit" id="loginBtn" class="btn btn-primary w-full">Đăng nhập</button>
+            <button type="submit" id="loginBtn" class="btn btn-primary w-full">ÄÄƒng nháº­p</button>
         </form>
     </div>
 </div>
@@ -58,11 +58,11 @@
                 <a href="home.html" class="sb-brand" style="text-decoration:none;">
                     <img src="logo-tool-anlc.webp" alt="ANLAA" class="sb-logo">
                     <div class="sb-brand-text">
-                        <span class="sb-title">Dự toán ANLAA</span>
+                        <span class="sb-title">Dá»± toÃ¡n ANLAA</span>
                         <span class="sb-version">Mecalc v2.0</span>
                     </div>
                 </a>
-                <button id="sidebarClose" class="sb-close-btn" title="Đóng">
+                <button id="sidebarClose" class="sb-close-btn" title="ÄÃ³ng">
                     <i data-lucide="x"></i>
                 </button>
             </div>
@@ -70,75 +70,75 @@
             <!-- SCROLLABLE BODY -->
             <div class="sb-body">
 
-                <!-- GROUP 1: DỰ ÁN HIỆN TẠI (always visible) -->
+                <!-- GROUP 1: Dá»° ÃN HIá»†N Táº I (always visible) -->
                 <div class="sb-section">
-                    <p class="sb-section-label">Dự án</p>
+                    <p class="sb-section-label">Dá»± Ã¡n</p>
                     <div class="info-group">
-                        <input type="text" id="projectName" class="sb-input" placeholder="Tên dự án..." value="Cải tạo Căn hộ Chung cư">
+                        <input type="text" id="projectName" class="sb-input" placeholder="TÃªn dá»± Ã¡n..." value="Cáº£i táº¡o CÄƒn há»™ Chung cÆ°">
                     </div>
                     <div class="info-group" style="margin-top:6px;">
-                        <input type="text" id="projectAddress" class="sb-input" placeholder="Địa chỉ..." value="Hà Nội">
+                        <input type="text" id="projectAddress" class="sb-input" placeholder="Äá»‹a chá»‰..." value="HÃ  Ná»™i">
                     </div>
                 </div>
 
                 <div class="sb-divider"></div>
 
-                <!-- GROUP 2: MODULE TÍNH TOÁN (nav thuần, không accordion) -->
+                <!-- GROUP 2: MODULE TÃNH TOÃN (nav thuáº§n, khÃ´ng accordion) -->
                 <div class="sb-section">
-                    <p class="sb-section-label">Tính toán</p>
+                    <p class="sb-section-label">TÃ­nh toÃ¡n</p>
                     <nav class="sb-nav">
                         <button class="tab-btn active" data-tab="masonry">
-                            <i data-lucide="brick"></i> Xây &amp; Trát
+                            <i data-lucide="brick"></i> XÃ¢y &amp; TrÃ¡t
                         </button>
                         <button class="tab-btn" data-tab="plastering">
-                            <i data-lucide="layers"></i> Cán nền
+                            <i data-lucide="layers"></i> CÃ¡n ná»n
                         </button>
                         <button class="tab-btn" data-tab="tiling">
-                            <i data-lucide="grid-3x3"></i> Ốp lát gạch
+                            <i data-lucide="grid-3x3"></i> á»p lÃ¡t gáº¡ch
                         </button>
                         <div class="sb-nav-separator"></div>
                         <button class="tab-btn" data-tab="unit-prices">
-                            <i data-lucide="coins"></i> Đơn giá Vật tư
+                            <i data-lucide="coins"></i> ÄÆ¡n giÃ¡ Váº­t tÆ°
                         </button>
                         <button class="tab-btn" data-tab="work-prices">
-                            <i data-lucide="hard-hat"></i> Đơn giá Thi công
+                            <i data-lucide="hard-hat"></i> ÄÆ¡n giÃ¡ Thi cÃ´ng
                         </button>
                     </nav>
                 </div>
 
                 <div class="sb-divider"></div>
 
-                <!-- GROUP 2b: ĐIỀU HƯỚNG -->
+                <!-- GROUP 2b: ÄIá»€U HÆ¯á»šNG -->
                 <div class="sb-section">
-                    <p class="sb-section-label">Điều hướng</p>
+                    <p class="sb-section-label">Äiá»u hÆ°á»›ng</p>
                     <nav class="sb-nav">
                         <a href="home.html" class="tab-btn sb-nav-link">
-                            <i data-lucide="home"></i> Trang chủ Landing
+                            <i data-lucide="home"></i> Trang chá»§ Landing
                         </a>
                         <a href="estimate.html" class="tab-btn sb-nav-link">
-                            <i data-lucide="file-spreadsheet"></i> Dự toán Chi phí
+                            <i data-lucide="file-spreadsheet"></i> Dá»± toÃ¡n Chi phÃ­
                         </a>
                         <a href="materials.html" class="tab-btn sb-nav-link">
-                            <i data-lucide="package"></i> Vật tư cần mua
+                            <i data-lucide="package"></i> Váº­t tÆ° cáº§n mua
                         </a>
                         <a href="pricing.html" class="tab-btn sb-nav-link">
-                            <i data-lucide="bar-chart-2"></i> Bảng Giá & NTP
+                            <i data-lucide="bar-chart-2"></i> Báº£ng GiÃ¡ & NTP
                         </a>
                         <a href="contractors.html" class="tab-btn sb-nav-link">
-                            <i data-lucide="hard-hat"></i> Nhà thầu phụ
+                            <i data-lucide="hard-hat"></i> NhÃ  tháº§u phá»¥
                         </a>
                         <div class="sb-nav-separator"></div>
                         <a href="history.html" class="tab-btn sb-nav-link">
-                            <i data-lucide="clock"></i> Lịch sử Dự toán
+                            <i data-lucide="clock"></i> Lá»‹ch sá»­ Dá»± toÃ¡n
                         </a>
                         <a href="settings.html" class="tab-btn sb-nav-link">
-                            <i data-lucide="settings"></i> Cài đặt Tài khoản
+                            <i data-lucide="settings"></i> CÃ i Ä‘áº·t TÃ i khoáº£n
                         </a>
                         <a href="help.html" class="tab-btn sb-nav-link">
-                            <i data-lucide="book-open"></i> Hướng dẫn sử dụng
+                            <i data-lucide="book-open"></i> HÆ°á»›ng dáº«n sá»­ dá»¥ng
                         </a>
                         <a id="adminNavBtn" href="admin.html" class="tab-btn sb-nav-link sb-nav-admin" style="display:none;">
-                            <i data-lucide="shield-check"></i> Quản lý Admin
+                            <i data-lucide="shield-check"></i> Quáº£n lÃ½ Admin
                         </a>
                     </nav>
                 </div>
@@ -156,19 +156,19 @@
                         <span class="sb-user-dot"></span>
                     </div>
                     <div class="sb-user-info" style="flex: 1; min-width: 0; margin-right: 8px;">
-                        <span id="sidebarUserName" class="sb-user-name" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block;">Đang tải...</span>
-                        <span class="sb-user-role" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block;">KTS / Người dự toán</span>
+                        <span id="sidebarUserName" class="sb-user-name" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block;">Äang táº£i...</span>
+                        <span class="sb-user-role" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block;">KTS / NgÆ°á»i dá»± toÃ¡n</span>
                     </div>
                     
                     <!-- UNIFIED NOTIFICATION BELL (placed beautifully in sidebar footer) -->
                     <div class="noti-container no-print" style="margin-right: 8px; display: inline-flex;">
-                        <button id="btnNotifications" class="sb-icon-btn noti-btn" title="Thông báo hệ thống" style="position: relative; width: 32px; height: 32px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; color: var(--text-secondary); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: var(--transition-smooth);">
+                        <button id="btnNotifications" class="sb-icon-btn noti-btn" title="ThÃ´ng bÃ¡o há»‡ thá»‘ng" style="position: relative; width: 32px; height: 32px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; color: var(--text-secondary); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: var(--transition-smooth);">
                             <i data-lucide="bell" style="width: 16px; height: 16px;"></i>
                             <span id="notiBadgeCount" class="noti-badge" style="display:none; position: absolute; top: -3px; right: -3px; background: #ff5252; color: #ffffff; font-size: 8px; font-weight: 800; width: 14px; height: 14px; border-radius: 50%; border: 1px solid var(--bg-main); display: flex; align-items: center; justify-content: center; animation: pulse-noti 2s infinite;">0</span>
                         </button>
                     </div>
 
-                    <button id="sidebarLogoutBtn" class="sb-icon-btn sb-logout-btn" title="Đăng xuất" style="width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; color: var(--text-secondary); cursor: pointer; transition: var(--transition-smooth);">
+                    <button id="sidebarLogoutBtn" class="sb-icon-btn sb-logout-btn" title="ÄÄƒng xuáº¥t" style="width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; color: var(--text-secondary); cursor: pointer; transition: var(--transition-smooth);">
                         <i data-lucide="log-out" style="width: 16px; height: 16px;"></i>
                     </button>
                 </div>
@@ -176,33 +176,33 @@
                 <!-- Actions -->
                 <div class="sb-actions">
                     <div class="sb-actions-row">
-                        <button id="btnSaveProject" class="btn btn-secondary btn-sm sb-action-btn" title="Lưu dự án thành file JSON">
-                            <i data-lucide="download"></i> Lưu JSON
+                        <button id="btnSaveProject" class="btn btn-secondary btn-sm sb-action-btn" title="LÆ°u dá»± Ã¡n thÃ nh file JSON">
+                            <i data-lucide="download"></i> LÆ°u JSON
                         </button>
-                        <button id="btnLoadProjectTrigger" class="btn btn-secondary btn-sm sb-action-btn" title="Tải dự án từ file JSON">
-                            <i data-lucide="upload"></i> Tải JSON
+                        <button id="btnLoadProjectTrigger" class="btn btn-secondary btn-sm sb-action-btn" title="Táº£i dá»± Ã¡n tá»« file JSON">
+                            <i data-lucide="upload"></i> Táº£i JSON
                         </button>
                         <input type="file" id="btnLoadProject" accept=".json" style="display:none;">
                         <!-- More menu -->
                         <div class="sb-more-wrap">
-                            <button id="btnMoreActions" class="btn btn-secondary btn-sm sb-icon-btn" title="Thêm">
+                            <button id="btnMoreActions" class="btn btn-secondary btn-sm sb-icon-btn" title="ThÃªm">
                                 <i data-lucide="more-horizontal"></i>
                             </button>
                             <div id="sbMoreMenu" class="sb-more-menu" style="display:none;">
                                 <button id="btnResetProject" class="sb-more-item sb-more-danger">
-                                    <i data-lucide="trash-2"></i> Xóa hết dữ liệu
+                                    <i data-lucide="trash-2"></i> XÃ³a háº¿t dá»¯ liá»‡u
                                 </button>
                             </div>
                         </div>
                     </div>
-                    <button id="btnSubmitProject" class="btn btn-success btn-sm w-full" title="Nộp dự án cho Admin duyệt">
-                        <i data-lucide="send"></i> Nộp duyệt
+                    <button id="btnSubmitProject" class="btn btn-success btn-sm w-full" title="Ná»™p dá»± Ã¡n cho Admin duyá»‡t">
+                        <i data-lucide="send"></i> Ná»™p duyá»‡t
                     </button>
                 </div>
 
                 <!-- Theme Switcher -->
                 <div class="sb-theme-bar no-print" id="sbThemeBar">
-                    <span class="sb-theme-label">Giao diện:</span>
+                    <span class="sb-theme-label">Giao diá»‡n:</span>
                     <div class="sb-theme-btns"></div>
                 </div>
             </div>
@@ -216,30 +216,30 @@
             <header class="app-header no-print">
                 <div class="header-welcome">
                     <div class="header-title-block">
-                        <button id="sidebarToggle" class="sidebar-toggle-btn" title="Mở Menu">
+                        <button id="sidebarToggle" class="sidebar-toggle-btn" title="Má»Ÿ Menu">
                             <i data-lucide="menu"></i>
                         </button>
-                        <h2>Công cụ Tính khối lượng Vật tư cải tạo</h2>
-                        <span id="projectStatusBadge" class="status-badge status-draft">Bản nháp 📄</span>
+                        <h2>CÃ´ng cá»¥ TÃ­nh khá»‘i lÆ°á»£ng Váº­t tÆ° cáº£i táº¡o</h2>
+                        <span id="projectStatusBadge" class="status-badge status-draft">Báº£n nhÃ¡p ðŸ“„</span>
                     </div>
-                    <p>Thiết kế riêng cho gạch tiêu chuẩn miền Bắc & Hỗn hợp ốp lát keo trộn xi măng</p>
+                    <p>Thiáº¿t káº¿ riÃªng cho gáº¡ch tiÃªu chuáº©n miá»n Báº¯c & Há»—n há»£p á»‘p lÃ¡t keo trá»™n xi mÄƒng</p>
                 </div>
                 <div class="header-actions">
-                    <button id="btnOpenTakeoff" class="btn btn-secondary btn-sm" title="Mở không gian đo đạc bản vẽ PDF/DXF để lấy số liệu">
-                        <i data-lucide="ruler-square"></i> Đo đạc Bản vẽ
+                    <button id="btnOpenTakeoff" class="btn btn-secondary btn-sm" title="Má»Ÿ khÃ´ng gian Ä‘o Ä‘áº¡c báº£n váº½ PDF/DXF Ä‘á»ƒ láº¥y sá»‘ liá»‡u">
+                        <i data-lucide="ruler-square"></i> Äo Ä‘áº¡c Báº£n váº½
                     </button>
                     <span class="location-badge">
-                        <i data-lucide="map-pin"></i> Hà Nội
+                        <i data-lucide="map-pin"></i> HÃ  Ná»™i
                     </span>
-                    <span id="userBadge" class="user-badge" title="Tài khoản đang đăng nhập"></span>
+                    <span id="userBadge" class="user-badge" title="TÃ i khoáº£n Ä‘ang Ä‘Äƒng nháº­p"></span>
 
-                    <a id="adminPanelBtn" href="/admin.html" class="btn btn-secondary btn-sm" title="Trang quản lý Admin" style="display:none;">
-                        <i data-lucide="shield-check"></i> Quản lý
+                    <a id="adminPanelBtn" href="/admin.html" class="btn btn-secondary btn-sm" title="Trang quáº£n lÃ½ Admin" style="display:none;">
+                        <i data-lucide="shield-check"></i> Quáº£n lÃ½
                     </a>
-                    <a href="help.html" class="btn btn-secondary btn-sm" title="Hướng dẫn sử dụng" style="text-decoration:none;">
+                    <a href="help.html" class="btn btn-secondary btn-sm" title="HÆ°á»›ng dáº«n sá»­ dá»¥ng" style="text-decoration:none;">
                         <i data-lucide="book-open"></i>
                     </a>
-                    <button id="logoutBtn" class="btn btn-secondary btn-sm" title="Đăng xuất">
+                    <button id="logoutBtn" class="btn btn-secondary btn-sm" title="ÄÄƒng xuáº¥t">
                         <i data-lucide="log-out"></i>
                     </button>
                 </div>
@@ -247,60 +247,60 @@
 
             <!-- Desktop secondary nav -->
             <div class="desktop-nav no-print">
-                <a href="index.html" class="dnav-active"><i data-lucide="calculator"></i> Bóc KL Vật tư</a>
-                <a href="estimate.html"><i data-lucide="file-spreadsheet"></i> Dự toán Chi phí</a>
-                <a href="materials.html"><i data-lucide="package"></i> Vật tư cần mua</a>
+                <a href="index.html" class="dnav-active"><i data-lucide="calculator"></i> BÃ³c KL Váº­t tÆ°</a>
+                <a href="estimate.html"><i data-lucide="file-spreadsheet"></i> Dá»± toÃ¡n Chi phÃ­</a>
+                <a href="materials.html"><i data-lucide="package"></i> Váº­t tÆ° cáº§n mua</a>
                 <div class="dnav-sep"></div>
-                <a href="pricing.html"><i data-lucide="bar-chart-2"></i> Bảng Giá & NTP</a>
-                <a href="contractors.html"><i data-lucide="hard-hat"></i> Nhà thầu phụ</a>
+                <a href="pricing.html"><i data-lucide="bar-chart-2"></i> Báº£ng GiÃ¡ & NTP</a>
+                <a href="contractors.html"><i data-lucide="hard-hat"></i> NhÃ  tháº§u phá»¥</a>
                 <div class="dnav-sep"></div>
-                <a href="history.html"><i data-lucide="clock"></i> Lịch sử</a>
-                <a href="help.html"><i data-lucide="book-open"></i> Hướng dẫn</a>
+                <a href="history.html"><i data-lucide="clock"></i> Lá»‹ch sá»­</a>
+                <a href="help.html"><i data-lucide="book-open"></i> HÆ°á»›ng dáº«n</a>
             </div>
 
 
             <!-- TAB CONTENT CONTAINER -->
             <div class="tab-content-container no-print">
                 
-                <!-- TAB 1: MASONRY (XÂY TƯỜNG) -->
+                <!-- TAB 1: MASONRY (XÃ‚Y TÆ¯á»œNG) -->
                 <section class="tab-content active" id="tab-masonry">
                     <div class="workspace-grid">
                         <div class="form-container">
-                            <h3>Thông số bóc khối lượng Xây & Trát</h3>
+                            <h3>ThÃ´ng sá»‘ bÃ³c khá»‘i lÆ°á»£ng XÃ¢y & TrÃ¡t</h3>
                             <form id="formMasonry" class="grid-form">
                                 <div class="form-group col-12">
-                                    <label for="masonryItemName">Tên hạng mục / Phòng</label>
-                                    <input type="text" id="masonryItemName" value="Xây & Trát vách toilet" placeholder="Ví dụ: Xây & Trát vách toilet">
+                                    <label for="masonryItemName">TÃªn háº¡ng má»¥c / PhÃ²ng</label>
+                                    <input type="text" id="masonryItemName" value="XÃ¢y & TrÃ¡t vÃ¡ch toilet" placeholder="VÃ­ dá»¥: XÃ¢y & TrÃ¡t vÃ¡ch toilet">
                                 </div>
                                 
                                 <!-- Toggle Input Mode -->
                                 <div class="input-mode-toggle col-12">
-                                    <span class="toggle-label text-bold">Phương pháp nhập số liệu:</span>
+                                    <span class="toggle-label text-bold">PhÆ°Æ¡ng phÃ¡p nháº­p sá»‘ liá»‡u:</span>
                                     <label class="switch">
                                         <input type="checkbox" id="masonryInputModeToggle">
                                         <span class="slider round"></span>
                                     </label>
-                                    <span class="toggle-status text-success text-bold" id="masonryInputModeStatus">Tính toán chi tiết từ hình học</span>
+                                    <span class="toggle-status text-success text-bold" id="masonryInputModeStatus">TÃ­nh toÃ¡n chi tiáº¿t tá»« hÃ¬nh há»c</span>
                                 </div>
 
                                 <!-- DETAILED GEOMETRY INPUT SECTION (TABLES) -->
                                 <div class="col-12 grid-form" id="masonryDetailedSection">
                                     <div class="form-group col-12">
                                         <div class="section-header-with-btn">
-                                            <label class="text-bold"><i data-lucide="layout-grid"></i> Bảng chi tiết các bức tường</label>
+                                            <label class="text-bold"><i data-lucide="layout-grid"></i> Báº£ng chi tiáº¿t cÃ¡c bá»©c tÆ°á»ng</label>
                                             <button type="button" class="btn btn-secondary btn-sm" id="btnAddingWallRow">
-                                                <i data-lucide="plus"></i> Thêm bức tường
+                                                <i data-lucide="plus"></i> ThÃªm bá»©c tÆ°á»ng
                                             </button>
                                         </div>
                                         <div class="table-responsive mt-1">
                                             <table class="input-grid-table" id="wallSegmentsTable">
                                                 <thead>
                                                     <tr>
-                                                        <th>Dài (m)</th>
+                                                        <th>DÃ i (m)</th>
                                                         <th>Cao (m)</th>
-                                                        <th>Độ dày</th>
-                                                        <th>Số lượng</th>
-                                                        <th title="Số mặt tường cần trát hoàn thiện (2 mặt = cả 2 phía, bỏ chọn = 1 mặt)">Trát</th>
+                                                        <th>Äá»™ dÃ y</th>
+                                                        <th>Sá»‘ lÆ°á»£ng</th>
+                                                        <th title="Sá»‘ máº·t tÆ°á»ng cáº§n trÃ¡t hoÃ n thiá»‡n (2 máº·t = cáº£ 2 phÃ­a, bá» chá»n = 1 máº·t)">TrÃ¡t</th>
                                                         <th width="40px"></th>
                                                     </tr>
                                                 </thead>
@@ -313,20 +313,20 @@
 
                                     <div class="form-group col-12 mt-2">
                                         <div class="section-header-with-btn">
-                                            <label class="text-bold"><i data-lucide="door-closed"></i> Bảng cửa khấu trừ diện tích</label>
+                                            <label class="text-bold"><i data-lucide="door-closed"></i> Báº£ng cá»­a kháº¥u trá»« diá»‡n tÃ­ch</label>
                                             <button type="button" class="btn btn-secondary btn-sm" id="btnAddingDoorRow">
-                                                <i data-lucide="plus"></i> Thêm cửa
+                                                <i data-lucide="plus"></i> ThÃªm cá»­a
                                             </button>
                                         </div>
                                         <div class="table-responsive mt-1">
                                             <table class="input-grid-table" id="doorDeductionsTable">
                                                 <thead>
                                                     <tr>
-                                                        <th>Loại cửa</th>
-                                                        <th>Rộng (m)</th>
+                                                        <th>Loáº¡i cá»­a</th>
+                                                        <th>Rá»™ng (m)</th>
                                                         <th>Cao (m)</th>
-                                                        <th>Số lượng</th>
-                                                        <th>Trát má</th>
+                                                        <th>Sá»‘ lÆ°á»£ng</th>
+                                                        <th>TrÃ¡t mÃ¡</th>
                                                         <th width="40px"></th>
                                                     </tr>
                                                 </thead>
@@ -343,15 +343,15 @@
                                             <label class="checkbox-container">
                                                 <input type="checkbox" id="masonryPlasterColumns">
                                                 <span class="checkmark"></span>
-                                                <strong>Tính thêm trát cạnh cột / góc cột đi kèm (md)</strong>
+                                                <strong>TÃ­nh thÃªm trÃ¡t cáº¡nh cá»™t / gÃ³c cá»™t Ä‘i kÃ¨m (md)</strong>
                                             </label>
                                         </div>
                                         <div class="form-group col-6 column-plaster-fields" style="display: none;">
-                                            <label for="masonryColumnLength">Tổng chiều dài cạnh cột (md)</label>
+                                            <label for="masonryColumnLength">Tá»•ng chiá»u dÃ i cáº¡nh cá»™t (md)</label>
                                             <input type="number" id="masonryColumnLength" value="3.0" min="0" step="0.1">
                                         </div>
                                         <div class="form-group col-6 column-plaster-fields" style="display: none;">
-                                            <label for="masonryColumnWidth">Chiều rộng má cột cần trát (m)</label>
+                                            <label for="masonryColumnWidth">Chiá»u rá»™ng mÃ¡ cá»™t cáº§n trÃ¡t (m)</label>
                                             <input type="number" id="masonryColumnWidth" value="0.22" min="0.01" step="0.01">
                                         </div>
                                     </div>
@@ -360,87 +360,87 @@
                                 <!-- DIRECT VOLUME INPUT SECTION -->
                                 <div class="col-12 grid-form" id="masonryDirectSection" style="display: none;">
                                     <div class="form-group col-6 masonry-direct-build-fields">
-                                        <label for="masonryDirectArea">Tổng diện tích tường xây (m²)</label>
+                                        <label for="masonryDirectArea">Tá»•ng diá»‡n tÃ­ch tÆ°á»ng xÃ¢y (mÂ²)</label>
                                         <input type="number" id="masonryDirectArea" value="10.0" min="0" step="0.1">
                                     </div>
                                     <div class="form-group col-6 masonry-direct-build-fields">
-                                        <label for="masonryDirectWallType">Độ dày tường xây</label>
+                                        <label for="masonryDirectWallType">Äá»™ dÃ y tÆ°á»ng xÃ¢y</label>
                                         <select id="masonryDirectWallType">
-                                            <option value="110" selected>Tường 110 (10cm)</option>
-                                            <option value="220">Tường 220 (20cm)</option>
+                                            <option value="110" selected>TÆ°á»ng 110 (10cm)</option>
+                                            <option value="220">TÆ°á»ng 220 (20cm)</option>
                                         </select>
                                     </div>
                                     <div class="form-group col-12 masonry-direct-plaster-fields" style="display: none;">
-                                        <label for="masonryDirectPlasterArea">Diện tích trát tường đứng có sẵn (m²)</label>
+                                        <label for="masonryDirectPlasterArea">Diá»‡n tÃ­ch trÃ¡t tÆ°á»ng Ä‘á»©ng cÃ³ sáºµn (mÂ²)</label>
                                         <input type="number" id="masonryDirectPlasterArea" value="20.0" min="0" step="0.1">
                                     </div>
-                                    <span class="text-xs text-gray mt-1 col-12">Nhập diện tích xây tường thô và diện tích trát tường đứng có sẵn để lập tức quy đổi khối lượng cát, xi măng và gạch thô.</span>
+                                    <span class="text-xs text-gray mt-1 col-12">Nháº­p diá»‡n tÃ­ch xÃ¢y tÆ°á»ng thÃ´ vÃ  diá»‡n tÃ­ch trÃ¡t tÆ°á»ng Ä‘á»©ng cÃ³ sáºµn Ä‘á»ƒ láº­p tá»©c quy Ä‘á»•i khá»‘i lÆ°á»£ng cÃ¡t, xi mÄƒng vÃ  gáº¡ch thÃ´.</span>
                                 </div>
 
                                 <!-- AUTO PLASTER SPECIFICATIONS -->
                                 <div class="col-12 mt-2 grid-form border-glass-box-neon">
                                     <div class="form-group col-6">
-                                        <label for="masonryAutoPlaster">Tự động tính vữa trát tường đi kèm</label>
+                                        <label for="masonryAutoPlaster">Tá»± Ä‘á»™ng tÃ­nh vá»¯a trÃ¡t tÆ°á»ng Ä‘i kÃ¨m</label>
                                         <select id="masonryAutoPlaster">
-                                            <option value="none">Không trát hoàn thiện</option>
-                                            <option value="auto" selected>Có trát (số mặt theo từng tường)</option>
+                                            <option value="none">KhÃ´ng trÃ¡t hoÃ n thiá»‡n</option>
+                                            <option value="auto" selected>CÃ³ trÃ¡t (sá»‘ máº·t theo tá»«ng tÆ°á»ng)</option>
                                         </select>
                                     </div>
                                     <div class="form-group col-6 auto-plaster-fields">
-                                        <label for="masonryPlasterThickness">Độ dày lớp trát đi kèm</label>
+                                        <label for="masonryPlasterThickness">Äá»™ dÃ y lá»›p trÃ¡t Ä‘i kÃ¨m</label>
                                         <select id="masonryPlasterThickness">
-                                            <option value="1.5" selected>Dày 1.5 cm (Chuẩn trong nhà)</option>
-                                            <option value="2.0">Dày 2.0 cm (Trát bù nền cũ gồ ghề)</option>
+                                            <option value="1.5" selected>DÃ y 1.5 cm (Chuáº©n trong nhÃ )</option>
+                                            <option value="2.0">DÃ y 2.0 cm (TrÃ¡t bÃ¹ ná»n cÅ© gá»“ ghá»)</option>
                                         </select>
                                     </div>
                                     <div class="form-group col-6 auto-plaster-fields">
-                                        <label for="masonryPlasterMortarGrade">Mác vữa trát đi kèm</label>
+                                        <label for="masonryPlasterMortarGrade">MÃ¡c vá»¯a trÃ¡t Ä‘i kÃ¨m</label>
                                         <select id="masonryPlasterMortarGrade">
-                                            <option value="M50">Mác M50 (PC40 + cát mịn)</option>
-                                            <option value="M75">Mác M75 (PC40 + cát mịn)</option>
-                                            <option value="M100" selected>Mác M100 (PC40 + cát mịn)</option>
+                                            <option value="M50">MÃ¡c M50 (PC40 + cÃ¡t má»‹n)</option>
+                                            <option value="M75">MÃ¡c M75 (PC40 + cÃ¡t má»‹n)</option>
+                                            <option value="M100" selected>MÃ¡c M100 (PC40 + cÃ¡t má»‹n)</option>
                                         </select>
                                     </div>
                                     <div class="form-group col-6 auto-plaster-fields">
-                                        <label for="masonryPlasterWaste">Hao hụt vữa trát đi kèm (%)</label>
+                                        <label for="masonryPlasterWaste">Hao há»¥t vá»¯a trÃ¡t Ä‘i kÃ¨m (%)</label>
                                         <input type="number" id="masonryPlasterWaste" value="8" min="0" max="50">
                                     </div>
                                 </div>
 
                                 <!-- CORE BRICK & MORTAR SPECS -->
                                 <div class="form-group col-6">
-                                    <label for="masonryBrickType">Loại gạch xây</label>
+                                    <label for="masonryBrickType">Loáº¡i gáº¡ch xÃ¢y</label>
                                     <select id="masonryBrickType">
-                                        <option value="brick-2-hole" selected>Gạch rỗng 2 lỗ (6.5x10.5x22)</option>
-                                        <option value="brick-solid">Gạch đặc đỏ (6.5x10.5x22)</option>
-                                        <option value="brick-aac">Gạch nhẹ AAC (10x20x60)</option>
-                                        <option value="none">Chỉ trát hoàn thiện (Không xây thô)</option>
+                                        <option value="brick-2-hole" selected>Gáº¡ch rá»—ng 2 lá»— (6.5x10.5x22)</option>
+                                        <option value="brick-solid">Gáº¡ch Ä‘áº·c Ä‘á» (6.5x10.5x22)</option>
+                                        <option value="brick-aac">Gáº¡ch nháº¹ AAC (10x20x60)</option>
+                                        <option value="none">Chá»‰ trÃ¡t hoÃ n thiá»‡n (KhÃ´ng xÃ¢y thÃ´)</option>
                                     </select>
                                 </div>
                                 <div class="form-group col-6">
-                                    <label for="masonryMortarGrade">Mác vữa vữa xây</label>
+                                    <label for="masonryMortarGrade">MÃ¡c vá»¯a vá»¯a xÃ¢y</label>
                                     <select id="masonryMortarGrade">
-                                        <option value="M50">Mác M50 (PC40 + cát mịn)</option>
-                                        <option value="M75">Mác M75 (PC40 + cát mịn)</option>
-                                        <option value="M100" selected>Mác M100 (PC40 + cát mịn)</option>
+                                        <option value="M50">MÃ¡c M50 (PC40 + cÃ¡t má»‹n)</option>
+                                        <option value="M75">MÃ¡c M75 (PC40 + cÃ¡t má»‹n)</option>
+                                        <option value="M100" selected>MÃ¡c M100 (PC40 + cÃ¡t má»‹n)</option>
                                     </select>
                                 </div>
                                 <div class="form-group col-6">
-                                    <label for="masonryBrickWaste" class="has-tooltip" title="Tỷ lệ hao hụt gạch vỡ do cắt tỉa góc và vận chuyển thang máy chung cư">
-                                        Hao hụt gạch (%) <i data-lucide="help-circle"></i>
+                                    <label for="masonryBrickWaste" class="has-tooltip" title="Tá»· lá»‡ hao há»¥t gáº¡ch vá»¡ do cáº¯t tá»‰a gÃ³c vÃ  váº­n chuyá»ƒn thang mÃ¡y chung cÆ°">
+                                        Hao há»¥t gáº¡ch (%) <i data-lucide="help-circle"></i>
                                     </label>
                                     <input type="number" id="masonryBrickWaste" value="3" min="0" max="50">
                                 </div>
                                 <div class="form-group col-6">
-                                    <label for="masonryMortarWaste" class="has-tooltip" title="Tỷ lệ rơi vãi vữa xây cát, xi măng trong thi công thực tế">
-                                        Hao hụt vữa (%) <i data-lucide="help-circle"></i>
+                                    <label for="masonryMortarWaste" class="has-tooltip" title="Tá»· lá»‡ rÆ¡i vÃ£i vá»¯a xÃ¢y cÃ¡t, xi mÄƒng trong thi cÃ´ng thá»±c táº¿">
+                                        Hao há»¥t vá»¯a (%) <i data-lucide="help-circle"></i>
                                     </label>
                                     <input type="number" id="masonryMortarWaste" value="5" min="0" max="50">
                                 </div>
                                 
                                 <div class="col-12 mt-2">
                                     <button type="button" id="btnAddMasonry" class="btn btn-primary w-full">
-                                        <i data-lucide="plus-circle"></i> Thêm vào bảng tổng hợp
+                                        <i data-lucide="plus-circle"></i> ThÃªm vÃ o báº£ng tá»•ng há»£p
                                     </button>
                                 </div>
                             </form>
@@ -449,8 +449,8 @@
                         <!-- Real-time Estimation Preview Column -->
                         <div class="preview-container">
                             <div class="preview-header">
-                                <h3>Xem trước Khối lượng</h3>
-                                <span class="badge badge-success">Thời gian thực</span>
+                                <h3>Xem trÆ°á»›c Khá»‘i lÆ°á»£ng</h3>
+                                <span class="badge badge-success">Thá»i gian thá»±c</span>
                             </div>
                             <div class="preview-body" id="masonryPreview">
                                 <!-- Dynamic JS Output here -->
@@ -459,44 +459,44 @@
                     </div>
                 </section>
                 
-                <!-- TAB 2: PLASTERING (CÁN NỀN) -->
+                <!-- TAB 2: PLASTERING (CÃN Ná»€N) -->
                 <section class="tab-content" id="tab-plastering">
                     <div class="workspace-grid">
                         <div class="form-container">
-                            <h3>Thông số bóc khối lượng Cán nền</h3>
+                            <h3>ThÃ´ng sá»‘ bÃ³c khá»‘i lÆ°á»£ng CÃ¡n ná»n</h3>
                             <form id="formPlastering" class="grid-form">
                                 <input type="hidden" id="plasterWorkType" value="screed-floor">
                                 
                                 <div class="form-group col-12">
-                                    <label for="plasteringItemName">Tên hạng mục / Phòng</label>
-                                    <input type="text" id="plasteringItemName" value="Cán nền phòng khách" placeholder="Ví dụ: Cán nền vệ sinh, Cán nền hành lang">
+                                    <label for="plasteringItemName">TÃªn háº¡ng má»¥c / PhÃ²ng</label>
+                                    <input type="text" id="plasteringItemName" value="CÃ¡n ná»n phÃ²ng khÃ¡ch" placeholder="VÃ­ dá»¥: CÃ¡n ná»n vá»‡ sinh, CÃ¡n ná»n hÃ nh lang">
                                 </div>
 
                                 <!-- Toggle Input Mode -->
                                 <div class="input-mode-toggle col-12">
-                                    <span class="toggle-label text-bold">Phương pháp nhập số liệu:</span>
+                                    <span class="toggle-label text-bold">PhÆ°Æ¡ng phÃ¡p nháº­p sá»‘ liá»‡u:</span>
                                     <label class="switch">
                                         <input type="checkbox" id="plasteringInputModeToggle">
                                         <span class="slider round"></span>
                                     </label>
-                                    <span class="toggle-status text-success text-bold" id="plasteringInputModeStatus">Tính toán chi tiết từ hình học</span>
+                                    <span class="toggle-status text-success text-bold" id="plasteringInputModeStatus">TÃ­nh toÃ¡n chi tiáº¿t tá»« hÃ¬nh há»c</span>
                                 </div>
 
                                 <!-- DETAILED GEOMETRY INPUT SECTION -->
                                 <div class="col-12 grid-form" id="plasteringDetailedSection">
                                     <!-- Floor Screed specific fields -->
                                     <div class="form-group col-12 floor-screed-fields">
-                                        <label for="screedingThickness">Độ dày lớp vữa cán nền</label>
+                                        <label for="screedingThickness">Äá»™ dÃ y lá»›p vá»¯a cÃ¡n ná»n</label>
                                         <select id="screedingThickness">
-                                            <option value="2.0">Dày 2.0 cm (Cán nền WC / lớp mỏng)</option>
-                                            <option value="3.0" selected>Dày 3.0 cm (Chuẩn căn hộ chung cư)</option>
-                                            <option value="4.0">Dày 4.0 cm (Cân bù nền lệch cốt nhiều)</option>
-                                            <option value="5.0">Dày 5.0 cm (Tôn nền cán dày)</option>
+                                            <option value="2.0">DÃ y 2.0 cm (CÃ¡n ná»n WC / lá»›p má»ng)</option>
+                                            <option value="3.0" selected>DÃ y 3.0 cm (Chuáº©n cÄƒn há»™ chung cÆ°)</option>
+                                            <option value="4.0">DÃ y 4.0 cm (CÃ¢n bÃ¹ ná»n lá»‡ch cá»‘t nhiá»u)</option>
+                                            <option value="5.0">DÃ y 5.0 cm (TÃ´n ná»n cÃ¡n dÃ y)</option>
                                         </select>
                                     </div>
 
                                     <div class="form-group col-12">
-                                        <label for="plasteringArea" id="plasteringAreaLabel">Diện tích sàn cần cán (m²)</label>
+                                        <label for="plasteringArea" id="plasteringAreaLabel">Diá»‡n tÃ­ch sÃ n cáº§n cÃ¡n (mÂ²)</label>
                                         <input type="number" id="plasteringArea" value="15.5" min="0.01" step="0.01">
                                     </div>
                                 </div>
@@ -504,29 +504,29 @@
                                 <!-- DIRECT QUANTITY INPUT SECTION -->
                                 <div class="col-12 grid-form" id="plasteringDirectSection" style="display: none;">
                                     <div class="form-group col-12">
-                                        <label for="plasteringDirectArea" id="plasteringDirectAreaLabel">Tổng diện tích cán nền (m²)</label>
+                                        <label for="plasteringDirectArea" id="plasteringDirectAreaLabel">Tá»•ng diá»‡n tÃ­ch cÃ¡n ná»n (mÂ²)</label>
                                         <input type="number" id="plasteringDirectArea" value="15.50" min="0.01" step="0.01">
-                                        <span class="text-xs text-gray mt-1">Nhập trực tiếp diện tích từ hồ sơ thiết kế sẵn có.</span>
+                                        <span class="text-xs text-gray mt-1">Nháº­p trá»±c tiáº¿p diá»‡n tÃ­ch tá»« há»“ sÆ¡ thiáº¿t káº¿ sáºµn cÃ³.</span>
                                     </div>
                                 </div>
 
                                 <!-- COMMON SPECS -->
                                 <div class="form-group col-6">
-                                    <label for="plasteringMortarGrade">Mác vữa cán nền</label>
+                                    <label for="plasteringMortarGrade">MÃ¡c vá»¯a cÃ¡n ná»n</label>
                                     <select id="plasteringMortarGrade">
-                                        <option value="M50">Mác M50 (PC40 + cát mịn)</option>
-                                        <option value="M75" selected>Mác M75 (PC40 + cát mịn)</option>
-                                        <option value="M100">Mác M100 (PC40 + cát mịn)</option>
+                                        <option value="M50">MÃ¡c M50 (PC40 + cÃ¡t má»‹n)</option>
+                                        <option value="M75" selected>MÃ¡c M75 (PC40 + cÃ¡t má»‹n)</option>
+                                        <option value="M100">MÃ¡c M100 (PC40 + cÃ¡t má»‹n)</option>
                                     </select>
                                 </div>
                                 <div class="form-group col-6">
-                                    <label for="plasteringWaste" id="plasteringWasteLabel">Hao hụt vữa cán nền (%)</label>
+                                    <label for="plasteringWaste" id="plasteringWasteLabel">Hao há»¥t vá»¯a cÃ¡n ná»n (%)</label>
                                     <input type="number" id="plasteringWaste" value="5" min="0" max="50">
                                 </div>
                                 
                                 <div class="col-12 mt-4">
                                     <button type="button" id="btnAddPlastering" class="btn btn-primary w-full">
-                                        <i data-lucide="plus-circle"></i> Thêm vào bảng tổng hợp
+                                        <i data-lucide="plus-circle"></i> ThÃªm vÃ o báº£ng tá»•ng há»£p
                                     </button>
                                 </div>
                             </form>
@@ -534,8 +534,8 @@
                         
                         <div class="preview-container">
                             <div class="preview-header">
-                                <h3>Xem trước Khối lượng</h3>
-                                <span class="badge badge-success">Thời gian thực</span>
+                                <h3>Xem trÆ°á»›c Khá»‘i lÆ°á»£ng</h3>
+                                <span class="badge badge-success">Thá»i gian thá»±c</span>
                             </div>
                             <div class="preview-body" id="plasteringPreview">
                                 <!-- Dynamic JS Output here -->
@@ -544,42 +544,42 @@
                     </div>
                 </section>
                 
-                <!-- TAB 3: TILING (ỐP LÁT) -->
+                <!-- TAB 3: TILING (á»P LÃT) -->
                 <section class="tab-content" id="tab-tiling">
                     <div class="workspace-grid">
                         <div class="form-container">
-                            <h3>Thông số bóc khối lượng Ốp lát</h3>
+                            <h3>ThÃ´ng sá»‘ bÃ³c khá»‘i lÆ°á»£ng á»p lÃ¡t</h3>
                             <form id="formTiling" class="grid-form">
                                 <div class="form-group col-6">
-                                    <label for="tilingItemName">Tên hạng mục / Phòng</label>
-                                    <input type="text" id="tilingItemName" value="Lát nền phòng khách" placeholder="Ví dụ: Lát nền WC, Ốp vách bếp">
+                                    <label for="tilingItemName">TÃªn háº¡ng má»¥c / PhÃ²ng</label>
+                                    <input type="text" id="tilingItemName" value="LÃ¡t ná»n phÃ²ng khÃ¡ch" placeholder="VÃ­ dá»¥: LÃ¡t ná»n WC, á»p vÃ¡ch báº¿p">
                                 </div>
                                 <div class="form-group col-6">
-                                    <label for="tilingTileSize">Kích thước gạch ốp lát</label>
+                                    <label for="tilingTileSize">KÃ­ch thÆ°á»›c gáº¡ch á»‘p lÃ¡t</label>
                                     <select id="tilingTileSize">
-                                        <option value="30x30">30x30 cm (gạch lát WC phổ biến)</option>
-                                        <option value="40x40">40x40 cm (gạch lát phòng phụ)</option>
-                                        <option value="30x60" selected>30x60 cm (gạch ốp WC/vách bếp phổ biến)</option>
-                                        <option value="60x60">60x60 cm (gạch lát sàn phổ biến)</option>
-                                        <option value="80x80">80x80 cm (gạch granite lát sàn cao cấp)</option>
-                                        <option value="60x120">60x120 cm (gạch khổ lớn sang trọng)</option>
+                                        <option value="30x30">30x30 cm (gáº¡ch lÃ¡t WC phá»• biáº¿n)</option>
+                                        <option value="40x40">40x40 cm (gáº¡ch lÃ¡t phÃ²ng phá»¥)</option>
+                                        <option value="30x60" selected>30x60 cm (gáº¡ch á»‘p WC/vÃ¡ch báº¿p phá»• biáº¿n)</option>
+                                        <option value="60x60">60x60 cm (gáº¡ch lÃ¡t sÃ n phá»• biáº¿n)</option>
+                                        <option value="80x80">80x80 cm (gáº¡ch granite lÃ¡t sÃ n cao cáº¥p)</option>
+                                        <option value="60x120">60x120 cm (gáº¡ch khá»• lá»›n sang trá»ng)</option>
                                     </select>
                                 </div>
 
                                 <!-- Toggle Input Mode -->
                                 <div class="input-mode-toggle col-12">
-                                    <span class="toggle-label text-bold">Phương pháp nhập số liệu:</span>
+                                    <span class="toggle-label text-bold">PhÆ°Æ¡ng phÃ¡p nháº­p sá»‘ liá»‡u:</span>
                                     <label class="switch">
                                         <input type="checkbox" id="tilingInputModeToggle">
                                         <span class="slider round"></span>
                                     </label>
-                                    <span class="toggle-status text-success text-bold" id="tilingInputModeStatus">Tính toán chi tiết từ hình học</span>
+                                    <span class="toggle-status text-success text-bold" id="tilingInputModeStatus">TÃ­nh toÃ¡n chi tiáº¿t tá»« hÃ¬nh há»c</span>
                                 </div>
 
                                 <!-- DETAILED GEOMETRY INPUT SECTION -->
                                 <div class="col-12 grid-form" id="tilingDetailedSection">
                                     <div class="form-group col-12">
-                                        <label for="tilingArea">Diện tích ốp lát (m²)</label>
+                                        <label for="tilingArea">Diá»‡n tÃ­ch á»‘p lÃ¡t (mÂ²)</label>
                                         <input type="number" id="tilingArea" value="24.5" min="0.01" step="0.01">
                                     </div>
                                 </div>
@@ -587,60 +587,60 @@
                                 <!-- DIRECT QUANTITY INPUT SECTION -->
                                 <div class="col-12 grid-form" id="tilingDirectSection" style="display: none;">
                                     <div class="form-group col-12">
-                                        <label for="tilingDirectArea">Tổng diện tích ốp lát (m²)</label>
+                                        <label for="tilingDirectArea">Tá»•ng diá»‡n tÃ­ch á»‘p lÃ¡t (mÂ²)</label>
                                         <input type="number" id="tilingDirectArea" value="24.50" min="0.01" step="0.01">
-                                        <span class="text-xs text-gray mt-1">Nhập trực tiếp diện tích ốp lát từ hồ sơ thiết kế sẵn có.</span>
+                                        <span class="text-xs text-gray mt-1">Nháº­p trá»±c tiáº¿p diá»‡n tÃ­ch á»‘p lÃ¡t tá»« há»“ sÆ¡ thiáº¿t káº¿ sáºµn cÃ³.</span>
                                     </div>
                                 </div>
 
                                 <!-- TILING SPECS -->
                                 <div class="form-group col-6">
-                                    <label for="tilingGroutWidth">Độ rộng mạch ron (mm)</label>
+                                    <label for="tilingGroutWidth">Äá»™ rá»™ng máº¡ch ron (mm)</label>
                                     <input type="number" id="tilingGroutWidth" value="2.0" min="0.5" max="10" step="0.1">
                                 </div>
                                 <div class="form-group col-6">
-                                    <label for="tilingTileThickness" class="has-tooltip" title="Chiều dày viên gạch (mm) để tính lượng keo chà ron lấp đầy khe">
-                                        Chiều dày gạch (mm) <i data-lucide="help-circle"></i>
+                                    <label for="tilingTileThickness" class="has-tooltip" title="Chiá»u dÃ y viÃªn gáº¡ch (mm) Ä‘á»ƒ tÃ­nh lÆ°á»£ng keo chÃ  ron láº¥p Ä‘áº§y khe">
+                                        Chiá»u dÃ y gáº¡ch (mm) <i data-lucide="help-circle"></i>
                                     </label>
                                     <input type="number" id="tilingTileThickness" value="8" min="2" max="30">
                                 </div>
                                 <div class="form-group col-6">
-                                    <label for="tilingMethod">Phương pháp liên kết dán gạch</label>
+                                    <label for="tilingMethod">PhÆ°Æ¡ng phÃ¡p liÃªn káº¿t dÃ¡n gáº¡ch</label>
                                     <select id="tilingMethod">
-                                        <option value="adhesive-pure">Keo dán gạch nguyên chất 100%</option>
-                                        <option value="adhesive-mixed" selected>Hỗn hợp Keo dán gạch trộn Xi măng</option>
+                                        <option value="adhesive-pure">Keo dÃ¡n gáº¡ch nguyÃªn cháº¥t 100%</option>
+                                        <option value="adhesive-mixed" selected>Há»—n há»£p Keo dÃ¡n gáº¡ch trá»™n Xi mÄƒng</option>
                                     </select>
                                 </div>
                                 <div class="form-group col-6" id="mixRatioGroup">
-                                    <label for="tilingMixRatio">Tỷ lệ trộn hỗn hợp (Khối lượng)</label>
+                                    <label for="tilingMixRatio">Tá»· lá»‡ trá»™n há»—n há»£p (Khá»‘i lÆ°á»£ng)</label>
                                     <select id="tilingMixRatio">
-                                        <option value="1:1" selected>1 Keo : 1 Xi măng PC40 (Mặc định phổ biến)</option>
-                                        <option value="2:1">2 Keo : 1 Xi măng PC40 (Bám dính cao hơn)</option>
-                                        <option value="1:2">1 Keo : 2 Xi măng PC40 (Tiết kiệm keo)</option>
+                                        <option value="1:1" selected>1 Keo : 1 Xi mÄƒng PC40 (Máº·c Ä‘á»‹nh phá»• biáº¿n)</option>
+                                        <option value="2:1">2 Keo : 1 Xi mÄƒng PC40 (BÃ¡m dÃ­nh cao hÆ¡n)</option>
+                                        <option value="1:2">1 Keo : 2 Xi mÄƒng PC40 (Tiáº¿t kiá»‡m keo)</option>
                                     </select>
                                 </div>
                                 <div class="form-group col-4">
-                                    <label for="tilingTileWaste" class="has-tooltip" title="Hao hụt gạch do cắt chéo góc, khoét lỗ hộp kỹ thuật, vỡ gạch">
-                                        Hao hụt gạch (%) <i data-lucide="help-circle"></i>
+                                    <label for="tilingTileWaste" class="has-tooltip" title="Hao há»¥t gáº¡ch do cáº¯t chÃ©o gÃ³c, khoÃ©t lá»— há»™p ká»¹ thuáº­t, vá»¡ gáº¡ch">
+                                        Hao há»¥t gáº¡ch (%) <i data-lucide="help-circle"></i>
                                     </label>
                                     <input type="number" id="tilingTileWaste" value="5" min="0" max="50">
                                 </div>
                                 <div class="form-group col-4">
-                                    <label for="tilingAdhesiveWaste" class="has-tooltip" title="Hao hụt keo dán gạch do bám dính bay răng cưa và rơi vãi">
-                                        Hao hụt keo dán (%) <i data-lucide="help-circle"></i>
+                                    <label for="tilingAdhesiveWaste" class="has-tooltip" title="Hao há»¥t keo dÃ¡n gáº¡ch do bÃ¡m dÃ­nh bay rÄƒng cÆ°a vÃ  rÆ¡i vÃ£i">
+                                        Hao há»¥t keo dÃ¡n (%) <i data-lucide="help-circle"></i>
                                     </label>
                                     <input type="number" id="tilingAdhesiveWaste" value="5" min="0" max="50">
                                 </div>
                                 <div class="form-group col-4">
-                                    <label for="tilingGroutWaste" class="has-tooltip" title="Hao hụt keo chà ron khi miết mạch gạch">
-                                        Hao hụt keo ron (%) <i data-lucide="help-circle"></i>
+                                    <label for="tilingGroutWaste" class="has-tooltip" title="Hao há»¥t keo chÃ  ron khi miáº¿t máº¡ch gáº¡ch">
+                                        Hao há»¥t keo ron (%) <i data-lucide="help-circle"></i>
                                     </label>
                                     <input type="number" id="tilingGroutWaste" value="5" min="0" max="50">
                                 </div>
                                 
                                 <div class="col-12 mt-2">
                                     <button type="button" id="btnAddTiling" class="btn btn-primary w-full">
-                                        <i data-lucide="plus-circle"></i> Thêm vào bảng tổng hợp
+                                        <i data-lucide="plus-circle"></i> ThÃªm vÃ o báº£ng tá»•ng há»£p
                                     </button>
                                 </div>
                             </form>
@@ -648,8 +648,8 @@
                         
                         <div class="preview-container">
                             <div class="preview-header">
-                                <h3>Xem trước Khối lượng</h3>
-                                <span class="badge badge-success">Thời gian thực</span>
+                                <h3>Xem trÆ°á»›c Khá»‘i lÆ°á»£ng</h3>
+                                <span class="badge badge-success">Thá»i gian thá»±c</span>
                             </div>
                             <div class="preview-body" id="tilingPreview">
                                 <!-- Dynamic JS Output here -->
@@ -658,16 +658,16 @@
                     </div>
                 </section>
                 
-                <!-- TAB 4: UNIT PRICES (ĐƠN GIÁ VẬT TƯ) -->
+                <!-- TAB 4: UNIT PRICES (ÄÆ N GIÃ Váº¬T TÆ¯) -->
                 <section class="tab-content" id="tab-unit-prices">
                     <div class="form-container full-width">
                         <div class="form-header-with-actions">
                             <div>
-                                <h3>Bảng Đơn giá Vật tư địa phương (Hà Nội)</h3>
-                                <p class="text-sm text-gray">Vui lòng điều chỉnh đơn giá sát với cửa hàng vật tư xây dựng gần công trình của bạn.</p>
+                                <h3>Báº£ng ÄÆ¡n giÃ¡ Váº­t tÆ° Ä‘á»‹a phÆ°Æ¡ng (HÃ  Ná»™i)</h3>
+                                <p class="text-sm text-gray">Vui lÃ²ng Ä‘iá»u chá»‰nh Ä‘Æ¡n giÃ¡ sÃ¡t vá»›i cá»­a hÃ ng váº­t tÆ° xÃ¢y dá»±ng gáº§n cÃ´ng trÃ¬nh cá»§a báº¡n.</p>
                             </div>
-                            <button id="btnResetPrices" class="btn btn-secondary btn-sm" title="Khôi phục lại bảng đơn giá mặc định Hà Nội">
-                                <i data-lucide="rotate-ccw"></i> Reset mặc định
+                            <button id="btnResetPrices" class="btn btn-secondary btn-sm" title="KhÃ´i phá»¥c láº¡i báº£ng Ä‘Æ¡n giÃ¡ máº·c Ä‘á»‹nh HÃ  Ná»™i">
+                                <i data-lucide="rotate-ccw"></i> Reset máº·c Ä‘á»‹nh
                             </button>
                         </div>
                         
@@ -675,11 +675,11 @@
                             <table class="prices-table" id="pricesTable">
                                 <thead>
                                     <tr>
-                                        <th>Loại vật tư</th>
-                                        <th>Quy cách / Đóng gói</th>
-                                        <th>Đơn vị tính</th>
-                                        <th>Đơn giá địa phương (VNĐ)</th>
-                                        <th>Cập nhật thực tế</th>
+                                        <th>Loáº¡i váº­t tÆ°</th>
+                                        <th>Quy cÃ¡ch / ÄÃ³ng gÃ³i</th>
+                                        <th>ÄÆ¡n vá»‹ tÃ­nh</th>
+                                        <th>ÄÆ¡n giÃ¡ Ä‘á»‹a phÆ°Æ¡ng (VNÄ)</th>
+                                        <th>Cáº­p nháº­t thá»±c táº¿</th>
                                     </tr>
                                 </thead>
                                 <tbody id="pricesTableBody">
@@ -690,26 +690,26 @@
                     </div>
                 </section>
 
-                <!-- TAB 5: WORK ITEM PRICES (ĐƠN GIÁ THI CÔNG) -->
+                <!-- TAB 5: WORK ITEM PRICES (ÄÆ N GIÃ THI CÃ”NG) -->
                 <section class="tab-content" id="tab-work-prices">
                     <div class="form-container full-width">
                         <div class="form-header-with-actions">
                             <div>
-                                <h3>Bảng Đơn giá Thi công Tổng hợp (Hà Nội)</h3>
-                                <p class="text-sm text-gray">Đơn giá gộp vật liệu + nhân công theo thị trường nhà dân. Cập nhật theo giá thực tế công trình của bạn.</p>
+                                <h3>Báº£ng ÄÆ¡n giÃ¡ Thi cÃ´ng Tá»•ng há»£p (HÃ  Ná»™i)</h3>
+                                <p class="text-sm text-gray">ÄÆ¡n giÃ¡ gá»™p váº­t liá»‡u + nhÃ¢n cÃ´ng theo thá»‹ trÆ°á»ng nhÃ  dÃ¢n. Cáº­p nháº­t theo giÃ¡ thá»±c táº¿ cÃ´ng trÃ¬nh cá»§a báº¡n.</p>
                             </div>
-                            <button id="btnResetWorkPrices" class="btn btn-secondary btn-sm" title="Khôi phục lại đơn giá thi công mặc định Hà Nội">
-                                <i data-lucide="rotate-ccw"></i> Reset mặc định
+                            <button id="btnResetWorkPrices" class="btn btn-secondary btn-sm" title="KhÃ´i phá»¥c láº¡i Ä‘Æ¡n giÃ¡ thi cÃ´ng máº·c Ä‘á»‹nh HÃ  Ná»™i">
+                                <i data-lucide="rotate-ccw"></i> Reset máº·c Ä‘á»‹nh
                             </button>
                         </div>
                         <div class="table-responsive mt-3">
                             <table class="prices-table" id="workPricesTable">
                                 <thead>
                                     <tr>
-                                        <th>Hạng mục thi công</th>
-                                        <th>Đơn vị</th>
-                                        <th>Đơn giá tổng hợp (VNĐ)</th>
-                                        <th>Cập nhật thực tế</th>
+                                        <th>Háº¡ng má»¥c thi cÃ´ng</th>
+                                        <th>ÄÆ¡n vá»‹</th>
+                                        <th>ÄÆ¡n giÃ¡ tá»•ng há»£p (VNÄ)</th>
+                                        <th>Cáº­p nháº­t thá»±c táº¿</th>
                                     </tr>
                                 </thead>
                                 <tbody id="workPricesTableBody">
@@ -721,40 +721,40 @@
 
             </div>
 
-            <!-- ADDED ITEMS DASHBOARD (DANH SÁCH HẠNG MỤC ĐÃ THÊM NGOÀI TRANG CHÍNH - TỐI GIẢN) -->
+            <!-- ADDED ITEMS DASHBOARD (DANH SÃCH Háº NG Má»¤C ÄÃƒ THÃŠM NGOÃ€I TRANG CHÃNH - Tá»I GIáº¢N) -->
             <div class="added-items-container no-print" id="addedItemsDashboard">
                 <div class="added-items-header">
-                    <h3><i data-lucide="list-todo"></i> Hạng mục dự toán đã thêm <span id="itemsCount" class="badge badge-success">0</span></h3>
-                    <span class="text-xs text-muted">Bấm dấu × để xóa nhanh hạng mục khỏi dự toán</span>
+                    <h3><i data-lucide="list-todo"></i> Háº¡ng má»¥c dá»± toÃ¡n Ä‘Ã£ thÃªm <span id="itemsCount" class="badge badge-success">0</span></h3>
+                    <span class="text-xs text-muted">Báº¥m dáº¥u Ã— Ä‘á»ƒ xÃ³a nhanh háº¡ng má»¥c khá»i dá»± toÃ¡n</span>
                 </div>
                 <div class="added-items-wrapper">
                     <ul id="itemsList" class="added-items-list">
-                        <li class="empty-list-msg">Chưa có hạng mục nào được&nbsp;thêm</li>
+                        <li class="empty-list-msg">ChÆ°a cÃ³ háº¡ng má»¥c nÃ o Ä‘Æ°á»£c&nbsp;thÃªm</li>
                     </ul>
                 </div>
             </div>
 
-            <!-- TOTAL AGGREGATION & BOQ BUIDLER (KẾT QUẢ TỔNG HỢP & IN ẤN) -->
+            <!-- TOTAL AGGREGATION & BOQ BUIDLER (Káº¾T QUáº¢ Tá»”NG Há»¢P & IN áº¤N) -->
             <section class="boq-section" id="boq-report-area">
                 
                 <div class="boq-header">
                     <div class="boq-title-block">
-                        <h2 id="printBOQTitle">BẢNG TỔNG HỢP KHỐI LƯỢNG VẬT TƯ & DỰ TOÁN CHI PHÍ</h2>
-                        <p id="printBOQSubtitle" class="text-sm text-gray">Dự án: Cải tạo Căn hộ Chung cư | Địa điểm: Hà Nội</p>
+                        <h2 id="printBOQTitle">Báº¢NG Tá»”NG Há»¢P KHá»I LÆ¯á»¢NG Váº¬T TÆ¯ & Dá»° TOÃN CHI PHÃ</h2>
+                        <p id="printBOQSubtitle" class="text-sm text-gray">Dá»± Ã¡n: Cáº£i táº¡o CÄƒn há»™ Chung cÆ° | Äá»‹a Ä‘iá»ƒm: HÃ  Ná»™i</p>
                     </div>
                     
                     <div class="boq-actions-block no-print">
-                        <a href="estimate.html" class="btn btn-gradient" title="Mở bảng dự toán chi phí thi công G8-style" style="text-decoration:none;">
-                            <i data-lucide="file-spreadsheet"></i> Dự toán Chi phí →
+                        <a href="estimate.html" class="btn btn-gradient" title="Má»Ÿ báº£ng dá»± toÃ¡n chi phÃ­ thi cÃ´ng G8-style" style="text-decoration:none;">
+                            <i data-lucide="file-spreadsheet"></i> Dá»± toÃ¡n Chi phÃ­ â†’
                         </a>
-                        <button id="btnPrintPDF" class="btn btn-secondary" title="In hoặc Xuất file PDF chất lượng cao khổ A4 Ngang">
-                            <i data-lucide="file-text"></i> Xuất PDF
+                        <button id="btnPrintPDF" class="btn btn-secondary" title="In hoáº·c Xuáº¥t file PDF cháº¥t lÆ°á»£ng cao khá»• A4 Ngang">
+                            <i data-lucide="file-text"></i> Xuáº¥t PDF
                         </button>
-                        <button id="btnExportImage" class="btn btn-secondary" title="Chụp bảng BOQ tải xuống dưới dạng file ảnh PNG">
-                            <i data-lucide="image"></i> Xuất Ảnh
+                        <button id="btnExportImage" class="btn btn-secondary" title="Chá»¥p báº£ng BOQ táº£i xuá»‘ng dÆ°á»›i dáº¡ng file áº£nh PNG">
+                            <i data-lucide="image"></i> Xuáº¥t áº¢nh
                         </button>
-                        <button id="btnExportCSV" class="btn btn-secondary" title="Xuất file báo cáo Excel CSV tiếng Việt">
-                            <i data-lucide="file-spreadsheet"></i> Xuất Excel (CSV)
+                        <button id="btnExportCSV" class="btn btn-secondary" title="Xuáº¥t file bÃ¡o cÃ¡o Excel CSV tiáº¿ng Viá»‡t">
+                            <i data-lucide="file-spreadsheet"></i> Xuáº¥t Excel (CSV)
                         </button>
                     </div>
                 </div>
@@ -767,19 +767,19 @@
                                 <thead>
                                     <tr>
                                         <th>STT</th>
-                                        <th>Tên vật tư</th>
-                                        <th>Quy cách đóng gói</th>
-                                        <th class="text-right">Khối lượng chuẩn</th>
-                                        <th class="text-right">Hao hụt cộng dồn</th>
-                                        <th class="text-right">Khối lượng cần mua</th>
-                                        <th>Đơn vị</th>
-                                        <th class="text-right">Đơn giá (VNĐ)</th>
-                                        <th class="text-right">Thành tiền (VNĐ)</th>
+                                        <th>TÃªn váº­t tÆ°</th>
+                                        <th>Quy cÃ¡ch Ä‘Ã³ng gÃ³i</th>
+                                        <th class="text-right">Khá»‘i lÆ°á»£ng chuáº©n</th>
+                                        <th class="text-right">Hao há»¥t cá»™ng dá»“n</th>
+                                        <th class="text-right">Khá»‘i lÆ°á»£ng cáº§n mua</th>
+                                        <th>ÄÆ¡n vá»‹</th>
+                                        <th class="text-right">ÄÆ¡n giÃ¡ (VNÄ)</th>
+                                        <th class="text-right">ThÃ nh tiá»n (VNÄ)</th>
                                     </tr>
                                 </thead>
                                 <tbody id="boqTableBody">
                                     <tr>
-                                        <td colspan="9" class="empty-boq-msg">Chưa có hạng mục nào được thêm để tổng hợp&nbsp;BOQ</td>
+                                        <td colspan="9" class="empty-boq-msg">ChÆ°a cÃ³ háº¡ng má»¥c nÃ o Ä‘Æ°á»£c thÃªm Ä‘á»ƒ tá»•ng há»£p&nbsp;BOQ</td>
                                     </tr>
                                 </tbody>
                             </table>
@@ -787,35 +787,35 @@
                         
                         <!-- Cost in Words Area -->
                         <div class="cost-in-words-area" id="costInWordsBox" style="display: none;">
-                            <span class="text-bold">Viết bằng chữ:</span> <span id="costInWordsText">Không đồng.</span>
+                            <span class="text-bold">Viáº¿t báº±ng chá»¯:</span> <span id="costInWordsText">KhÃ´ng Ä‘á»“ng.</span>
                         </div>
                         
-                        <!-- Disclaimer Rule §12a -->
+                        <!-- Disclaimer Rule Â§12a -->
                         <div class="boq-disclaimer mt-3">
                             <p>
-                                <strong>⚠️ KHUYẾN CÁO:</strong> Bảng khối lượng vật tư và dự toán chi phí này được tính toán tự động dựa trên định mức tiêu chuẩn kết hợp với hệ số hao hụt cải tạo thực tế. Người sử dụng (Chủ đầu tư / Kỹ sư) cần trực tiếp khảo sát hiện trạng cốt nền, độ phẳng tường cũ và trao đổi kỹ với đội ngũ thợ thi công để rà soát, phê duyệt và điều chỉnh khối lượng chính xác trước khi mua sắm vật tư chính thức.
+                                <strong>âš ï¸ KHUYáº¾N CÃO:</strong> Báº£ng khá»‘i lÆ°á»£ng váº­t tÆ° vÃ  dá»± toÃ¡n chi phÃ­ nÃ y Ä‘Æ°á»£c tÃ­nh toÃ¡n tá»± Ä‘á»™ng dá»±a trÃªn Ä‘á»‹nh má»©c tiÃªu chuáº©n káº¿t há»£p vá»›i há»‡ sá»‘ hao há»¥t cáº£i táº¡o thá»±c táº¿. NgÆ°á»i sá»­ dá»¥ng (Chá»§ Ä‘áº§u tÆ° / Ká»¹ sÆ°) cáº§n trá»±c tiáº¿p kháº£o sÃ¡t hiá»‡n tráº¡ng cá»‘t ná»n, Ä‘á»™ pháº³ng tÆ°á»ng cÅ© vÃ  trao Ä‘á»•i ká»¹ vá»›i Ä‘á»™i ngÅ© thá»£ thi cÃ´ng Ä‘á»ƒ rÃ  soÃ¡t, phÃª duyá»‡t vÃ  Ä‘iá»u chá»‰nh khá»‘i lÆ°á»£ng chÃ­nh xÃ¡c trÆ°á»›c khi mua sáº¯m váº­t tÆ° chÃ­nh thá»©c.
                             </p>
                             <p id="plasteringNoteBox" class="mt-2 text-yellow" style="display: none; font-size: 12px; border-top: 1px dashed rgba(255, 255, 255, 0.1); padding-top: 8px;">
-                                <strong>* Lưu ý hạng mục Trát tường:</strong> Khối lượng tính toán không bao gồm công tác đắp phào chỉ, nẹp góc, hoặc nẹp tách khe vật liệu.
+                                <strong>* LÆ°u Ã½ háº¡ng má»¥c TrÃ¡t tÆ°á»ng:</strong> Khá»‘i lÆ°á»£ng tÃ­nh toÃ¡n khÃ´ng bao gá»“m cÃ´ng tÃ¡c Ä‘áº¯p phÃ o chá»‰, náº¹p gÃ³c, hoáº·c náº¹p tÃ¡ch khe váº­t liá»‡u.
                             </p>
                         </div>
                         
                         <!-- Signatures Area (Only for print) -->
                         <div class="print-signatures-area">
                             <div class="signature-col">
-                                <h4>ĐƠN VỊ THI CÔNG</h4>
-                                <span class="sig-space">(Ký, ghi rõ họ tên)</span>
+                                <h4>ÄÆ N Vá»Š THI CÃ”NG</h4>
+                                <span class="sig-space">(KÃ½, ghi rÃµ há» tÃªn)</span>
                             </div>
                             <div class="signature-col">
-                                <h4>CHỦ ĐẦU TƯ / KHÁCH HÀNG</h4>
-                                <span class="sig-space">(Ký, ghi rõ họ tên)</span>
+                                <h4>CHá»¦ Äáº¦U TÆ¯ / KHÃCH HÃ€NG</h4>
+                                <span class="sig-space">(KÃ½, ghi rÃµ há» tÃªn)</span>
                             </div>
                         </div>
                     </div>
                     
                     <!-- Dynamic Material Distribution Chart (Hidden on Print) -->
                     <div class="chart-container-wrapper no-print">
-                        <h3>Biểu đồ phân bổ chi phí vật tư</h3>
+                        <h3>Biá»ƒu Ä‘á»“ phÃ¢n bá»• chi phÃ­ váº­t tÆ°</h3>
                         <div class="chart-box">
                             <canvas id="materialChart"></canvas>
                         </div>
@@ -823,68 +823,68 @@
                 </div>
             </section>
 
-            <!-- TAKEOFF WORKSPACE (BẢN VẼ KỸ THUẬT) -->
+            <!-- TAKEOFF WORKSPACE (Báº¢N Váº¼ Ká»¸ THUáº¬T) -->
             <section class="takeoff-section no-print" id="takeoff-workspace" style="display: none;">
                 <div class="takeoff-header">
                     <div class="takeoff-title-block">
-                        <h3><i data-lucide="map"></i> Không gian đo đạc Bản vẽ số (Digital Takeoff)</h3>
-                        <p class="text-sm text-gray">Calibrate tỉ lệ xích và click chuột để tự động bóc khối lượng từ file PDF hoặc CAD (DXF)</p>
+                        <h3><i data-lucide="map"></i> KhÃ´ng gian Ä‘o Ä‘áº¡c Báº£n váº½ sá»‘ (Digital Takeoff)</h3>
+                        <p class="text-sm text-gray">Calibrate tá»‰ lá»‡ xÃ­ch vÃ  click chuá»™t Ä‘á»ƒ tá»± Ä‘á»™ng bÃ³c khá»‘i lÆ°á»£ng tá»« file PDF hoáº·c CAD (DXF)</p>
                     </div>
                     <button class="btn btn-secondary btn-sm" id="btnCloseTakeoff" type="button">
-                        <i data-lucide="x"></i> Đóng bản vẽ
+                        <i data-lucide="x"></i> ÄÃ³ng báº£n váº½
                     </button>
                 </div>
                 <div class="takeoff-grid mt-3">
                     <div class="takeoff-control-panel">
                         <div class="info-group">
-                            <label>Tải bản vẽ (PDF hoặc DXF)</label>
+                            <label>Táº£i báº£n váº½ (PDF hoáº·c DXF)</label>
                             <input type="file" id="takeoffFile" accept=".pdf,.dxf">
                         </div>
                         
                         <!-- PDF Controls -->
                         <div id="pdfControls" class="takeoff-tool-group mt-3">
-                            <h4>Công cụ đo PDF</h4>
+                            <h4>CÃ´ng cá»¥ Ä‘o PDF</h4>
                             <div class="btn-grid-2">
-                                <button class="btn btn-secondary btn-sm active" id="btnToolHand" title="Di chuyển / Kéo bản vẽ" type="button">
-                                    <i data-lucide="hand"></i> Bàn tay
+                                <button class="btn btn-secondary btn-sm active" id="btnToolHand" title="Di chuyá»ƒn / KÃ©o báº£n váº½" type="button">
+                                    <i data-lucide="hand"></i> BÃ n tay
                                 </button>
-                                <button class="btn btn-secondary btn-sm" id="btnToolCalibrate" title="Calibrate: Click chọn 2 điểm trên bản vẽ và nhập khoảng cách thực tế" type="button">
+                                <button class="btn btn-secondary btn-sm" id="btnToolCalibrate" title="Calibrate: Click chá»n 2 Ä‘iá»ƒm trÃªn báº£n váº½ vÃ  nháº­p khoáº£ng cÃ¡ch thá»±c táº¿" type="button">
                                     <i data-lucide="ruler"></i> Calibrate
                                 </button>
-                                <button class="btn btn-secondary btn-sm" id="btnToolLine" title="Đo chiều dài gấp khúc (Tính chiều dài tường)" type="button">
-                                    <i data-lucide="spline"></i> Đo chiều dài
+                                <button class="btn btn-secondary btn-sm" id="btnToolLine" title="Äo chiá»u dÃ i gáº¥p khÃºc (TÃ­nh chiá»u dÃ i tÆ°á»ng)" type="button">
+                                    <i data-lucide="spline"></i> Äo chiá»u dÃ i
                                 </button>
-                                <button class="btn btn-secondary btn-sm" id="btnToolArea" title="Đo diện tích đa giác (Tính diện tích sàn/trát)" type="button">
-                                    <i data-lucide="pentagon"></i> Đo diện tích
+                                <button class="btn btn-secondary btn-sm" id="btnToolArea" title="Äo diá»‡n tÃ­ch Ä‘a giÃ¡c (TÃ­nh diá»‡n tÃ­ch sÃ n/trÃ¡t)" type="button">
+                                    <i data-lucide="pentagon"></i> Äo diá»‡n tÃ­ch
                                 </button>
                             </div>
                             <div class="info-group mt-2" id="calibrateValGroup" style="display: none;">
-                                <label for="calibrateDistance">Nhập khoảng cách thực tế (m)</label>
+                                <label for="calibrateDistance">Nháº­p khoáº£ng cÃ¡ch thá»±c táº¿ (m)</label>
                                 <input type="number" id="calibrateDistance" value="3.0" min="0.01" step="0.01">
-                                <button class="btn btn-primary btn-sm w-full mt-1" id="btnSaveCalibrate" type="button">Lưu tỷ lệ xích</button>
+                                <button class="btn btn-primary btn-sm w-full mt-1" id="btnSaveCalibrate" type="button">LÆ°u tá»· lá»‡ xÃ­ch</button>
                             </div>
                             <div class="scale-info mt-2">
-                                <span class="text-sm text-gray">Tỷ lệ hiện tại: </span>
-                                <span id="currentScaleText" class="text-bold text-success">Chưa calibrate</span>
+                                <span class="text-sm text-gray">Tá»· lá»‡ hiá»‡n táº¡i: </span>
+                                <span id="currentScaleText" class="text-bold text-success">ChÆ°a calibrate</span>
                             </div>
                         </div>
 
                         <!-- DXF Controls -->
                         <div id="dxfControls" class="takeoff-tool-group mt-3" style="display: none;">
-                            <h4>Lựa chọn Layer CAD (DXF)</h4>
-                            <p class="text-xs text-gray mt-1">Chọn layer tường để tự động cộng dồn toàn bộ chiều dài hình học</p>
+                            <h4>Lá»±a chá»n Layer CAD (DXF)</h4>
+                            <p class="text-xs text-gray mt-1">Chá»n layer tÆ°á»ng Ä‘á»ƒ tá»± Ä‘á»™ng cá»™ng dá»“n toÃ n bá»™ chiá»u dÃ i hÃ¬nh há»c</p>
                             <div class="layer-list-container mt-2">
                                 <select id="dxfLayersSelect" class="w-full">
-                                    <option value="">-- Đang quét layer... --</option>
+                                    <option value="">-- Äang quÃ©t layer... --</option>
                                 </select>
                             </div>
                             <button class="btn btn-primary btn-sm w-full mt-2" id="btnImportDXFLayer" type="button">
-                                <i data-lucide="import"></i> Import chiều dài Layer
+                                <i data-lucide="import"></i> Import chiá»u dÃ i Layer
                             </button>
                         </div>
 
                         <button class="btn btn-danger btn-sm w-full mt-3" id="btnClearTakeoffDrawings" type="button">
-                            <i data-lucide="rotate-ccw"></i> Xóa nét vẽ nháp
+                            <i data-lucide="rotate-ccw"></i> XÃ³a nÃ©t váº½ nhÃ¡p
                         </button>
                     </div>
 
@@ -898,23 +898,23 @@
             <!-- FLOATING SUMMARY BAR (STICKY BOTTOM BAR) -->
             <div class="floating-summary-bar no-print" id="floatingSummaryBar">
                 <div class="summary-left">
-                    <span class="summary-label">TỔNG DỰ TOÁN VẬT TƯ:</span>
-                    <span class="summary-value" id="floatingGrandTotal">0 VNĐ</span>
+                    <span class="summary-label">Tá»”NG Dá»° TOÃN Váº¬T TÆ¯:</span>
+                    <span class="summary-value" id="floatingGrandTotal">0 VNÄ</span>
                 </div>
                 <div class="summary-middle">
                     <span class="save-status-indicator">
-                        <i data-lucide="cloud-lightning" style="width: 14px; height: 14px;"></i> Đã tự động lưu offline
+                        <i data-lucide="cloud-lightning" style="width: 14px; height: 14px;"></i> ÄÃ£ tá»± Ä‘á»™ng lÆ°u offline
                     </span>
                 </div>
                 <div class="summary-right">
-                    <button id="floatingPrintPDF" class="btn btn-gradient btn-sm" title="Xuất file PDF chất lượng cao khổ A4 Ngang">
-                        <i data-lucide="file-text"></i> Xuất PDF
+                    <button id="floatingPrintPDF" class="btn btn-gradient btn-sm" title="Xuáº¥t file PDF cháº¥t lÆ°á»£ng cao khá»• A4 Ngang">
+                        <i data-lucide="file-text"></i> Xuáº¥t PDF
                     </button>
-                    <button id="floatingExportImage" class="btn btn-gradient btn-sm" title="Chụp bảng BOQ tải xuống dạng PNG">
-                        <i data-lucide="image"></i> Xuất Ảnh BOQ
+                    <button id="floatingExportImage" class="btn btn-gradient btn-sm" title="Chá»¥p báº£ng BOQ táº£i xuá»‘ng dáº¡ng PNG">
+                        <i data-lucide="image"></i> Xuáº¥t áº¢nh BOQ
                     </button>
-                    <button id="floatingExportCSV" class="btn btn-secondary btn-sm" title="Xuất file báo cáo Excel CSV">
-                        <i data-lucide="file-spreadsheet"></i> Xuất Excel
+                    <button id="floatingExportCSV" class="btn btn-secondary btn-sm" title="Xuáº¥t file bÃ¡o cÃ¡o Excel CSV">
+                        <i data-lucide="file-spreadsheet"></i> Xuáº¥t Excel
                     </button>
                 </div>
             </div>
@@ -923,22 +923,22 @@
     </div>
     
     <!-- BOTTOM TAB BAR (mobile only) -->
-    <nav class="bottom-tab-bar no-print" aria-label="Điều hướng chính">
+    <nav class="bottom-tab-bar no-print" aria-label="Äiá»u hÆ°á»›ng chÃ­nh">
         <a href="index.html" class="btab-item btab-active">
             <i data-lucide="calculator"></i>
-            <span>Bóc KL</span>
+            <span>BÃ³c KL</span>
         </a>
         <a href="estimate.html" class="btab-item">
             <i data-lucide="file-spreadsheet"></i>
-            <span>Dự toán</span>
+            <span>Dá»± toÃ¡n</span>
         </a>
         <a href="materials.html" class="btab-item">
             <i data-lucide="package"></i>
-            <span>Vật tư</span>
+            <span>Váº­t tÆ°</span>
         </a>
         <a href="pricing.html" class="btab-item">
             <i data-lucide="bar-chart-2"></i>
-            <span>Giá</span>
+            <span>GiÃ¡</span>
         </a>
         <a href="help.html" class="btab-item">
             <i data-lucide="book-open"></i>
@@ -956,7 +956,7 @@
     <script src="js/pdf-takeoff.js?v=3.18"></script>
     <script src="js/api.js?v=3.18"></script>
     <script src="js/auth.js?v=3.18"></script>
-    <script src="js/app.js?v=3.18"></script>
+    <script src="js/app.js?v=3.22"></script>
     <script src="js/nav.js?v=3.20"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {

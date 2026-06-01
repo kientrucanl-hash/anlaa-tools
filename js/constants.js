@@ -186,51 +186,235 @@ const DEFAULT_UNIT_PRICES = {
     "tile-wedges": 50000      // 50000 VNĐ per bag of 100 wedges
 };
 
-// 10. Default construction work item prices (combined material + labor, Hanoi market Q1/2025)
-// These are "đơn giá thi công tổng hợp" — suitable for private/residential projects (nhà dân)
-// User can update these in the "Đơn Giá Thi Công" tab; changes persist in localStorage
-const DEFAULT_WORK_ITEM_PRICES = {
-    "masonry-110": {
-        name: "Xây tường gạch 110 (tường đơn)",
-        unit: "m²",
-        price: 250000
+// 10. Regional construction work item price table (nhân công + vật tư tổng hợp)
+// Keys match WORK_ITEM_DIMS. Prices are "đơn giá thi công tổng hợp" cho nhà dân.
+// Source: khảo sát thị trường thực tế + tham khảo thông báo giá vật liệu xây dựng Bộ Xây dựng
+// Cập nhật: Q2/2026 (tháng 6/2026) — tăng ~8-10% so với Q1/2025 do lương tối thiểu vùng tăng 6%
+// từ 1/7/2025 và giá xi măng/thép/vật tư hoàn thiện tăng 5-8%
+const REGION_PRICES = {
+    "hanoi": {
+        label: "Hà Nội",
+        quarter: "Q2/2026",
+        updatedAt: "2026-06-01",
+        note: "Hà Nội & vùng phụ cận — tháng 6/2026",
+        prices: {
+            "excavation":         330000,
+            "backfill":           135000,
+            "concrete-footing":  3050000,
+            "concrete-column":   3450000,
+            "concrete-beam":     3450000,
+            "concrete-slab":     3050000,
+            "concrete-stair":    3800000,
+            "masonry-110":        275000,
+            "masonry-220":        385000,
+            "masonry-aac-110":    240000,
+            "formwork":           132000,
+            "plastering-1-face":   72000,
+            "plastering-2-face":  132000,
+            "plastering-ceiling":  78000,
+            "skim-coat":           50000,
+            "paint-interior":      62000,
+            "paint-exterior":      72000,
+            "paint-ceiling":       62000,
+            "screed":              94000,
+            "tiling-floor":       200000,
+            "tiling-wall":        220000,
+            "waterproof-floor":   135000,
+            "waterproof-wall":    145000,
+            "stone-floor":        310000,
+            "stone-wall":         355000,
+            "ceiling-gypsum":     200000,
+            "ceiling-wood":       245000,
+            "railing":            500000,
+            "fence":              420000,
+            "pathway":            245000,
+            "door":              2750000,
+            "window":            1980000,
+            "sanitary":          1320000,
+            "electrical":         94000,
+            "plumbing":          105000,
+        }
     },
-    "masonry-220": {
-        name: "Xây tường gạch 220 (tường đôi)",
-        unit: "m²",
-        price: 350000
+    "hcm": {
+        label: "TP. Hồ Chí Minh",
+        quarter: "Q2/2026",
+        updatedAt: "2026-06-01",
+        note: "HCM & vùng phụ cận — tháng 6/2026",
+        prices: {
+            "excavation":         385000,
+            "backfill":           155000,
+            "concrete-footing":  3380000,
+            "concrete-column":   3800000,
+            "concrete-beam":     3800000,
+            "concrete-slab":     3380000,
+            "concrete-stair":    4150000,
+            "masonry-110":        308000,
+            "masonry-220":        428000,
+            "masonry-aac-110":    275000,
+            "formwork":           155000,
+            "plastering-1-face":   83000,
+            "plastering-2-face":  150000,
+            "plastering-ceiling":  88000,
+            "skim-coat":           58000,
+            "paint-interior":      72000,
+            "paint-exterior":      83000,
+            "paint-ceiling":       72000,
+            "screed":             105000,
+            "tiling-floor":       220000,
+            "tiling-wall":        242000,
+            "waterproof-floor":   150000,
+            "waterproof-wall":    165000,
+            "stone-floor":        340000,
+            "stone-wall":         396000,
+            "ceiling-gypsum":     220000,
+            "ceiling-wood":       275000,
+            "railing":            550000,
+            "fence":              475000,
+            "pathway":            275000,
+            "door":              3080000,
+            "window":            2200000,
+            "sanitary":          1540000,
+            "electrical":         105000,
+            "plumbing":           121000,
+        }
     },
-    "masonry-aac-110": {
-        name: "Xây tường gạch AAC 100mm",
-        unit: "m²",
-        price: 220000
+    "danang": {
+        label: "Đà Nẵng",
+        quarter: "Q2/2026",
+        updatedAt: "2026-06-01",
+        note: "Đà Nẵng & vùng phụ cận — tháng 6/2026",
+        prices: {
+            "excavation":         297000,
+            "backfill":           121000,
+            "concrete-footing":  2830000,
+            "concrete-column":   3270000,
+            "concrete-beam":     3270000,
+            "concrete-slab":     2830000,
+            "concrete-stair":    3600000,
+            "masonry-110":        253000,
+            "masonry-220":        363000,
+            "masonry-aac-110":    220000,
+            "formwork":           121000,
+            "plastering-1-face":   66000,
+            "plastering-2-face":  121000,
+            "plastering-ceiling":  72000,
+            "skim-coat":           47000,
+            "paint-interior":      58000,
+            "paint-exterior":      66000,
+            "paint-ceiling":       58000,
+            "screed":              88000,
+            "tiling-floor":       187000,
+            "tiling-wall":        209000,
+            "waterproof-floor":   121000,
+            "waterproof-wall":    132000,
+            "stone-floor":        286000,
+            "stone-wall":         330000,
+            "ceiling-gypsum":     182000,
+            "ceiling-wood":       220000,
+            "railing":            462000,
+            "fence":              385000,
+            "pathway":            220000,
+            "door":              2530000,
+            "window":            1815000,
+            "sanitary":          1210000,
+            "electrical":          88000,
+            "plumbing":            97000,
+        }
     },
-    "plastering-1-face": {
-        name: "Trát tường xi măng 1 mặt",
-        unit: "m²",
-        price: 65000
+    "mien-trung": {
+        label: "Miền Trung (tỉnh)",
+        quarter: "Q2/2026",
+        updatedAt: "2026-06-01",
+        note: "Nghệ An, Hà Tĩnh, Quảng Bình, Quảng Trị, Thừa Thiên Huế — tháng 6/2026",
+        prices: {
+            "excavation":         264000,
+            "backfill":           105000,
+            "concrete-footing":  2620000,
+            "concrete-column":   3050000,
+            "concrete-beam":     3050000,
+            "concrete-slab":     2620000,
+            "concrete-stair":    3270000,
+            "masonry-110":        231000,
+            "masonry-220":        330000,
+            "masonry-aac-110":    204000,
+            "formwork":           110000,
+            "plastering-1-face":   61000,
+            "plastering-2-face":  110000,
+            "plastering-ceiling":  64000,
+            "skim-coat":           42000,
+            "paint-interior":      50000,
+            "paint-exterior":      61000,
+            "paint-ceiling":       50000,
+            "screed":              79000,
+            "tiling-floor":       171000,
+            "tiling-wall":        193000,
+            "waterproof-floor":   110000,
+            "waterproof-wall":    121000,
+            "stone-floor":        264000,
+            "stone-wall":         303000,
+            "ceiling-gypsum":     165000,
+            "ceiling-wood":       204000,
+            "railing":            418000,
+            "fence":              352000,
+            "pathway":            198000,
+            "door":              2310000,
+            "window":            1650000,
+            "sanitary":          1045000,
+            "electrical":          79000,
+            "plumbing":            88000,
+        }
     },
-    "plastering-2-face": {
-        name: "Trát tường xi măng 2 mặt",
-        unit: "m²",
-        price: 120000
-    },
-    "screed": {
-        name: "Cán nền phẳng xi măng cát",
-        unit: "m²",
-        price: 85000
-    },
-    "tiling-floor": {
-        name: "Lát nền gạch (gạch + keo + nhân công)",
-        unit: "m²",
-        price: 180000
-    },
-    "tiling-wall": {
-        name: "Ốp tường gạch (gạch + keo + nhân công)",
-        unit: "m²",
-        price: 200000
-    }
 };
+
+// Default region on first load
+const DEFAULT_REGION = "hanoi";
+
+// Backward-compat alias — code that reads DEFAULT_WORK_ITEM_PRICES[key].price still works
+const DEFAULT_WORK_ITEM_PRICES = (() => {
+    const base = REGION_PRICES[DEFAULT_REGION].prices;
+    const dims = {
+        "masonry-110":        { name: "Xây tường gạch 110 (tường đơn)",          unit: "m²" },
+        "masonry-220":        { name: "Xây tường gạch 220 (tường đôi)",          unit: "m²" },
+        "masonry-aac-110":    { name: "Xây tường gạch AAC 100mm",                unit: "m²" },
+        "plastering-1-face":  { name: "Trát tường xi măng 1 mặt",                unit: "m²" },
+        "plastering-2-face":  { name: "Trát tường xi măng 2 mặt",                unit: "m²" },
+        "plastering-ceiling": { name: "Trát trần bê tông",                       unit: "m²" },
+        "skim-coat":          { name: "Bả bột putty",                            unit: "m²" },
+        "paint-interior":     { name: "Sơn tường trong nhà",                     unit: "m²" },
+        "paint-exterior":     { name: "Sơn tường ngoài nhà",                     unit: "m²" },
+        "paint-ceiling":      { name: "Sơn trần nhà",                            unit: "m²" },
+        "screed":             { name: "Cán nền phẳng xi măng cát",               unit: "m²" },
+        "tiling-floor":       { name: "Lát nền gạch (gạch + keo + nhân công)",   unit: "m²" },
+        "tiling-wall":        { name: "Ốp tường gạch (gạch + keo + nhân công)",  unit: "m²" },
+        "waterproof-floor":   { name: "Chống thấm sàn",                          unit: "m²" },
+        "waterproof-wall":    { name: "Chống thấm tường",                        unit: "m²" },
+        "stone-floor":        { name: "Lát đá sàn",                              unit: "m²" },
+        "stone-wall":         { name: "Ốp đá tường",                             unit: "m²" },
+        "ceiling-gypsum":     { name: "Trần thạch cao",                          unit: "m²" },
+        "ceiling-wood":       { name: "Trần gỗ/nhựa PVC",                        unit: "m²" },
+        "formwork":           { name: "Ván khuôn",                               unit: "m²" },
+        "excavation":         { name: "Đào đất hố móng",                         unit: "m³" },
+        "backfill":           { name: "Đắp đất",                                 unit: "m³" },
+        "concrete-footing":   { name: "Bê tông móng (vật tư + nhân công)",       unit: "m³" },
+        "concrete-column":    { name: "Bê tông cột (vật tư + nhân công)",        unit: "m³" },
+        "concrete-beam":      { name: "Bê tông dầm (vật tư + nhân công)",        unit: "m³" },
+        "concrete-slab":      { name: "Bê tông sàn (vật tư + nhân công)",        unit: "m³" },
+        "concrete-stair":     { name: "Bê tông cầu thang (vật tư + nhân công)",  unit: "m³" },
+        "railing":            { name: "Lan can/tay vịn",                         unit: "md" },
+        "fence":              { name: "Hàng rào",                                unit: "md" },
+        "pathway":            { name: "Đường dạo/lát vỉa hè",                   unit: "m²" },
+        "door":               { name: "Lắp cửa đi",                              unit: "cái" },
+        "window":             { name: "Lắp cửa sổ",                              unit: "cái" },
+        "sanitary":           { name: "Thiết bị vệ sinh",                        unit: "bộ" },
+        "electrical":         { name: "Hệ thống điện âm tường",                  unit: "m" },
+        "plumbing":           { name: "Hệ thống cấp/thoát nước",                 unit: "m" },
+    };
+    const result = {};
+    Object.entries(dims).forEach(([key, meta]) => {
+        result[key] = { ...meta, price: base[key] || 0 };
+    });
+    return result;
+})();
 
 // 11. Work item dimension rules — defines which dimensions are active per work type
 // dims: ["l","h"] = Dài × Cao (tường đứng), ["l","w"] = Dài × Rộng (sàn ngang), ["l","w","h"] = m³, [] = chỉ đếm số cái
@@ -315,6 +499,295 @@ const MATERIAL_NORMS = {
     "concrete-stair":     [{ key:"cement-pc40",   perUnit:300   }, { key:"sand-fine",   perUnit:0.43  }, { key:"gravel", perUnit:0.82 }],
     "backfill":           [{ key:"sand-fine",     perUnit:1.2   }],
 };
+
+// ─── PROJECT TEMPLATES ────────────────────────────────────────────────────
+// Each template generates constructionItems (sections + items) when applied.
+// rows[0].l is the placeholder quantity — user replaces with actual measurements.
+const PROJECT_TEMPLATES = [
+    {
+        id: "caito-chungcu",
+        name: "Cải tạo căn hộ chung cư",
+        desc: "Tháo dỡ, hoàn thiện nội thất toàn bộ (không đụng kết cấu)",
+        icon: "building-2",
+        sections: [
+            {
+                name: "Phần I — Tháo dỡ & Chuẩn bị",
+                items: [
+                    { key: "custom", name: "Tháo dỡ vách gạch cũ", unit: "m²", price: 80000 },
+                    { key: "custom", name: "Tháo dỡ gạch lát nền cũ", unit: "m²", price: 60000 },
+                    { key: "custom", name: "Tháo dỡ trần thạch cao cũ", unit: "m²", price: 50000 },
+                    { key: "custom", name: "Chuyển phế thải ra ngoài", unit: "m³", price: 250000 },
+                ]
+            },
+            {
+                name: "Phần II — Xây & Trát",
+                items: [
+                    { key: "masonry-110",       name: "Xây tường ngăn phòng gạch 110" },
+                    { key: "plastering-2-face", name: "Trát tường 2 mặt" },
+                    { key: "plastering-ceiling",name: "Trát trần bê tông" },
+                ]
+            },
+            {
+                name: "Phần III — Điện & Nước",
+                items: [
+                    { key: "electrical", name: "Hệ thống điện âm tường (đi dây + ổ cắm + công tắc)" },
+                    { key: "plumbing",   name: "Hệ thống cấp/thoát nước (ống âm tường)" },
+                ]
+            },
+            {
+                name: "Phần IV — Hoàn thiện tường & trần",
+                items: [
+                    { key: "skim-coat",      name: "Bả bột putty tường trong" },
+                    { key: "paint-interior", name: "Sơn tường trong 2 nước" },
+                    { key: "ceiling-gypsum", name: "Trần thạch cao phẳng" },
+                    { key: "paint-ceiling",  name: "Sơn trần 2 nước" },
+                ]
+            },
+            {
+                name: "Phần V — Nền & Ốp lát",
+                items: [
+                    { key: "waterproof-floor", name: "Chống thấm vệ sinh" },
+                    { key: "screed",           name: "Cán nền xi măng cát san phẳng" },
+                    { key: "tiling-floor",     name: "Lát nền gạch ceramic/porcelain" },
+                    { key: "tiling-wall",      name: "Ốp tường nhà vệ sinh" },
+                ]
+            },
+            {
+                name: "Phần VI — Cửa & Hoàn thiện khác",
+                items: [
+                    { key: "door",     name: "Lắp cửa đi (gỗ công nghiệp)" },
+                    { key: "window",   name: "Lắp cửa sổ / cửa ban công (nhôm)" },
+                    { key: "sanitary", name: "Lắp đặt thiết bị vệ sinh (lavabo, bồn cầu, vòi...)" },
+                ]
+            },
+        ]
+    },
+    {
+        id: "xaymoi-nha-dan",
+        name: "Xây mới nhà dân (1 tầng)",
+        desc: "Từ đào móng đến hoàn thiện cơ bản nhà ở 1 tầng",
+        icon: "home",
+        sections: [
+            {
+                name: "Phần I — Công tác đất & Móng",
+                items: [
+                    { key: "excavation",       name: "Đào đất móng bằng máy" },
+                    { key: "backfill",          name: "Đắp đất san lấp" },
+                    { key: "concrete-footing",  name: "Bê tông móng M200 (đá 1×2)" },
+                ]
+            },
+            {
+                name: "Phần II — Kết cấu BTCT",
+                items: [
+                    { key: "formwork",        name: "Ván khuôn cột, dầm, sàn" },
+                    { key: "concrete-column", name: "Bê tông cột M200" },
+                    { key: "concrete-beam",   name: "Bê tông dầm M200" },
+                    { key: "concrete-slab",   name: "Bê tông sàn mái M200 (dày 10cm)" },
+                ]
+            },
+            {
+                name: "Phần III — Xây tường",
+                items: [
+                    { key: "masonry-220", name: "Xây tường ngoài gạch 220 (tường đôi)" },
+                    { key: "masonry-110", name: "Xây tường trong gạch 110 (tường đơn)" },
+                ]
+            },
+            {
+                name: "Phần IV — Hoàn thiện",
+                items: [
+                    { key: "plastering-2-face",  name: "Trát tường trong + ngoài 2 mặt" },
+                    { key: "plastering-ceiling", name: "Trát trần bê tông" },
+                    { key: "skim-coat",          name: "Bả bột putty trong nhà" },
+                    { key: "paint-interior",     name: "Sơn tường trong 2 nước" },
+                    { key: "paint-exterior",     name: "Sơn tường ngoài chống thấm" },
+                ]
+            },
+            {
+                name: "Phần V — Nền & Ốp lát",
+                items: [
+                    { key: "screed",       name: "Cán nền xi măng cát" },
+                    { key: "tiling-floor", name: "Lát nền gạch" },
+                    { key: "tiling-wall",  name: "Ốp tường nhà vệ sinh" },
+                    { key: "waterproof-floor", name: "Chống thấm sàn vệ sinh + mái" },
+                ]
+            },
+            {
+                name: "Phần VI — Điện, Nước & Hoàn thiện khác",
+                items: [
+                    { key: "electrical", name: "Hệ thống điện âm tường" },
+                    { key: "plumbing",   name: "Hệ thống cấp/thoát nước" },
+                    { key: "door",       name: "Lắp cửa đi" },
+                    { key: "window",     name: "Lắp cửa sổ" },
+                    { key: "sanitary",   name: "Thiết bị vệ sinh" },
+                    { key: "railing",    name: "Lan can cầu thang" },
+                ]
+            },
+        ]
+    },
+    {
+        id: "caito-wc",
+        name: "Cải tạo nhà vệ sinh",
+        desc: "Tháo dỡ và hoàn thiện lại toàn bộ 1 nhà vệ sinh",
+        icon: "droplets",
+        sections: [
+            {
+                name: "Phần I — Tháo dỡ",
+                items: [
+                    { key: "custom", name: "Tháo gạch ốp tường cũ", unit: "m²", price: 80000 },
+                    { key: "custom", name: "Tháo gạch lát nền cũ", unit: "m²", price: 70000 },
+                    { key: "custom", name: "Tháo thiết bị vệ sinh cũ", unit: "bộ", price: 500000 },
+                ]
+            },
+            {
+                name: "Phần II — Chống thấm & Hoàn thiện",
+                items: [
+                    { key: "waterproof-floor", name: "Chống thấm sàn vệ sinh (quét 2 lớp)" },
+                    { key: "waterproof-wall",  name: "Chống thấm tường (quét 1,5m)" },
+                    { key: "screed",           name: "Cán nền xi măng tạo dốc thoát nước" },
+                    { key: "tiling-floor",     name: "Lát nền gạch chống trơn" },
+                    { key: "tiling-wall",      name: "Ốp tường gạch ceramic/porcelain" },
+                ]
+            },
+            {
+                name: "Phần III — Thiết bị & Hoàn thiện",
+                items: [
+                    { key: "plumbing",   name: "Thay ống cấp/thoát nước" },
+                    { key: "sanitary",   name: "Lắp thiết bị vệ sinh mới" },
+                    { key: "electrical", name: "Điện chiếu sáng + quạt hút" },
+                    { key: "door",       name: "Cửa nhôm kính chống nước" },
+                ]
+            },
+        ]
+    },
+    {
+        id: "xay-tron-goi",
+        name: "Xây nhà trọn gói (2–3 tầng)",
+        desc: "Từ phá dỡ / đào móng đến hoàn thiện bàn giao nhà 2–3 tầng liền kề / biệt thự nhỏ",
+        icon: "building",
+        sections: [
+            {
+                name: "Phần I — Phá dỡ & Chuẩn bị mặt bằng",
+                items: [
+                    { key: "custom", name: "Phá dỡ công trình cũ (nếu có)", unit: "m²", price: 150000 },
+                    { key: "excavation",  name: "Đào đất hố móng bằng máy" },
+                    { key: "backfill",    name: "Đắp đất san lấp + đầm chặt" },
+                    { key: "custom", name: "Xử lý nền, đổ bê tông lót móng C10", unit: "m²", price: 180000 },
+                ]
+            },
+            {
+                name: "Phần II — Móng & Tầng hầm / Tầng 1",
+                items: [
+                    { key: "concrete-footing", name: "Bê tông móng đơn / móng băng M200" },
+                    { key: "formwork",         name: "Ván khuôn móng + giằng móng" },
+                    { key: "concrete-column",  name: "Bê tông cột tầng 1 M200" },
+                    { key: "concrete-beam",    name: "Bê tông dầm sàn tầng 2 M200" },
+                    { key: "concrete-slab",    name: "Bê tông sàn tầng 2 (dày 10cm) M200" },
+                    { key: "masonry-220",      name: "Xây tường ngoài tầng 1 gạch 220" },
+                    { key: "masonry-110",      name: "Xây tường trong tầng 1 gạch 110" },
+                ]
+            },
+            {
+                name: "Phần III — Kết cấu tầng 2",
+                items: [
+                    { key: "formwork",        name: "Ván khuôn cột dầm sàn tầng 2" },
+                    { key: "concrete-column", name: "Bê tông cột tầng 2 M200" },
+                    { key: "concrete-beam",   name: "Bê tông dầm sàn tầng 3 M200" },
+                    { key: "concrete-slab",   name: "Bê tông sàn tầng 3 (dày 10cm) M200" },
+                    { key: "masonry-220",     name: "Xây tường ngoài tầng 2 gạch 220" },
+                    { key: "masonry-110",     name: "Xây tường trong tầng 2 gạch 110" },
+                ]
+            },
+            {
+                name: "Phần IV — Kết cấu tầng 3 & Mái",
+                items: [
+                    { key: "formwork",        name: "Ván khuôn cột dầm sàn tầng 3" },
+                    { key: "concrete-column", name: "Bê tông cột tầng 3 M200" },
+                    { key: "concrete-beam",   name: "Bê tông dầm mái M200" },
+                    { key: "concrete-slab",   name: "Bê tông sàn mái (dày 10cm) M200" },
+                    { key: "masonry-110",     name: "Xây tường trong tầng 3 gạch 110" },
+                    { key: "waterproof-floor",name: "Chống thấm sàn mái (2 lớp)" },
+                ]
+            },
+            {
+                name: "Phần V — Cầu thang & Lan can",
+                items: [
+                    { key: "concrete-stair", name: "Bê tông cầu thang toàn nhà M200" },
+                    { key: "railing",        name: "Lan can cầu thang + ban công (inox/sắt)" },
+                    { key: "tiling-floor",   name: "Lát bậc cầu thang gạch granite" },
+                ]
+            },
+            {
+                name: "Phần VI — Hoàn thiện tường & trần",
+                items: [
+                    { key: "plastering-2-face",  name: "Trát tường trong + ngoài 2 mặt toàn nhà" },
+                    { key: "plastering-ceiling", name: "Trát trần bê tông toàn nhà" },
+                    { key: "skim-coat",          name: "Bả bột putty tường trong" },
+                    { key: "paint-interior",     name: "Sơn tường trong 2 nước phủ" },
+                    { key: "paint-exterior",     name: "Sơn ngoại thất chống thấm 2 nước" },
+                    { key: "ceiling-gypsum",     name: "Trần thạch cao phòng khách + phòng ngủ" },
+                    { key: "paint-ceiling",      name: "Sơn trần 2 nước" },
+                ]
+            },
+            {
+                name: "Phần VII — Nền & Ốp lát",
+                items: [
+                    { key: "waterproof-floor", name: "Chống thấm sàn vệ sinh các tầng" },
+                    { key: "screed",           name: "Cán nền xi măng cát toàn nhà" },
+                    { key: "tiling-floor",     name: "Lát nền gạch ceramic/porcelain toàn nhà" },
+                    { key: "tiling-wall",      name: "Ốp tường gạch các phòng vệ sinh" },
+                    { key: "stone-floor",      name: "Lát đá granite sảnh + phòng khách (nếu có)" },
+                ]
+            },
+            {
+                name: "Phần VIII — Điện & Nước",
+                items: [
+                    { key: "electrical", name: "Hệ thống điện âm tường toàn nhà (dây + CB + ổ cắm)" },
+                    { key: "plumbing",   name: "Hệ thống cấp/thoát nước toàn nhà" },
+                    { key: "sanitary",   name: "Lắp đặt thiết bị vệ sinh (mỗi phòng tắm)" },
+                ]
+            },
+            {
+                name: "Phần IX — Cửa & Hoàn thiện khác",
+                items: [
+                    { key: "door",     name: "Lắp cửa đi chính + cửa phòng (gỗ công nghiệp)" },
+                    { key: "window",   name: "Lắp cửa sổ / cửa ban công nhôm kính" },
+                    { key: "fence",    name: "Tường rào + cổng (nếu có)" },
+                    { key: "pathway",  name: "Sân trước + lối đi lát gạch" },
+                ]
+            },
+        ]
+    },
+    {
+        id: "son-noi-that",
+        name: "Sơn & Hoàn thiện nội thất",
+        desc: "Bả putty + sơn tường trần toàn nhà / căn hộ",
+        icon: "paint-roller",
+        sections: [
+            {
+                name: "Phần I — Chuẩn bị bề mặt",
+                items: [
+                    { key: "custom", name: "Đục tẩy vết thấm, nứt, bong tróc", unit: "m²", price: 30000 },
+                    { key: "custom", name: "Bơm keo chống nứt khe hở", unit: "md", price: 25000 },
+                ]
+            },
+            {
+                name: "Phần II — Bả & Sơn tường",
+                items: [
+                    { key: "skim-coat",      name: "Bả bột putty tường trong (2 lớp + đánh giấy)" },
+                    { key: "paint-interior", name: "Sơn tường trong 1 nước lót + 2 nước phủ" },
+                    { key: "paint-exterior", name: "Sơn ngoại thất chống thấm (nếu có)" },
+                ]
+            },
+            {
+                name: "Phần III — Trần",
+                items: [
+                    { key: "ceiling-gypsum", name: "Trần thạch cao (nếu cải tạo)" },
+                    { key: "paint-ceiling",  name: "Sơn trần 1 nước lót + 2 nước phủ" },
+                ]
+            },
+        ]
+    },
+];
 
 // Purchase unit metadata for materials.html
 const PURCHASE_MATERIAL_LABELS = {
