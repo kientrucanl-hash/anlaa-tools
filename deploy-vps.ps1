@@ -40,11 +40,16 @@ $extractCmd = "mkdir -p $REMOTE_DIR && tar -xzf /tmp/$ARCHIVE -C $REMOTE_DIR && 
 ssh -o StrictHostKeyChecking=no $SERVER $extractCmd
 Write-Host "Giai nen tren VPS thanh cong!" -ForegroundColor Green
 
-# 4. Rebuild & Restart Docker Compose on VPS
+# 4. Rebuild & Restart Docker Compose on VPS, then run DB migration
 Write-Host "[4/5] Dang kich hoat build va tai khoi dong Docker Container tren VPS..." -ForegroundColor Yellow
 $dockerCmd = "cd $REMOTE_DIR && docker compose up -d --build --force-recreate && docker image prune -f"
 ssh -o StrictHostKeyChecking=no $SERVER $dockerCmd
 Write-Host "Khoi dong Docker Container trên VPS thanh cong!" -ForegroundColor Green
+
+Write-Host "[4b] Chay DB migration..." -ForegroundColor Yellow
+$migrateCmd = "cd $REMOTE_DIR && docker compose exec -T anlc node server/db/migrate.js"
+ssh -o StrictHostKeyChecking=no $SERVER $migrateCmd
+Write-Host "Migration hoan tat!" -ForegroundColor Green
 
 # 5. Clean up local archive
 Write-Host "[5/5] Don dep tep tam local..." -ForegroundColor Yellow
