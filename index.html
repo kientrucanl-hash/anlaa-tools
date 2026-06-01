@@ -2,19 +2,17 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-    <meta http-equiv="Pragma" content="no-cache">
-    <meta http-equiv="Expires" content="0">
-    <link rel="icon" type="image/x-icon" href="favicon.ico">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">    <link rel="icon" type="image/x-icon" href="favicon.ico">
     <link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
     <title>Dự toán ANLAA — Tool Tính Vật tư Xây - Trát - Ốp lát miền Bắc</title>
     <!-- Google Fonts: Inter & Outfit -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Outfit:wght@100..900&display=swap" rel="stylesheet">
+    <!-- Anti-FOUC: apply saved theme before first paint -->
+    <script>document.documentElement.setAttribute('data-theme', localStorage.getItem('anlaa_theme') || 'dark');</script>
     <!-- Main Style -->
-    <link rel="stylesheet" href="css/styles.css?v=3.15">
+    <link rel="stylesheet" href="css/styles.css?v=3.20">
     <!-- Chart.js CDN -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <!-- html2canvas CDN -->
@@ -200,6 +198,12 @@
                     <button id="btnSubmitProject" class="btn btn-success btn-sm w-full" title="Nộp dự án cho Admin duyệt">
                         <i data-lucide="send"></i> Nộp duyệt
                     </button>
+                </div>
+
+                <!-- Theme Switcher -->
+                <div class="sb-theme-bar no-print" id="sbThemeBar">
+                    <span class="sb-theme-label">Giao diện:</span>
+                    <div class="sb-theme-btns"></div>
                 </div>
             </div>
 
@@ -946,13 +950,20 @@
     <div id="toastNotification" class="toast-notification"></div>
     
     <!-- Application Logic Modules -->
-    <script src="js/constants.js?v=3.14"></script>
-    <script src="js/calculator.js?v=3.14"></script>
-    <script src="js/dxf-parser.js?v=3.14"></script>
-    <script src="js/pdf-takeoff.js?v=3.14"></script>
-    <script src="js/api.js?v=3.14"></script>
-    <script src="js/auth.js?v=3.14"></script>
-    <script src="js/app.js?v=3.14"></script>
-    <script src="js/nav.js?v=3.15"></script>
+    <script src="js/constants.js?v=3.18"></script>
+    <script src="js/calculator.js?v=3.18"></script>
+    <script src="js/dxf-parser.js?v=3.18"></script>
+    <script src="js/pdf-takeoff.js?v=3.18"></script>
+    <script src="js/api.js?v=3.18"></script>
+    <script src="js/auth.js?v=3.18"></script>
+    <script src="js/app.js?v=3.18"></script>
+    <script src="js/nav.js?v=3.20"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            initAppSidebar({ activePage: 'masonry' });
+        });
+    </script>
 </body>
 </html>
+
+
