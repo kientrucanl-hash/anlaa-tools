@@ -98,6 +98,7 @@ function renderSidebarHTML(activePage) {
                     ${getNavLink('materials', 'Vật tư cần mua', 'package', 'materials.html')}
                     ${getNavLink('pricing', 'Bảng Giá & NTP', 'bar-chart-2', 'pricing.html')}
                     ${getNavLink('contractors', 'Nhà thầu phụ', 'hard-hat', 'contractors.html')}
+                    ${getNavLink('quotations', 'Báo giá Nhà thầu', 'clipboard-list', 'quotations.html')}
                     <div class="sb-nav-separator"></div>
                     ${getNavLink('history', 'Lịch sử Dự toán', 'clock', 'history.html')}
                     ${getNavLink('settings', 'Cài đặt Tài khoản', 'settings', 'settings.html')}
@@ -120,7 +121,7 @@ function renderSidebarHTML(activePage) {
                     <span id="sidebarUserName" class="sb-user-name" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block;">${userName}</span>
                     <span class="sb-user-role" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block;">${userRole}</span>
                 </div>
-                
+
                 <!-- UNIFIED NOTIFICATION BELL (placed beautifully in sidebar footer) -->
                 <div class="noti-container no-print" style="margin-right: 8px; display: inline-flex;">
                     <button id="btnNotifications" class="sb-icon-btn noti-btn" title="Thông báo hệ thống" style="position: relative; width: 32px; height: 32px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; color: var(--text-secondary); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: var(--transition-smooth);">
@@ -132,6 +133,12 @@ function renderSidebarHTML(activePage) {
                 <button id="sidebarLogoutBtn" class="sb-icon-btn sb-logout-btn" title="Đăng xuất" style="width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; color: var(--text-secondary); cursor: pointer; transition: var(--transition-smooth);">
                     <i data-lucide="log-out" style="width: 16px; height: 16px;"></i>
                 </button>
+            </div>
+
+            <!-- Theme Switcher -->
+            <div class="sb-theme-bar no-print" id="sbThemeBar">
+                <span class="sb-theme-label">Giao diện:</span>
+                <div class="sb-theme-btns"></div>
             </div>
         </div>
     `;
@@ -404,6 +411,11 @@ function initAppSidebar({ activePage = '' } = {}) {
     // Initialize Lucide Icons
     if (typeof lucide !== 'undefined') {
         lucide.createIcons();
+    }
+
+    // Initialize Theme Switcher
+    if (typeof initThemeSwitcher === 'function') {
+        initThemeSwitcher();
     }
 
     // Initialize Notification System

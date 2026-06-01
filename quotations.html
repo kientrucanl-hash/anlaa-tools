@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/x-icon" href="favicon.ico">
+    <link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
+    <title>Báo giá Nhà thầu — ANLAA Mecalc</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Outfit:wght@100..900&display=swap" rel="stylesheet">
+    <script>document.documentElement.setAttribute('data-theme', localStorage.getItem('anlaa_theme') || 'dark');</script>
+    <link rel="stylesheet" href="css/styles.css?v=3.21">
+    <link rel="stylesheet" href="css/quotations.css?v=1.0">
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+
+<!-- Login Overlay -->
+<div id="loginOverlay" class="login-overlay" style="display:none;">
+    <div class="login-card">
+        <div class="login-brand">
+            <img src="logo-tool-anlc.webp" alt="Dự toán ANLAA" class="login-logo">
+        </div>
+        <form id="loginForm" autocomplete="off">
+            <div class="login-field">
+                <label for="loginUsername">Tên đăng nhập</label>
+                <input type="text" id="loginUsername" placeholder="Nhập tên đăng nhập" required autocomplete="username">
+            </div>
+            <div class="login-field">
+                <label for="loginPassword">Mật khẩu</label>
+                <div class="pwd-wrapper">
+                    <input type="password" id="loginPassword" placeholder="••••••••" required autocomplete="current-password">
+                    <button type="button" id="togglePassword" class="toggle-pwd">👁</button>
+                </div>
+            </div>
+            <p id="loginError" class="login-error"></p>
+            <button type="submit" id="loginBtn" class="btn btn-primary w-full">Đăng nhập</button>
+        </form>
+    </div>
+</div>
+
+<div id="appContainer" class="app-container">
+
+    <!-- SIDEBAR LEFT -->
+    <aside id="appSidebar" class="app-sidebar no-print"></aside>
+
+    <!-- MAIN -->
+    <main class="spage-main">
+
+        <!-- HEADER -->
+        <div class="spage-header">
+            <div style="display:flex; align-items:center; gap:10px;">
+                <button id="sidebarToggle" class="sidebar-toggle-btn" title="Mở Menu">
+                    <i data-lucide="menu"></i>
+                </button>
+                <div>
+                    <h2 style="margin:0;">Báo giá Nhà thầu</h2>
+                    <p style="margin-top:4px; color:var(--text-secondary);">So sánh đơn giá thi công từ nhiều nhà thầu — gửi admin phê duyệt</p>
+                </div>
+            </div>
+            <div class="toolbar-actions" style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                <button id="btnNewQuotation" class="btn btn-primary btn-sm">
+                    <i data-lucide="plus"></i> Tạo bảng mới
+                </button>
+                <button id="btnRefreshList" class="btn btn-secondary btn-sm">
+                    <i data-lucide="refresh-cw"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- LIST VIEW -->
+        <section id="viewList">
+            <div class="qtable-wrap">
+                <table class="admin-table" id="quotationListTable">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Tên bảng báo giá</th>
+                            <th>Nhà thầu</th>
+                            <th>Hạng mục</th>
+                            <th>Cập nhật</th>
+                            <th>Trạng thái</th>
+                            <th>Hành động</th>
+                        </tr>
+                    </thead>
+                    <tbody id="quotationListBody">
+                        <tr><td colspan="7" class="table-empty">Đang tải...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- EDITOR VIEW -->
+        <section id="viewEditor" style="display:none;">
+            <div class="qeditor-header">
+                <button id="btnBackToList" class="btn btn-secondary btn-sm">
+                    <i data-lucide="arrow-left"></i> Danh sách
+                </button>
+                <div class="qeditor-title-wrap">
+                    <input type="text" id="qName" class="qeditor-title-input" placeholder="Tên bảng báo giá..." maxlength="200">
+                    <span id="qStatusBadge" class="status-badge"></span>
+                </div>
+                <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                    <button id="btnSaveDraft" class="btn btn-secondary btn-sm">
+                        <i data-lucide="save"></i> Lưu nháp
+                    </button>
+                    <button id="btnSubmitQuotation" class="btn btn-primary btn-sm">
+                        <i data-lucide="send"></i> Gửi duyệt
+                    </button>
+                </div>
+            </div>
+
+            <!-- Admin note (rejection) -->
+            <div id="qAdminNote" class="admin-note-box" style="display:none; margin:0 2rem 1rem;">
+                <strong>Lý do từ chối:</strong>
+                <p id="qAdminNoteText"></p>
+            </div>
+
+            <!-- Contractor name headers -->
+            <div class="qcontractors-row">
+                <div class="qcontractor-label">Nhà thầu:</div>
+                <input type="text" id="ntc0" class="qcontractor-input" placeholder="Tên nhà thầu 1">
+                <input type="text" id="ntc1" class="qcontractor-input" placeholder="Tên nhà thầu 2">
+                <input type="text" id="ntc2" class="qcontractor-input" placeholder="Tên nhà thầu 3">
+            </div>
+
+            <!-- Quotation table -->
+            <div class="qtable-wrap" style="margin: 0 1.5rem 1.5rem;">
+                <table class="qdata-table" id="qDataTable">
+                    <thead>
+                        <tr>
+                            <th class="qth-stt">STT</th>
+                            <th class="qth-item">Hạng mục</th>
+                            <th class="qth-unit">Đơn vị</th>
+                            <th class="qth-price" id="qth0">Nhà thầu 1<br><span class="qth-sub">Đơn giá</span></th>
+                            <th class="qth-note" id="qthn0">Ghi chú</th>
+                            <th class="qth-price" id="qth1">Nhà thầu 2<br><span class="qth-sub">Đơn giá</span></th>
+                            <th class="qth-note" id="qthn1">Ghi chú</th>
+                            <th class="qth-price" id="qth2">Nhà thầu 3<br><span class="qth-sub">Đơn giá</span></th>
+                            <th class="qth-note" id="qthn2">Ghi chú</th>
+                            <th class="qth-action no-print"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="qDataBody">
+                        <!-- rows rendered by JS -->
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="no-print" style="margin: 0 1.5rem 2rem; display:flex; gap:8px;">
+                <button id="btnAddRow" class="btn btn-secondary btn-sm">
+                    <i data-lucide="plus"></i> Thêm hạng mục
+                </button>
+            </div>
+        </section>
+
+    </main>
+</div>
+
+<!-- Modal: Xác nhận xóa bảng -->
+<div id="deleteQuotationModal" class="modal-overlay" style="display:none;">
+    <div class="modal-box modal-sm">
+        <div class="modal-header">
+            <h3>Xác nhận xóa</h3>
+        </div>
+        <div class="modal-body">
+            <p>Bạn có chắc muốn xóa bảng <strong id="deleteQuotationName"></strong>? Hành động này không thể hoàn tác.</p>
+            <div class="modal-actions mt-2">
+                <button id="btnConfirmDeleteQuotation" class="btn btn-danger">Xóa</button>
+                <button id="btnCancelDeleteQuotation" class="btn btn-secondary">Hủy</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="js/api.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/nav.js?v=3.18"></script>
+<script src="js/quotations.js?v=1.0"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        initAppSidebar({ activePage: 'quotations' });
+    });
+</script>
+</body>
+</html>
