@@ -329,3 +329,13 @@ body.admin-page {
 .boq-table th, .boq-table td {
     font-size: 0.82rem;
 }
+
+/* ---- Font & Aligned numbers overrides ---- */
+.admin-toolbar h2, .modal-header h3, .spage-card h3 {
+    font-family: 'Outfit', sans-serif !important;
+    font-weight: 700;
+}
+.admin-table th, .admin-table td {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1;
+}
