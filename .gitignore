@@ -4,6 +4,7 @@ ACCOUNTS.local.md
 server/.env
 # Database files
 server/db/anlaa_data.json
+server/db/*.json
 server/db/anlaa.db
 server/db/anlaa.db-shm
 server/db/anlaa.db-wal

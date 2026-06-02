@@ -2,6 +2,7 @@ const express = require('express');
 const Joi = require('joi');
 const db = require('../db/database');
 const { requireAuth } = require('../middleware/auth');
+const authz = require('../authz');
 
 const router = express.Router();
 
@@ -16,15 +17,12 @@ function validate(schema) {
 
 // Helper: check if user can manage a project (owner or admin)
 function canManage(project, userId, userRole) {
-    return userRole === 'admin' || project.user_id === userId;
+    return authz.canManageProject(project, { id: userId, role: userRole });
 }
 
 // Helper: check if user has access (owner, admin, or accepted collaborator)
 function getCollabRole(project, userId, userRole) {
-    if (userRole === 'admin' || project.user_id === userId) return 'editor';
-    const collab = db.collaborators.find(project.id, userId);
-    if (collab && collab.status === 'accepted') return collab.role;
-    return null;
+    return authz.getCollabRole(db, project, userId, userRole);
 }
 
 // ── GET /api/collaboration/:projectId — get collaborators + pending requests
@@ -358,6 +356,11 @@ router.put('/:projectId/comments/:commentId/resolve', requireAuth, (req, res) =>
         return res.status(403).json({ error: 'Chỉ chủ dự án mới có thể resolve comment' });
     }
 
+    const comment = db.comments.findById(commentId);
+    if (!comment || comment.project_id !== projectId) {
+        return res.status(404).json({ error: 'Không tìm thấy comment' });
+    }
+
     db.comments.resolve(commentId, req.user.id);
 
     const io = req.app.get('io');
@@ -375,6 +378,14 @@ router.delete('/:projectId/comments/:commentId', requireAuth, (req, res) => {
     // Only comment author or project owner can delete
     const project = db.projects.findById(projectId);
     if (!project) return res.status(404).json({ error: 'Không tìm thấy dự án' });
+
+    const comment = db.comments.findById(commentId);
+    if (!comment || comment.project_id !== projectId) {
+        return res.status(404).json({ error: 'Không tìm thấy comment' });
+    }
+    if (!authz.canDeleteComment(project, comment, req.user)) {
+        return res.status(403).json({ error: 'Không có quyền xóa comment này' });
+    }
 
     db.comments.delete(commentId);
 

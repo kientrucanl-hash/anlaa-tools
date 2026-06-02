@@ -60,6 +60,15 @@ Có hệ thống tài khoản user/admin + workflow phê duyệt dự án (draft
 - Gói keo: **bao 25 kg**, xi măng PC40: **bao 50 kg**
 - UI 100% Tiếng Việt, code 100% Tiếng Anh
 
+## Quy tắc encoding HTML — BẮT BUỘC đọc trước khi sửa bất kỳ file HTML nào
+
+Đọc `.agent/rules/rule_encoding_html.md`. Tóm tắt cứng:
+
+- Tất cả file HTML phải là **UTF-8 không BOM** — kiểm tra trước khi edit
+- Dấu hiệu lỗi: chữ `Ã¡`, `á»`, `Ä'` trong file → double-encoded, phải fix từ git history
+- Trước deploy: chạy audit encoding toàn bộ `*.html` (script có trong rule)
+- Không dùng Notepad, không dùng `Set-Content` thiếu `-Encoding utf8`, không dùng `utf-8-sig`
+
 ## Quy tắc bảo mật dự án
 
 Đọc `.agent/rules/rule_bao_mat_du_an.md`. Tóm tắt cứng:
@@ -125,3 +134,4 @@ Khi compact context, **bắt buộc giữ lại**:
 - Bảo mật: KHÔNG in JWT_SECRET, KHÔNG commit `.env` và `anlaa.db`, mọi endpoint mới cần `requireAuth`/`requireAdmin`
 - Cấu trúc: frontend ở root (`index.html`, `js/`, `css/`), backend ở `server/`, DB ở `server/db/anlaa.db`
 - UI 100% Tiếng Việt, code 100% Tiếng Anh
+- **Encoding HTML**: UTF-8 không BOM bắt buộc — audit trước deploy: `python3 -c "import glob; [print('BAD' if open(f,'rb').read(3)==b'\xef\xbb\xbf' or 'Ã¡' in open(f).read() else 'OK', f) for f in glob.glob('*.html')]"`

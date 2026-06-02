@@ -14,7 +14,7 @@ const projectCreateSchema = Joi.object({
         'any.required': 'Thiếu tên dự án',
     }),
     address: Joi.string().trim().max(500).allow('').default(''),
-    data: Joi.array().default([]),
+    data: Joi.array().max(2000).default([]),
 });
 
 const projectUpdateSchema = Joi.object({
@@ -23,7 +23,7 @@ const projectUpdateSchema = Joi.object({
         'string.max': 'Tên dự án không được vượt quá 200 ký tự',
     }),
     address: Joi.string().trim().max(500).allow(''),
-    data: Joi.array(),
+    data: Joi.array().max(2000),
 }).min(1);
 
 const rejectSchema = Joi.object({

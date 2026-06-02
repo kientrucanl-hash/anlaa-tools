@@ -332,7 +332,7 @@ body.admin-page {
 
 /* ---- Font & Aligned numbers overrides ---- */
 .admin-toolbar h2, .modal-header h3, .spage-card h3 {
-    font-family: 'Outfit', sans-serif !important;
+    font-family: var(--font-display) !important;
     font-weight: 700;
 }
 .admin-table th, .admin-table td {

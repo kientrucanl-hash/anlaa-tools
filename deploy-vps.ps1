@@ -24,7 +24,7 @@ if (Test-Path $ARCHIVE) {
 }
 
 # Su dung tar co san tren Windows 10/11 de nen nhanh
-tar --exclude="node_modules" --exclude="server/node_modules" --exclude="server/db/*.db" --exclude=".git" --exclude="logs" --exclude="ACCOUNTS.local.md" --exclude="*.local.*" --exclude="server/.env" --exclude=".env" --exclude="deploy.tar.gz" -czf $ARCHIVE *
+tar --exclude="node_modules" --exclude="server/node_modules" --exclude="server/db/*.db" --exclude="server/db/*.json" --exclude=".git" --exclude="logs" --exclude="ACCOUNTS.local.md" --exclude="*.local.*" --exclude="server/.env" --exclude=".env" --exclude="deploy.tar.gz" -czf $ARCHIVE *
 
 $fileSize = (Get-Item $ARCHIVE).Length / 1KB
 Write-Host "Dong goi thanh cong! Kich thuoc file nen: $([math]::Round($fileSize, 2)) KB" -ForegroundColor Green

@@ -76,6 +76,7 @@ router.put('/:id/password', requireAdmin, validate(resetPasswordSchema), (req, r
         return res.status(404).json({ error: 'Không tìm thấy người dùng' });
     }
     db.users.updatePassword(id, bcrypt.hashSync(req.body.newPassword, 10));
+    db.sessions.deleteAllForUser(id);
     res.json({ message: 'Đặt lại mật khẩu thành công' });
 });
 
@@ -89,6 +90,7 @@ router.put('/:id/role', requireAdmin, validate(changeRoleSchema), (req, res) => 
         return res.status(404).json({ error: 'Không tìm thấy người dùng' });
     }
     db.users.updateRole(id, req.body.role);
+    db.sessions.deleteAllForUser(id);
     res.json({ message: 'Cập nhật vai trò thành công' });
 });
 

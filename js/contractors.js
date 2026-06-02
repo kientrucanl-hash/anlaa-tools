@@ -14,7 +14,9 @@ const SPECIALTY_LABELS = {
 const RATING_LABELS = ["", "Kém", "Yếu", "Trung bình", "Tốt", "Xuất sắc"];
 
 let allContractors = [];
+let allDrafts = [];
 let currentEditId = null;
+let currentDraftId = null;
 let sortField = "name";
 let sortDir = "asc";
 
@@ -51,6 +53,12 @@ function specTags(specialty) {
 function toast(msg) {
     const el = document.getElementById("toastNotification");
     if (el) { el.textContent = msg; el.classList.add("show"); setTimeout(() => el.classList.remove("show"), 2500); }
+}
+function currentUser() {
+    try { return JSON.parse(localStorage.getItem("anlaa_user") || "{}"); } catch { return {}; }
+}
+function isAdminUser() {
+    return currentUser().role === "admin";
 }
 
 // ─── API calls ────────────────────────────────────────────────────────────────
@@ -93,6 +101,67 @@ async function deleteContractorAPI(id) {
 }
 
 // ─── Load & Render ────────────────────────────────────────────────────────────
+async function fetchDrafts() {
+    const res = await fetch("/api/contractors/drafts", {
+        headers: { Authorization: "Bearer " + localStorage.getItem("anlaa_token") }
+    });
+    if (!res.ok) throw new Error("Khong the tai danh sach nhap");
+    return res.json();
+}
+async function saveDraftAPI(data, draftId = null) {
+    const method = draftId ? "PUT" : "POST";
+    const url = draftId ? `/api/contractors/drafts/${draftId}` : "/api/contractors/drafts";
+    const res = await fetch(url, {
+        method,
+        headers: {
+            "Content-Type": "application/json",
+            Authorization: "Bearer " + localStorage.getItem("anlaa_token")
+        },
+        body: JSON.stringify(data)
+    });
+    if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || "Khong the luu nhap");
+    }
+    return res.json();
+}
+async function submitDraftAPI(id) {
+    const res = await fetch(`/api/contractors/drafts/${id}/submit`, {
+        method: "PUT",
+        headers: { Authorization: "Bearer " + localStorage.getItem("anlaa_token") }
+    });
+    if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || "Khong the gui duyet");
+    }
+    return res.json();
+}
+async function reviewDraftAPI(id, action, admin_note = "") {
+    const res = await fetch(`/api/contractors/drafts/${id}/${action}`, {
+        method: "PUT",
+        headers: {
+            "Content-Type": "application/json",
+            Authorization: "Bearer " + localStorage.getItem("anlaa_token")
+        },
+        body: JSON.stringify({ admin_note })
+    });
+    if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || "Khong the xu ly nhap");
+    }
+    return res.json();
+}
+async function deleteDraftAPI(id) {
+    const res = await fetch(`/api/contractors/drafts/${id}`, {
+        method: "DELETE",
+        headers: { Authorization: "Bearer " + localStorage.getItem("anlaa_token") }
+    });
+    if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || "Khong the xoa nhap");
+    }
+}
+
 async function loadAll() {
     try {
         allContractors = await fetchContractors();
@@ -105,6 +174,13 @@ async function loadAll() {
         const stats = await fetchStats();
         if (stats) renderStats(stats);
     } catch {}
+    try {
+        allDrafts = await fetchDrafts();
+        renderDrafts();
+    } catch (e) {
+        allDrafts = [];
+        renderDrafts(e.message);
+    }
 }
 
 function renderStats(s) {
@@ -150,6 +226,134 @@ function getSorted(list) {
             ? String(av).localeCompare(String(bv), "vi")
             : String(bv).localeCompare(String(av), "vi");
     });
+}
+
+function draftStatusBadge(status) {
+    const map = {
+        draft: "Nhap",
+        pending: "Cho duyet",
+        approved: "Da duyet",
+        rejected: "Tu choi"
+    };
+    return `<span class="status-badge status-${status === "approved" ? "active" : status === "rejected" ? "blacklist" : "inactive"}">${map[status] || status}</span>`;
+}
+
+function ensureDraftPanel() {
+    let panel = document.getElementById("contractorDraftPanel");
+    if (panel) return panel;
+
+    const tableWrap = document.querySelector(".ctx-table-wrap");
+    if (!tableWrap || !tableWrap.parentNode) return null;
+
+    panel = document.createElement("div");
+    panel.id = "contractorDraftPanel";
+    panel.style.margin = "12px 0";
+    panel.style.padding = "12px";
+    panel.style.border = "1px solid rgba(148,163,184,.18)";
+    panel.style.borderRadius = "8px";
+    panel.style.background = "rgba(15,23,42,.35)";
+    tableWrap.parentNode.insertBefore(panel, tableWrap);
+    return panel;
+}
+
+function renderDrafts(error = "") {
+    const panel = ensureDraftPanel();
+    if (!panel) return;
+
+    const title = isAdminUser() ? "Nhap nha thau can xu ly" : "Nhap nha thau cua toi";
+    const visibleDrafts = isAdminUser()
+        ? allDrafts
+        : allDrafts.filter(d => d.status !== "approved" || d.reviewed_at);
+
+    if (error) {
+        panel.innerHTML = `<div style="font-size:12px;color:#fca5a5;">${escHtml(error)}</div>`;
+        return;
+    }
+
+    if (!visibleDrafts.length) {
+        panel.innerHTML = `
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
+                <strong style="font-size:13px;color:var(--text-secondary);">${title}</strong>
+                <span style="font-size:12px;color:var(--text-muted);">Chua co nhap</span>
+            </div>`;
+        return;
+    }
+
+    panel.innerHTML = `
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px;">
+            <strong style="font-size:13px;color:var(--text-secondary);">${title}</strong>
+            <span style="font-size:12px;color:var(--text-muted);">${visibleDrafts.length} ban ghi</span>
+        </div>
+        <div style="overflow:auto;">
+            <table class="ctx-table" style="min-width:760px;">
+                <thead>
+                    <tr>
+                        <th>Ten nha thau</th>
+                        <th>Trang thai</th>
+                        <th>Nguoi gui</th>
+                        <th>Cap nhat</th>
+                        <th>Ghi chu admin</th>
+                        <th class="no-print"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${visibleDrafts.map(d => `
+                        <tr>
+                            <td>
+                                <div class="td-name">${escHtml(d.payload?.name || "(chua co ten)")}</div>
+                                ${d.contractor_id ? `<div style="font-size:11px;color:var(--text-muted);">Sua nha thau #${d.contractor_id}</div>` : `<div style="font-size:11px;color:var(--text-muted);">Them moi</div>`}
+                            </td>
+                            <td>${draftStatusBadge(d.status)}</td>
+                            <td style="font-size:12px;">${escHtml(d.submitted_by_username || "")}</td>
+                            <td style="font-size:12px;color:var(--text-muted);">${escHtml(d.updated_at || "")}</td>
+                            <td style="font-size:12px;color:var(--text-muted);">${escHtml(d.admin_note || "")}</td>
+                            <td class="no-print" style="text-align:right;white-space:nowrap;">
+                                ${["draft","rejected"].includes(d.status) ? `<button class="btn btn-xs btn-secondary draft-edit" data-id="${d.id}">Sua</button>` : ""}
+                                ${["draft","rejected"].includes(d.status) ? `<button class="btn btn-xs btn-gradient draft-submit" data-id="${d.id}">Gui duyet</button>` : ""}
+                                ${isAdminUser() && d.status === "pending" ? `<button class="btn btn-xs btn-gradient draft-approve" data-id="${d.id}">Duyet</button><button class="btn btn-xs btn-danger draft-reject" data-id="${d.id}">Tu choi</button>` : ""}
+                                ${["draft","rejected"].includes(d.status) ? `<button class="btn btn-xs btn-danger draft-delete" data-id="${d.id}">Xoa</button>` : ""}
+                            </td>
+                        </tr>
+                    `).join("")}
+                </tbody>
+            </table>
+        </div>`;
+
+    panel.querySelectorAll(".draft-edit").forEach(btn => btn.addEventListener("click", () => openDraftModal(parseInt(btn.dataset.id))));
+    panel.querySelectorAll(".draft-submit").forEach(btn => btn.addEventListener("click", async () => {
+        try {
+            await submitDraftAPI(parseInt(btn.dataset.id));
+            allDrafts = await fetchDrafts();
+            renderDrafts();
+            toast("Da gui nhap cho admin duyet");
+        } catch (e) { toast("Loi: " + e.message); }
+    }));
+    panel.querySelectorAll(".draft-approve").forEach(btn => btn.addEventListener("click", async () => {
+        const note = prompt("Ghi chu phe duyet (neu co):", "") || "";
+        try {
+            await reviewDraftAPI(parseInt(btn.dataset.id), "approve", note);
+            await loadAll();
+            toast("Da duyet va luu vao danh ba nha thau");
+        } catch (e) { toast("Loi: " + e.message); }
+    }));
+    panel.querySelectorAll(".draft-reject").forEach(btn => btn.addEventListener("click", async () => {
+        const note = prompt("Ly do tu choi:", "") || "";
+        try {
+            await reviewDraftAPI(parseInt(btn.dataset.id), "reject", note);
+            allDrafts = await fetchDrafts();
+            renderDrafts();
+            toast("Da tu choi nhap");
+        } catch (e) { toast("Loi: " + e.message); }
+    }));
+    panel.querySelectorAll(".draft-delete").forEach(btn => btn.addEventListener("click", async () => {
+        if (!confirm("Xoa ban nhap nay?")) return;
+        try {
+            await deleteDraftAPI(parseInt(btn.dataset.id));
+            allDrafts = await fetchDrafts();
+            renderDrafts();
+            toast("Da xoa nhap");
+        } catch (e) { toast("Loi: " + e.message); }
+    }));
 }
 
 function renderTable() {
@@ -294,13 +498,15 @@ function setStars(v) {
     if (label) label.textContent = RATING_LABELS[v] || "";
 }
 
-function openModal(id = null) {
-    currentEditId = id;
+function openModal(id = null, draft = null) {
+    currentEditId = draft ? (draft.contractor_id || null) : id;
+    currentDraftId = draft ? draft.id : null;
     const modal = document.getElementById("contractorModal");
     const form = document.getElementById("contractorForm");
     if (!modal || !form) return;
 
     document.getElementById("modalTitle").textContent = id ? "Sửa thông tin nhà thầu" : "Thêm nhà thầu mới";
+    if (draft) document.getElementById("modalTitle").textContent = "Sua nhap nha thau";
     form.reset();
 
     // Reset specialties
@@ -309,8 +515,9 @@ function openModal(id = null) {
     document.querySelectorAll(".price-note-input").forEach(i => i.value = "");
     setStars(3);
 
-    if (id) {
-        const c = allContractors.find(x => x.id === id);
+    const source = draft ? draft.payload : (id ? allContractors.find(x => x.id === id) : null);
+    if (source) {
+        const c = source;
         if (!c) return;
         document.getElementById("f_name").value = c.name || "";
         document.getElementById("f_type").value = c.type || "team";
@@ -356,9 +563,16 @@ function openModal(id = null) {
     document.getElementById("f_name").focus();
 }
 
+function openDraftModal(draftId) {
+    const draft = allDrafts.find(d => d.id === draftId);
+    if (!draft) return;
+    openModal(draft.contractor_id || null, draft);
+}
+
 function closeModal() {
     document.getElementById("contractorModal")?.classList.remove("open");
     currentEditId = null;
+    currentDraftId = null;
 }
 
 async function handleSave() {
@@ -403,6 +617,16 @@ async function handleSave() {
     saveBtn.textContent = "Đang lưu...";
 
     try {
+        if (!isAdminUser()) {
+            const draftPayload = { ...payload, contractor_id: currentEditId || null };
+            await saveDraftAPI(draftPayload, currentDraftId);
+            allDrafts = await fetchDrafts();
+            closeModal();
+            renderDrafts();
+            toast("Da luu nhap. Bam Gui duyet de chuyen admin phe duyet.");
+            return;
+        }
+
         const saved = await saveContractorAPI(payload, currentEditId);
         if (currentEditId) {
             const idx = allContractors.findIndex(x => x.id === currentEditId);
@@ -548,6 +772,10 @@ document.addEventListener("DOMContentLoaded", () => {
     initSpecialtyFilter();
 
     loadAll();
+    if (!isAdminUser()) {
+        const del = document.getElementById("detailDelete");
+        if (del) del.style.display = "none";
+    }
 
     // Filters
     ["searchInput","filterStatus","filterType","filterSpecialty"].forEach(id => {

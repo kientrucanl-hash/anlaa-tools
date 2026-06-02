@@ -7,11 +7,11 @@ const router = express.Router();
 
 const pricesSchema = Joi.object({
     region: Joi.string().max(50).default('hanoi'),
-    prices: Joi.object().pattern(Joi.string(), Joi.number().min(0)).required(),
+    prices: Joi.object().max(500).pattern(Joi.string().max(100), Joi.number().min(0)).required(),
 });
 
 const projectPricesSchema = Joi.object({
-    prices: Joi.object().pattern(Joi.string(), Joi.number().min(0)).required(),
+    prices: Joi.object().max(500).pattern(Joi.string().max(100), Joi.number().min(0)).required(),
 });
 
 function validate(schema) {

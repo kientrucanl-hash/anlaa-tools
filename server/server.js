@@ -8,15 +8,14 @@ const rateLimit = require('express-rate-limit');
 const path = require('path');
 const logger = require('./logger');
 const jwt = require('jsonwebtoken');
+const db = require('./db/database');
+const { getProjectRole, parseId } = require('./authz');
 
 // Validate required env vars on startup
 if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32) {
     logger.error('JWT_SECRET must be set and at least 32 characters. Server will not start.');
     process.exit(1);
 }
-
-// Load DB (auto-initializes and seeds on first run)
-require('./db/database');
 
 const app = express();
 const httpServer = createServer(app);
@@ -34,7 +33,13 @@ io.use((socket, next) => {
     if (!token) return next(new Error('Authentication required'));
     try {
         const payload = jwt.verify(token, process.env.JWT_SECRET);
-        socket.user = payload;
+        if (!payload.sid) return next(new Error('Invalid session'));
+        const session = db.sessions.findByToken(payload.sid);
+        if (!session || session.user_id !== payload.id) return next(new Error('Session revoked'));
+        const user = db.users.findById(payload.id);
+        if (!user) return next(new Error('User not found'));
+        db.sessions.updateLastSeen(payload.sid);
+        socket.user = { id: user.id, username: user.username, role: user.role, sid: payload.sid };
         next();
     } catch {
         next(new Error('Invalid token'));
@@ -45,26 +50,34 @@ io.on('connection', (socket) => {
     const user = socket.user;
     logger.info(`[Socket] Connected: ${user.username} (${socket.id})`);
 
+    function getSocketProjectAccess(projectId, allowViewer = true) {
+        const access = getProjectRole(db, projectId, user);
+        if (!access) return null;
+        if (!allowViewer && access.role === 'viewer') return null;
+        return access;
+    }
+
     // Join personal room for direct notifications
     socket.join(`user:${user.id}`);
 
     // Send unread count on connect so badge updates immediately
     try {
-        const db = require('./db/database');
         const unread = db.notifications.unreadCount(user.id);
         if (unread > 0) socket.emit('notification:unread_count', { count: unread });
     } catch (_) {}
 
     // Join project room when user opens a project
     socket.on('project:join', ({ projectId }) => {
-        if (!projectId) return;
-        socket.join(`project:${projectId}`);
+        const id = parseId(projectId);
+        if (!id) return socket.emit('project:error', { error: 'invalid_project_id' });
+        if (!getSocketProjectAccess(id)) return socket.emit('project:error', { error: 'access_denied', projectId: id });
+        socket.join(`project:${id}`);
         // Announce presence to others in the room
-        socket.to(`project:${projectId}`).emit('presence:joined', {
+        socket.to(`project:${id}`).emit('presence:joined', {
             userId: user.id, username: user.username,
         });
         // Send back who else is in the room
-        const room = io.sockets.adapter.rooms.get(`project:${projectId}`);
+        const room = io.sockets.adapter.rooms.get(`project:${id}`);
         const presenceList = [];
         if (room) {
             room.forEach(sid => {
@@ -75,27 +88,34 @@ io.on('connection', (socket) => {
             });
         }
         socket.emit('presence:list', presenceList);
-        socket.data.currentProject = projectId;
+        socket.data.currentProject = id;
     });
 
     // Leave project room
     socket.on('project:leave', ({ projectId }) => {
-        socket.leave(`project:${projectId}`);
-        socket.to(`project:${projectId}`).emit('presence:left', {
+        const id = parseId(projectId);
+        if (!id) return;
+        socket.leave(`project:${id}`);
+        socket.to(`project:${id}`).emit('presence:left', {
             userId: user.id, username: user.username,
         });
+        if (socket.data.currentProject === id) socket.data.currentProject = null;
     });
 
     // Cursor/focus broadcast — user is editing a row
     socket.on('cursor:move', ({ projectId, itemId, rowIdx }) => {
-        socket.to(`project:${projectId}`).emit('cursor:update', {
+        const id = parseId(projectId);
+        if (!id || !getSocketProjectAccess(id)) return;
+        socket.to(`project:${id}`).emit('cursor:update', {
             userId: user.id, username: user.username, itemId, rowIdx,
         });
     });
 
     // Broadcast data changes to other collaborators
     socket.on('project:changed', ({ projectId, patch }) => {
-        socket.to(`project:${projectId}`).emit('project:remote_change', {
+        const id = parseId(projectId);
+        if (!id || !getSocketProjectAccess(id, false)) return;
+        socket.to(`project:${id}`).emit('project:remote_change', {
             userId: user.id, username: user.username, patch,
         });
     });

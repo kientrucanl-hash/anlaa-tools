@@ -15,13 +15,13 @@ const rowSchema = Joi.object({
 const quotationWriteSchema = Joi.object({
     name:        Joi.string().trim().min(1).max(200).required().messages({ 'any.required': 'Thiếu tên bảng báo giá' }),
     contractors: Joi.array().items(Joi.string().trim().max(100).allow('')).length(3).default(['', '', '']),
-    rows:        Joi.array().items(rowSchema).default([]),
+    rows:        Joi.array().items(rowSchema).max(1000).default([]),
 });
 
 const quotationUpdateSchema = Joi.object({
     name:        Joi.string().trim().min(1).max(200),
     contractors: Joi.array().items(Joi.string().trim().max(100).allow('')).length(3),
-    rows:        Joi.array().items(rowSchema),
+    rows:        Joi.array().items(rowSchema).max(1000),
 }).min(1);
 
 const rejectSchema = Joi.object({

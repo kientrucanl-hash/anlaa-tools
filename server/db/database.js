@@ -120,6 +120,23 @@ sqliteDb.exec(`
     CREATE INDEX IF NOT EXISTS idx_contractors_type   ON contractors(type);
     CREATE INDEX IF NOT EXISTS idx_contractors_rating ON contractors(rating);
 
+    CREATE TABLE IF NOT EXISTS contractor_drafts (
+        id              INTEGER PRIMARY KEY AUTOINCREMENT,
+        contractor_id   INTEGER REFERENCES contractors(id) ON DELETE SET NULL,
+        submitted_by    INTEGER NOT NULL REFERENCES users(id),
+        reviewed_by     INTEGER REFERENCES users(id),
+        payload         TEXT    NOT NULL,
+        status          TEXT    NOT NULL DEFAULT 'draft',
+        admin_note      TEXT,
+        created_at      TEXT    NOT NULL,
+        updated_at      TEXT    NOT NULL,
+        submitted_at    TEXT,
+        reviewed_at     TEXT
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_contractor_drafts_status ON contractor_drafts(status);
+    CREATE INDEX IF NOT EXISTS idx_contractor_drafts_user   ON contractor_drafts(submitted_by);
+
     -- Quotations: bảng so sánh báo giá nhà thầu
     CREATE TABLE IF NOT EXISTS quotations (
         id          INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -214,12 +231,33 @@ function now() {
             prices TEXT NOT NULL DEFAULT '{}',
             updated_at TEXT NOT NULL
         );
+
+        CREATE TABLE IF NOT EXISTS contractor_drafts (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            contractor_id INTEGER REFERENCES contractors(id) ON DELETE SET NULL,
+            submitted_by INTEGER NOT NULL REFERENCES users(id),
+            reviewed_by INTEGER REFERENCES users(id),
+            payload TEXT NOT NULL,
+            status TEXT NOT NULL DEFAULT 'draft',
+            admin_note TEXT,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            submitted_at TEXT,
+            reviewed_at TEXT
+        );
+        CREATE INDEX IF NOT EXISTS idx_contractor_drafts_status ON contractor_drafts(status);
+        CREATE INDEX IF NOT EXISTS idx_contractor_drafts_user ON contractor_drafts(submitted_by);
     `);
 })();
 
 function parseProject(row) {
     if (!row) return null;
     return { ...row, data: JSON.parse(row.data || '[]'), admin_note: row.admin_note || null };
+}
+
+function parseContractorDraft(row) {
+    if (!row) return null;
+    return { ...row, payload: JSON.parse(row.payload || '{}'), admin_note: row.admin_note || null };
 }
 
 // Migrate from legacy JSON file if DB is empty and JSON exists
@@ -247,6 +285,8 @@ if (userCount === 0) {
         } catch (e) {
             console.error('[ANLC] Migration from JSON failed:', e.message);
         }
+    } else if (process.env.NODE_ENV === 'production') {
+        throw new Error('Production database is empty and no legacy seed file exists. Bootstrap users before starting.');
     } else {
         // Seed default users
         const insertUser = sqliteDb.prepare(
@@ -527,6 +567,9 @@ db.comments = {
             ORDER BY c.created_at ASC
         `).all(projectId);
     },
+    findById(id) {
+        return sqliteDb.prepare('SELECT * FROM project_comments WHERE id=?').get(id) || null;
+    },
     create(projectId, userId, rowRef, content) {
         const result = sqliteDb.prepare(
             'INSERT INTO project_comments (project_id, user_id, row_ref, content, resolved, created_at) VALUES (?, ?, ?, ?, 0, ?)'
@@ -650,6 +693,98 @@ db.contractors = {
 };
 
 // ── Notifications ─────────────────────────────────────────────────────────
+db.contractorDrafts = {
+    all({ status } = {}) {
+        let query = `
+            SELECT d.*, u.username as submitted_by_username, r.username as reviewed_by_username
+            FROM contractor_drafts d
+            JOIN users u ON u.id = d.submitted_by
+            LEFT JOIN users r ON r.id = d.reviewed_by
+            WHERE 1=1
+        `;
+        const params = [];
+        if (status) {
+            query += ' AND d.status = ?';
+            params.push(status);
+        }
+        query += ' ORDER BY d.updated_at DESC';
+        return sqliteDb.prepare(query).all(...params).map(parseContractorDraft);
+    },
+    byUser(userId) {
+        return sqliteDb.prepare(`
+            SELECT d.*, u.username as submitted_by_username, r.username as reviewed_by_username
+            FROM contractor_drafts d
+            JOIN users u ON u.id = d.submitted_by
+            LEFT JOIN users r ON r.id = d.reviewed_by
+            WHERE d.submitted_by = ?
+            ORDER BY d.updated_at DESC
+        `).all(userId).map(parseContractorDraft);
+    },
+    findById(id) {
+        return parseContractorDraft(sqliteDb.prepare(`
+            SELECT d.*, u.username as submitted_by_username, r.username as reviewed_by_username
+            FROM contractor_drafts d
+            JOIN users u ON u.id = d.submitted_by
+            LEFT JOIN users r ON r.id = d.reviewed_by
+            WHERE d.id = ?
+        `).get(id));
+    },
+    create({ contractor_id = null, submitted_by, payload }) {
+        const ts = now();
+        const result = sqliteDb.prepare(`
+            INSERT INTO contractor_drafts
+              (contractor_id, submitted_by, payload, status, admin_note, created_at, updated_at)
+            VALUES (?, ?, ?, 'draft', NULL, ?, ?)
+        `).run(contractor_id || null, submitted_by, JSON.stringify(payload || {}), ts, ts);
+        return db.contractorDrafts.findById(result.lastInsertRowid);
+    },
+    update(id, { contractor_id, payload }) {
+        const draft = db.contractorDrafts.findById(id);
+        if (!draft) return null;
+        sqliteDb.prepare(`
+            UPDATE contractor_drafts
+            SET contractor_id=?, payload=?, status='draft', admin_note=NULL, updated_at=?
+            WHERE id=?
+        `).run(
+            contractor_id !== undefined ? contractor_id : draft.contractor_id,
+            JSON.stringify(payload || {}),
+            now(),
+            id
+        );
+        return db.contractorDrafts.findById(id);
+    },
+    submit(id) {
+        const ts = now();
+        sqliteDb.prepare(`
+            UPDATE contractor_drafts
+            SET status='pending', submitted_at=?, updated_at=?
+            WHERE id=?
+        `).run(ts, ts, id);
+        return db.contractorDrafts.findById(id);
+    },
+    approve(id, reviewerId, contractorId, adminNote = null) {
+        const ts = now();
+        sqliteDb.prepare(`
+            UPDATE contractor_drafts
+            SET contractor_id=?, reviewed_by=?, status='approved', admin_note=?, reviewed_at=?, updated_at=?
+            WHERE id=?
+        `).run(contractorId, reviewerId, adminNote || null, ts, ts, id);
+        return db.contractorDrafts.findById(id);
+    },
+    reject(id, reviewerId, adminNote = null) {
+        const ts = now();
+        sqliteDb.prepare(`
+            UPDATE contractor_drafts
+            SET reviewed_by=?, status='rejected', admin_note=?, reviewed_at=?, updated_at=?
+            WHERE id=?
+        `).run(reviewerId, adminNote || null, ts, ts, id);
+        return db.contractorDrafts.findById(id);
+    },
+    delete(id) {
+        return sqliteDb.prepare('DELETE FROM contractor_drafts WHERE id = ?').run(id).changes > 0;
+    },
+};
+
 db.notifications = {
     // Create a notification for a user
     create({ user_id, type, title, body, link = null, meta = {} }) {

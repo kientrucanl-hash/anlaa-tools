@@ -3,7 +3,6 @@
  *   node server/db/migrate.js
  */
 const Database = require('better-sqlite3');
-const bcrypt = require('bcryptjs');
 const path = require('path');
 
 const DB_PATH = path.join(__dirname, 'anlaa.db');
@@ -136,14 +135,7 @@ CREATE TABLE IF NOT EXISTS project_price_overrides (
 console.log('[OK] All tables ready');
 
 // ── 3. Seed user2 ────────────────────────────────────────────────────────────
-const existing = db.prepare('SELECT id FROM users WHERE username = ?').get('user2');
-if (!existing) {
-    db.prepare('INSERT INTO users (username, password_hash, role, max_sessions, created_at) VALUES (?, ?, ?, ?, ?)')
-        .run('user2', bcrypt.hashSync('User2@2024', 10), 'user', 2, now());
-    console.log('[OK] Created user2 / User2@2024');
-} else {
-    console.log('[SKIP] user2 already exists');
-}
+console.log('[SKIP] Default user seeding disabled');
 
 // ── 4. Verify ────────────────────────────────────────────────────────────────
 const tables = db.prepare("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name").all().map(t => t.name);

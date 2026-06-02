@@ -23,7 +23,6 @@ router.post('/login', (req, res) => {
         return res.status(401).json({ error: 'Tên đăng nhập hoặc mật khẩu không đúng' });
     }
 
-    // Create session token
     const sessionToken = crypto.randomBytes(32).toString('hex');
     db.sessions.create({
         user_id: user.id,
@@ -32,7 +31,6 @@ router.post('/login', (req, res) => {
         user_agent: req.headers['user-agent'] || null,
     });
 
-    // Enforce concurrent session limit (kick oldest sessions over the limit)
     db.sessions.enforceLimit(user.id, user.max_sessions);
 
     const token = jwt.sign(
@@ -44,27 +42,18 @@ router.post('/login', (req, res) => {
     res.json({ token, user: { id: user.id, username: user.username, role: user.role } });
 });
 
-// POST /api/auth/logout — invalidate current session
+// POST /api/auth/logout
 router.post('/logout', requireAuth, (req, res) => {
-    if (req.user.sid) {
-        db.sessions.delete(req.user.sid);
-    }
+    db.sessions.delete(req.user.sid);
     res.json({ message: 'Đã đăng xuất' });
 });
 
 // GET /api/auth/me
-router.get('/me', (req, res) => {
-    const header = req.headers['authorization'];
-    if (!header || !header.startsWith('Bearer ')) return res.status(401).json({ error: 'Chưa đăng nhập' });
-    try {
-        const user = jwt.verify(header.slice(7), process.env.JWT_SECRET);
-        res.json({ id: user.id, username: user.username, role: user.role });
-    } catch {
-        res.status(401).json({ error: 'Phiên đăng nhập hết hạn' });
-    }
+router.get('/me', requireAuth, (req, res) => {
+    res.json({ id: req.user.id, username: req.user.username, role: req.user.role });
 });
 
-// PUT /api/auth/password — change own password + invalidate all other sessions
+// PUT /api/auth/password
 router.put('/password', requireAuth, (req, res) => {
     const { currentPassword, newPassword } = req.body;
     if (!currentPassword || !newPassword) {
@@ -80,7 +69,6 @@ router.put('/password', requireAuth, (req, res) => {
     }
 
     db.users.updatePassword(user.id, bcrypt.hashSync(newPassword, 10));
-    // Revoke all sessions except current one — force others to re-login
     const sessions = db.sessions.byUser(user.id);
     for (const s of sessions) {
         if (s.session_token !== req.user.sid) db.sessions.delete(s.session_token);
