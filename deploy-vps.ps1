@@ -1,77 +1,63 @@
 # ==========================================================================
-# [EMERGENCY ONLY] MECALC Manual Deploy Script
+# MECALC Deploy Script
 #
-# DO NOT run this script under normal circumstances.
-# Primary deployment = CI/CD via GitHub Actions (push to main branch).
+# Luong chuan: git push -> GitHub Actions tu dong deploy len VPS.
+# Script nay chi de emergency khi CI/CD hong hoac can deploy gap khong qua GitHub.
 #
-# Chi chay khi: CI/CD bi hong hoac can deploy code chua commit gap.
-# Sau khi chay xong: commit + push ngay de CI/CD va VPS dong bo lai.
+# Su dung:
+#   .\deploy-vps.ps1           -> push len GitHub (CI/CD tu deploy)
+#   .\deploy-vps.ps1 -Force    -> SSH thang vao VPS, git pull + restart (bypass CI/CD)
 # ==========================================================================
+
+param(
+    [switch]$Force
+)
 
 $ErrorActionPreference = "Stop"
 $SERVER = "ubuntu@51.79.250.113"
 $REMOTE_DIR = "~/anlaa-tools"
-$ARCHIVE = "deploy.tar.gz"
 
 Write-Host "==========================================================" -ForegroundColor Cyan
-Write-Host "   MECALC AUTO-DEPLOY TO tool.kientrucanl.vn (51.79.250.113)" -ForegroundColor Cyan
+Write-Host "   MECALC DEPLOY — tool.kientrucanl.vn" -ForegroundColor Cyan
 Write-Host "==========================================================" -ForegroundColor Cyan
 
-# 1. Compress workspace securely
-Write-Host "[1/5] Dong goi ma nguon sach (loai bo node_modules)..." -ForegroundColor Yellow
-if (Test-Path $ARCHIVE) {
-    Remove-Item $ARCHIVE -Force
+if ($Force) {
+    # Emergency: SSH truc tiep vao VPS, git pull + docker restart
+    Write-Host "[FORCE] SSH truc tiep vao VPS..." -ForegroundColor Yellow
+    ssh -o StrictHostKeyChecking=no $SERVER @"
+        set -e
+        cd $REMOTE_DIR
+        echo '[1/3] git pull...'
+        git pull origin main
+        echo '[2/3] docker compose up...'
+        docker compose up --build --force-recreate -d
+        docker image prune -f
+        echo '[3/3] Health check...'
+        sleep 10
+        wget -qO- http://127.0.0.1:4000/health && echo 'OK' || (echo 'FAILED' && docker compose logs --tail=30 anlc && exit 1)
+"@
+    Write-Host ""
+    Write-Host "Deploy (force) thanh cong!" -ForegroundColor Green
+
+} else {
+    # Luong chuan: push len GitHub, CI/CD tu deploy
+    $branch = git rev-parse --abbrev-ref HEAD
+    if ($branch -ne "main") {
+        Write-Host "Branch hien tai: $branch (khong phai main)" -ForegroundColor Red
+        Write-Host "Chi deploy tu branch main. Chay: git checkout main" -ForegroundColor Red
+        exit 1
+    }
+
+    $unpushed = git log origin/main..HEAD --oneline
+    if (-not $unpushed) {
+        Write-Host "Khong co commit moi de push." -ForegroundColor Yellow
+        exit 0
+    }
+
+    Write-Host "[1/2] Pushing len GitHub..." -ForegroundColor Yellow
+    git push origin main
+    Write-Host "[2/2] Da push. GitHub Actions dang chay deploy..." -ForegroundColor Green
+    Write-Host ""
+    Write-Host "Theo doi tai: https://github.com/kientrucanl-hash/anlaa-tools/actions" -ForegroundColor Cyan
+    Write-Host "==========================================================" -ForegroundColor Cyan
 }
-
-# Su dung tar co san tren Windows 10/11 de nen nhanh
-tar --exclude="node_modules" --exclude="server/node_modules" --exclude="server/db/*.db" --exclude="server/db/*.json" --exclude=".git" --exclude="logs" --exclude="ACCOUNTS.local.md" --exclude="*.local.*" --exclude="server/.env" --exclude=".env" --exclude="deploy.tar.gz" -czf $ARCHIVE *
-
-$fileSize = (Get-Item $ARCHIVE).Length / 1KB
-Write-Host "Dong goi thanh cong! Kich thuoc file nen: $([math]::Round($fileSize, 2)) KB" -ForegroundColor Green
-
-# 2. SCP Upload to VPS /tmp
-Write-Host "[2/5] Dang upload file nen len VPS qua SCP..." -ForegroundColor Yellow
-scp -o StrictHostKeyChecking=no -o ConnectTimeout=15 $ARCHIVE "${SERVER}:/tmp/${ARCHIVE}"
-Write-Host "Upload file nen len VPS thanh cong!" -ForegroundColor Green
-
-# 3. Extract on VPS
-Write-Host "[3/5] Dang giai nen ma nguon de len thu muc $REMOTE_DIR tren VPS..." -ForegroundColor Yellow
-$extractCmd = "mkdir -p $REMOTE_DIR && tar -xzf /tmp/$ARCHIVE -C $REMOTE_DIR && rm /tmp/$ARCHIVE"
-ssh -o StrictHostKeyChecking=no $SERVER $extractCmd
-Write-Host "Giai nen tren VPS thanh cong!" -ForegroundColor Green
-
-# 4. Rebuild & Restart Docker Compose on VPS, then run DB migration
-Write-Host "[4/5] Dang kich hoat build va tai khoi dong Docker Container tren VPS..." -ForegroundColor Yellow
-$dockerCmd = "cd $REMOTE_DIR && docker compose up -d --build --force-recreate && docker image prune -f"
-ssh -o StrictHostKeyChecking=no $SERVER $dockerCmd
-Write-Host "Khoi dong Docker Container trên VPS thanh cong!" -ForegroundColor Green
-
-Write-Host "[4b] Chay DB migration..." -ForegroundColor Yellow
-# Convert CRLF->LF truoc khi upload de tranh truncation tren Linux
-$dbJsContent = Get-Content "server\db\database.js" -Raw
-$dbJsContent = $dbJsContent -replace "`r`n", "`n"
-[System.IO.File]::WriteAllText("$env:TEMP\database_lf.js", $dbJsContent, [System.Text.Encoding]::UTF8)
-$migrateContent = Get-Content "server\db\migrate.js" -Raw
-$migrateContent = $migrateContent -replace "`r`n", "`n"
-[System.IO.File]::WriteAllText("$env:TEMP\migrate_lf.js", $migrateContent, [System.Text.Encoding]::UTF8)
-scp -o StrictHostKeyChecking=no "$env:TEMP\database_lf.js" "${SERVER}:/tmp/database_new.js"
-scp -o StrictHostKeyChecking=no "$env:TEMP\migrate_lf.js" "${SERVER}:/tmp/migrate_new.js"
-$migrateCmd = "sudo cp /tmp/database_new.js /var/lib/docker/volumes/anlaa-tools_anlc_data/_data/database.js && docker cp /tmp/migrate_new.js anlaa-tools-anlc-1:/app/server/db/migrate.js && docker exec anlaa-tools-anlc-1 node /app/server/db/migrate.js"
-ssh -o StrictHostKeyChecking=no $SERVER $migrateCmd
-Write-Host "Migration hoan tat!" -ForegroundColor Green
-
-Write-Host "[4c] Restart container sau migration..." -ForegroundColor Yellow
-ssh -o StrictHostKeyChecking=no $SERVER "cd $REMOTE_DIR && docker compose restart"
-Write-Host "Restart hoan tat!" -ForegroundColor Green
-
-# 5. Clean up local archive
-Write-Host "[5/5] Don dep tep tam local..." -ForegroundColor Yellow
-if (Test-Path $ARCHIVE) {
-    Remove-Item $ARCHIVE -Force
-}
-
-Write-Host ""
-Write-Host "==========================================================" -ForegroundColor Cyan
-Write-Host "   DEPLOY THANH CONG LEN tool.kientrucanl.vn!" -ForegroundColor Green
-Write-Host "   Vui long truy cap trang web va kiem tra ket qua." -ForegroundColor Green
-Write-Host "==========================================================" -ForegroundColor Cyan
