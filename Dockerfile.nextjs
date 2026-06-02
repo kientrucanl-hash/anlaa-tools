@@ -9,8 +9,8 @@ RUN npm ci
 
 COPY . .
 
-# Generate Prisma client then build Next.js
-RUN npx prisma generate
+# Generate Prisma client (dummy URL — actual URL injected at runtime)
+RUN DATABASE_URL="postgresql://x:x@localhost:5432/x" npx prisma generate
 RUN npm run build
 
 # ── Runner stage ──────────────────────────────────────────────────────────────

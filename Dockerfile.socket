@@ -1,23 +1,26 @@
 FROM node:20-alpine
 WORKDIR /app
 
-# Install tsx globally for running TypeScript directly
+RUN apk add --no-cache wget
 RUN npm install -g tsx
 
-# Copy and install server deps
+# Server dependencies
 COPY server/package*.json ./
 RUN npm ci --omit=dev
 
-# Copy shared Prisma schema + generated client from root
+# Prisma schema + config
 COPY prisma ./prisma
-COPY package.json ./root-package.json
+COPY prisma.config.ts ./
 
-# Install Prisma at root level to get the CLI for generate
+# Install Prisma CLI + client for code generation
 RUN npm install prisma @prisma/client --save-dev
-RUN npx prisma generate --schema=./prisma/schema.prisma
+
+# Generate Prisma client — use dummy DATABASE_URL so generator doesn't fail
+RUN DATABASE_URL="postgresql://x:x@localhost:5432/x" npx prisma generate
 
 # Copy server source
 COPY server/socket-server.ts ./
+COPY server/tsconfig.json ./
 
 EXPOSE 4000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
