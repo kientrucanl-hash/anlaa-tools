@@ -512,6 +512,7 @@ function initTabSwitching() {
  * Attaches real-time keyup/change listeners on all input forms
  */
 function initRealTimeListeners() {
+    if (!document.getElementById("projectName")) return; // index.html only
     // 1. Sync project basic info with global state
     document.getElementById("projectName").addEventListener("input", (e) => {
         currentProject.name = e.target.value;
@@ -1263,7 +1264,7 @@ function renderPricesTable() {
  */
 function initActionListeners() {
     // 1. ADD MASONRY ITEM
-    document.getElementById("btnAddMasonry").addEventListener("click", () => {
+    document.getElementById("btnAddMasonry")?.addEventListener("click", () => {
         const isDirectMode = document.getElementById("masonryInputModeToggle").checked;
         const name = document.getElementById("masonryItemName").value.trim() || "Xây tường không tên";
         const brickType = document.getElementById("masonryBrickType").value;
@@ -1366,7 +1367,7 @@ function initActionListeners() {
     });
 
     // 2. ADD PLASTERING ITEM
-    document.getElementById("btnAddPlastering").addEventListener("click", () => {
+    document.getElementById("btnAddPlastering")?.addEventListener("click", () => {
         const name = document.getElementById("plasteringItemName").value.trim() || "Cán nền không tên";
         const isDirectMode = document.getElementById("plasteringInputModeToggle").checked;
         const mortarGrade = document.getElementById("plasteringMortarGrade").value;
@@ -1414,7 +1415,7 @@ function initActionListeners() {
     });
 
     // 3. ADD TILING ITEM
-    document.getElementById("btnAddTiling").addEventListener("click", () => {
+    document.getElementById("btnAddTiling")?.addEventListener("click", () => {
         const name = document.getElementById("tilingItemName").value.trim() || "Ốp lát không tên";
         const isDirectMode = document.getElementById("tilingInputModeToggle").checked;
         const tileSize = document.getElementById("tilingTileSize").value;
@@ -1472,7 +1473,7 @@ function initActionListeners() {
     });
 
     // 4. RESET PROJECT
-    document.getElementById("btnResetProject").addEventListener("click", () => {
+    document.getElementById("btnResetProject")?.addEventListener("click", () => {
         if (confirm("⚠️ CẢNH BÁO: Bạn có chắc chắn muốn XÓA TOÀN BỘ hạng mục trong dự án này? Thao tác này không thể phục hồi!")) {
             currentProject.items = [];
             saveProjectToStorage();
@@ -1485,7 +1486,7 @@ function initActionListeners() {
     });
 
     // 5. EXPORT JSON FILE
-    document.getElementById("btnSaveProject").addEventListener("click", () => {
+    document.getElementById("btnSaveProject")?.addEventListener("click", () => {
         if (currentProject.items.length === 0) {
             showToast("Chưa có hạng mục nào để lưu!", "danger");
             return;
@@ -1502,11 +1503,11 @@ function initActionListeners() {
     });
 
     // 6. IMPORT JSON FILE
-    document.getElementById("btnLoadProjectTrigger").addEventListener("click", () => {
+    document.getElementById("btnLoadProjectTrigger")?.addEventListener("click", () => {
         document.getElementById("btnLoadProject").click();
     });
 
-    document.getElementById("btnLoadProject").addEventListener("change", (e) => {
+    document.getElementById("btnLoadProject")?.addEventListener("change", (e) => {
         const fileReader = new FileReader();
         fileReader.onload = function(event) {
             try {
@@ -1535,7 +1536,7 @@ function initActionListeners() {
     });
 
     // 7. RESET PRICES
-    document.getElementById("btnResetPrices").addEventListener("click", () => {
+    document.getElementById("btnResetPrices")?.addEventListener("click", () => {
         if (confirm("Bạn có muốn khôi phục lại bảng đơn giá vật tư mặc định tại Hà Nội?")) {
             materialPrices = { ...DEFAULT_UNIT_PRICES };
             localStorage.setItem("anlaa_prices", JSON.stringify(materialPrices));
@@ -1549,7 +1550,7 @@ function initActionListeners() {
     });
 
     // 8. PRINT / EXPORT PDF BOQ (Rule WR-9)
-    document.getElementById("btnPrintPDF").addEventListener("click", () => {
+    document.getElementById("btnPrintPDF")?.addEventListener("click", () => {
         if (currentProject.items.length === 0) {
             showToast("Bảng BOQ trống, vui lòng thêm hạng mục trước khi in!", "danger");
             return;
@@ -1562,12 +1563,12 @@ function initActionListeners() {
     });
 
     // 9. EXPORT EXCEL CSV (WITH UNICODE BOM tiếng Việt)
-    document.getElementById("btnExportCSV").addEventListener("click", () => {
+    document.getElementById("btnExportCSV")?.addEventListener("click", () => {
         exportBOQToCSV();
     });
 
     // 10. EXPORT PNG IMAGE (html2canvas)
-    document.getElementById("btnExportImage").addEventListener("click", () => {
+    document.getElementById("btnExportImage")?.addEventListener("click", () => {
         exportBOQToImage();
     });
 
@@ -2253,6 +2254,7 @@ function generateUUID() {
  * Initializes spreadsheets-like interactive tables for wall segments and doors deductions
  */
 function initSpreadsheetTables() {
+    if (!document.getElementById("btnAddingWallRow")) return; // index.html only
     // 1. Add Wall Segments
     document.getElementById("btnAddingWallRow").addEventListener("click", () => {
         wallSegments.push({ length: 3.5, height: 2.8, wallType: "110", multiplier: 1, faces: 2 });
@@ -2446,6 +2448,7 @@ function renderDoorTable() {
  * Initializes toggles to switch inputs mode between Detailed (dynamic spreadsheet) and Direct (BOQ quick estimate)
  */
 function initInputModeToggles() {
+    if (!document.getElementById("masonryInputModeToggle")) return; // index.html only
     // 1. Masonry mode toggle
     document.getElementById("masonryInputModeToggle").addEventListener("change", function() {
         const isDirect = this.checked;
@@ -2659,7 +2662,7 @@ function initTakeoffWorkspace() {
     });
 
     // Nộp duyệt button
-    document.getElementById("btnSubmitProject").addEventListener("click", async () => {
+    document.getElementById("btnSubmitProject")?.addEventListener("click", async () => {
         if (!currentProject.id) {
             showToast("Chưa có dữ liệu để nộp. Vui lòng thêm hạng mục trước.", "danger");
             return;
