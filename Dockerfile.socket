@@ -12,10 +12,10 @@ RUN npm ci --omit=dev
 COPY prisma ./prisma
 COPY prisma.config.ts ./
 
-# Install Prisma CLI + client for code generation
-RUN npm install prisma @prisma/client --save-dev
+# Install Prisma v6 (pin to avoid Prisma 7 breaking changes with schema url)
+RUN npm install prisma@^6 @prisma/client@^6 --save-dev
 
-# Generate Prisma client — use dummy DATABASE_URL so generator doesn't fail
+# Generate Prisma client
 RUN DATABASE_URL="postgresql://x:x@localhost:5432/x" npx prisma generate
 
 # Copy server source
