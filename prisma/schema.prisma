@@ -1,0 +1,288 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum ProjectStatus {
+  DRAFT
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum CollabRole {
+  EDITOR
+  VIEWER
+}
+
+enum CollabStatus {
+  PENDING
+  ACCEPTED
+  DENIED
+}
+
+enum ContractorType {
+  TEAM
+  COMPANY
+  INDIVIDUAL
+}
+
+enum ContractorStatus {
+  ACTIVE
+  INACTIVE
+  BLACKLIST
+}
+
+enum AccessRequestStatus {
+  PENDING
+  APPROVED
+  DENIED
+}
+
+enum NotifType {
+  COLLAB_INVITE
+  COLLAB_RESPONDED
+  ACCESS_REQUEST
+  ACCESS_APPROVED
+  ACCESS_DENIED
+  PROJECT_APPROVED
+  PROJECT_REJECTED
+  ROLE_CHANGED
+  SYSTEM
+}
+
+model User {
+  id           Int      @id @default(autoincrement())
+  username     String   @unique
+  passwordHash String
+  role         Role     @default(USER)
+  maxSessions  Int      @default(2)
+  createdAt    DateTime @default(now())
+
+  sessions           Session[]
+  projects           Project[]
+  collabsAsOwner     ProjectCollaborator[] @relation("owner")
+  collabsAsInvitee   ProjectCollaborator[] @relation("invitee")
+  accessRequests     ProjectAccessRequest[]
+  comments           ProjectComment[]
+  notifications      Notification[]
+  contractorDrafts   ContractorDraft[]
+  priceProfile       UserPriceProfile?
+  createdContractors Contractor[]
+  quotations         Quotation[]
+  estimateTemplates  EstimateTemplate[]
+}
+
+model Session {
+  id           Int      @id @default(autoincrement())
+  userId       Int
+  sessionToken String   @unique
+  ip           String?
+  userAgent    String?
+  createdAt    DateTime @default(now())
+  lastSeen     DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Project {
+  id               Int           @id @default(autoincrement())
+  userId           Int
+  name             String
+  address          String        @default("")
+  data             Json          @default("[]")
+  status           ProjectStatus @default(DRAFT)
+  adminNote        String?
+  estimateSnapshot String?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  user           User                   @relation(fields: [userId], references: [id])
+  collaborators  ProjectCollaborator[]
+  accessRequests ProjectAccessRequest[]
+  comments       ProjectComment[]
+  priceOverrides ProjectPriceOverride?
+
+  @@index([userId])
+}
+
+model ProjectCollaborator {
+  id        Int          @id @default(autoincrement())
+  projectId Int
+  ownerId   Int
+  inviteeId Int
+  role      CollabRole   @default(VIEWER)
+  status    CollabStatus @default(PENDING)
+  createdAt DateTime     @default(now())
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  owner   User    @relation("owner", fields: [ownerId], references: [id])
+  invitee User    @relation("invitee", fields: [inviteeId], references: [id])
+
+  @@unique([projectId, inviteeId])
+  @@index([projectId])
+  @@index([inviteeId])
+}
+
+model ProjectAccessRequest {
+  id            Int                 @id @default(autoincrement())
+  projectId     Int
+  requesterId   Int
+  roleRequested CollabRole          @default(VIEWER)
+  message       String?
+  status        AccessRequestStatus @default(PENDING)
+  createdAt     DateTime            @default(now())
+
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  requester User    @relation(fields: [requesterId], references: [id])
+
+  @@unique([projectId, requesterId])
+}
+
+model ProjectComment {
+  id        Int      @id @default(autoincrement())
+  projectId Int
+  userId    Int
+  rowRef    String?
+  content   String
+  resolved  Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id])
+
+  @@index([projectId])
+}
+
+model Contractor {
+  id            Int              @id @default(autoincrement())
+  type          ContractorType   @default(TEAM)
+  name          String
+  contactName   String?
+  phone         String?
+  phone2        String?
+  email         String?
+  address       String?
+  district      String?
+  city          String           @default("Hà Nội")
+  specialty     Json?
+  workScope     String?
+  taxCode       String?
+  bankAccount   String?
+  bankName      String?
+  rating        Int              @default(3)
+  ratingNote    String?
+  projectCount  Int              @default(0)
+  totalValue    Float            @default(0)
+  lastProjectAt DateTime?
+  priceNotes    Json?
+  status        ContractorStatus @default(ACTIVE)
+  note          String?
+  createdById   Int?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  createdBy User?             @relation(fields: [createdById], references: [id])
+  drafts    ContractorDraft[]
+
+  @@index([rating])
+}
+
+model ContractorDraft {
+  id           Int           @id @default(autoincrement())
+  contractorId Int?
+  submittedBy  Int
+  reviewedBy   Int?
+  payload      Json
+  status       ProjectStatus @default(DRAFT)
+  adminNote    String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  submittedAt  DateTime?
+  reviewedAt   DateTime?
+
+  contractor Contractor? @relation(fields: [contractorId], references: [id])
+  submitter  User        @relation(fields: [submittedBy], references: [id])
+
+  @@index([submittedBy])
+}
+
+model Quotation {
+  id          Int           @id @default(autoincrement())
+  userId      Int
+  name        String
+  contractors Json          @default("[\"\",\"\",\"\"]")
+  rows        Json          @default("[]")
+  status      ProjectStatus @default(DRAFT)
+  adminNote   String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+}
+
+model Notification {
+  id        Int        @id @default(autoincrement())
+  userId    Int
+  type      NotifType
+  title     String
+  body      String
+  link      String?
+  meta      Json       @default("{}")
+  isRead    Boolean    @default(false)
+  createdAt DateTime   @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, isRead])
+}
+
+model UserPriceProfile {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @unique
+  region    String   @default("hanoi")
+  prices    Json     @default("{}")
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model ProjectPriceOverride {
+  id        Int      @id @default(autoincrement())
+  projectId Int      @unique
+  prices    Json     @default("{}")
+  updatedAt DateTime @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}
+
+model EstimateTemplate {
+  id          Int      @id @default(autoincrement())
+  name        String
+  category    String   @default("nha-pho")
+  description String?
+  snapshot    String
+  isActive    Boolean  @default(true)
+  createdById Int?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  createdBy User? @relation(fields: [createdById], references: [id])
+
+  @@index([category])
+  @@index([isActive])
+}

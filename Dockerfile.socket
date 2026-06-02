@@ -1,0 +1,26 @@
+FROM node:20-alpine
+WORKDIR /app
+
+# Install tsx globally for running TypeScript directly
+RUN npm install -g tsx
+
+# Copy and install server deps
+COPY server/package*.json ./
+RUN npm ci --omit=dev
+
+# Copy shared Prisma schema + generated client from root
+COPY prisma ./prisma
+COPY package.json ./root-package.json
+
+# Install Prisma at root level to get the CLI for generate
+RUN npm install prisma @prisma/client --save-dev
+RUN npx prisma generate --schema=./prisma/schema.prisma
+
+# Copy server source
+COPY server/socket-server.ts ./
+
+EXPOSE 4000
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+  CMD wget -qO- http://127.0.0.1:4000/health || exit 1
+
+CMD ["tsx", "socket-server.ts"]

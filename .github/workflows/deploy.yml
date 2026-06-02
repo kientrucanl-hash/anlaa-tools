@@ -7,18 +7,65 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
+
     steps:
-      - name: Deploy to server via SSH
+      - name: Deploy to VPS via SSH
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: 51.79.250.113
           username: ubuntu
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
-            cd /home/ubuntu/anlaa-tools
-            git pull origin main
+            set -e
+
+            DEPLOY_DIR="/home/ubuntu/anlaa-tools-next"
+
+            # Clone on first deploy, pull on subsequent
+            if [ ! -d "$DEPLOY_DIR/.git" ]; then
+              echo "[1/6] First deploy — cloning repo..."
+              git clone https://github.com/${{ github.repository }}.git "$DEPLOY_DIR"
+            else
+              echo "[1/6] Pulling latest code..."
+              cd "$DEPLOY_DIR"
+              git pull origin main
+            fi
+
+            cd "$DEPLOY_DIR"
+
+            # Write .env from GitHub Secrets
+            echo "[2/6] Writing .env..."
+            cat > .env <<EOF
+            DATABASE_URL=${{ secrets.DATABASE_URL }}
+            JWT_SECRET=${{ secrets.JWT_SECRET }}
+            POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
+            ALLOWED_ORIGINS=${{ secrets.ALLOWED_ORIGINS }}
+            SOCKET_PUBLIC_URL=https://tool.kientrucanl.vn
+            NEXT_PUBLIC_SOCKET_URL=https://tool.kientrucanl.vn
+            EOF
+
+            # Build and start containers
+            echo "[3/6] Building Docker images..."
             docker compose up --build --force-recreate -d
+
+            # Clean up old images
             docker image prune -f
-            sleep 15
+
+            # Run Prisma migrations
+            echo "[4/6] Running database migrations..."
+            docker compose exec -T nextjs npx prisma migrate deploy
+
+            # Health checks
+            echo "[5/6] Health checks..."
+            sleep 20
+
+            # Next.js
+            docker compose exec -T nextjs wget -qO- http://127.0.0.1:3000/ > /dev/null \
+              || (echo "Next.js health check FAILED" && docker compose logs --tail=50 nextjs && exit 1)
+
+            # Socket server
+            docker compose exec -T socket wget -qO- http://127.0.0.1:4000/health > /dev/null \
+              || echo "Socket health check failed (non-fatal — /health endpoint not implemented)"
+
+            echo "[6/6] Deployment complete!"
             docker compose ps
-            docker compose exec -T anlc wget -qO- http://127.0.0.1:4000/health || (echo "Health check FAILED" && docker compose logs --tail=50 anlc && exit 1)

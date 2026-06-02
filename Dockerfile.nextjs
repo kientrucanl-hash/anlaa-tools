@@ -1,0 +1,36 @@
+FROM node:20-alpine AS builder
+WORKDIR /app
+
+# Install build deps (needed for better-sqlite3 native module in seed)
+RUN apk add --no-cache python3 make g++
+
+COPY package*.json ./
+RUN npm ci
+
+COPY . .
+
+# Generate Prisma client then build Next.js
+RUN npx prisma generate
+RUN npm run build
+
+# ── Runner stage ──────────────────────────────────────────────────────────────
+FROM node:20-alpine AS runner
+WORKDIR /app
+ENV NODE_ENV=production
+
+# Install wget for healthcheck
+RUN apk add --no-cache wget
+
+# Copy production node_modules (built with native modules from builder)
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/.next ./.next
+COPY --from=builder /app/public ./public
+COPY --from=builder /app/package.json ./package.json
+COPY --from=builder /app/prisma ./prisma
+COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+
+EXPOSE 3000
+HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
+  CMD wget -qO- http://127.0.0.1:3000/ > /dev/null || exit 1
+
+CMD ["npm", "start"]

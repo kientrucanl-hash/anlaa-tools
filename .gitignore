@@ -1,15 +1,45 @@
-ACCOUNTS.local.md
-# Environment files (contain secrets — never commit)
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Build output
+.next/
+out/
+dist/
+
+# Environment — NEVER commit
 .env
-server/.env
-# Database files
-server/db/anlaa_data.json
-server/db/*.json
-server/db/anlaa.db
-server/db/anlaa.db-shm
-server/db/anlaa.db-wal
-# Generated
-server/node_modules/
-02_Process/
-*.log
+.env.local
+.env.*.local
+
+# Prisma generated
+prisma/generated/
+
+# Logs
 logs/
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/settings.json
+.idea/
+
+# Misc
+*.tsbuildinfo
+next-env.d.ts
+
+# SQLite migration file (never commit production DB)
+*.db
+*.db-wal
+*.db-shm
+
+# Server dist
+server/dist/
+
+# Cutover logs
+cutover-*.log
