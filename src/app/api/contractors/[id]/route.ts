@@ -26,7 +26,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     if (!(await prisma.contractor.findUnique({ where: { id } }))) return notFound('Không tìm thấy nhà thầu')
     const body = contractorSchema.partial().safeParse(await req.json())
     if (!body.success) return badRequest(body.error.errors.map((e) => e.message).join('; '))
-    const updated = await prisma.contractor.update({ where: { id }, data: body.data })
+    const updated = await prisma.contractor.update({ where: { id }, data: body.data as never })
     return NextResponse.json(updated)
   } catch (e: unknown) {
     if (e instanceof Error && e.message === 'Forbidden')

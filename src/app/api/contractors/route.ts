@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
     const body = contractorSchema.safeParse(await req.json())
     if (!body.success) return badRequest(body.error.errors.map((e) => e.message).join('; '))
     const contractor = await prisma.contractor.create({
-      data: { ...body.data, createdById: user.id },
+      data: { ...body.data, createdById: user.id } as never,
     })
     return NextResponse.json(contractor, { status: 201 })
   } catch (e: unknown) {
