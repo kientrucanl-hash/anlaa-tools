@@ -35,6 +35,20 @@ function contractorDraftBadgeHTML(status) {
     return `<span class="status-badge ${s.cls}">${s.text}</span>`;
 }
 
+// ---- Toast notification (replaces alert()) ----
+function showToast(message, type = 'success') {
+    const toast = document.getElementById('adminToast');
+    if (!toast) return;
+    toast.textContent = message;
+    toast.style.borderColor = type === 'danger' ? '#ff5252' : 'var(--border-focus)';
+    toast.style.boxShadow = type === 'danger'
+        ? '0 10px 30px rgba(255,82,82,0.2)'
+        : '0 10px 30px rgba(0,242,254,0.2)';
+    toast.classList.add('show');
+    clearTimeout(toast._timer);
+    toast._timer = setTimeout(() => toast.classList.remove('show'), 3500);
+}
+
 // ---- Projects view ----
 async function loadProjects() {
     try {
@@ -196,7 +210,7 @@ async function confirmResetPassword() {
         document.getElementById('btnConfirmResetPassword').disabled = true;
         await API.resetUserPassword(resetTargetId, newPassword);
         closeResetPasswordModal();
-        alert('Đặt lại mật khẩu thành công');
+        showToast('Đặt lại mật khẩu thành công');
     } catch (err) {
         errEl.textContent = err.message;
         errEl.style.display = 'block';
@@ -212,8 +226,9 @@ async function toggleUserRole(id, newRole, username) {
     try {
         await API.changeUserRole(id, newRole);
         await loadUsers();
+        showToast(`Đã ${label} thành công`);
     } catch (err) {
-        alert('Lỗi: ' + err.message);
+        showToast('Lỗi: ' + err.message, 'danger');
     }
 }
 
@@ -237,8 +252,9 @@ async function confirmDeleteUser() {
         await API.deleteUser(deleteUserTargetId);
         closeDeleteUserModal();
         await loadUsers();
+        showToast('Đã xóa người dùng');
     } catch (err) {
-        alert('Lỗi: ' + err.message);
+        showToast('Lỗi: ' + err.message, 'danger');
     }
 }
 
@@ -317,8 +333,9 @@ async function approveProject() {
         await API.approveProject(currentProjectId);
         closeProjectModal();
         await loadProjects();
+        showToast('Đã phê duyệt project');
     } catch (err) {
-        alert('Lỗi: ' + err.message);
+        showToast('Lỗi: ' + err.message, 'danger');
     }
 }
 
@@ -331,15 +348,16 @@ function showRejectForm() {
 async function confirmReject() {
     const note = document.getElementById('rejectNote').value.trim();
     if (!note) {
-        alert('Vui lòng nhập lý do từ chối');
+        showToast('Vui lòng nhập lý do từ chối', 'danger');
         return;
     }
     try {
         await API.rejectProject(currentProjectId, note);
         closeProjectModal();
         await loadProjects();
+        showToast('Đã từ chối project');
     } catch (err) {
-        alert('Lỗi: ' + err.message);
+        showToast('Lỗi: ' + err.message, 'danger');
     }
 }
 
@@ -363,8 +381,9 @@ async function confirmDelete() {
         await API.deleteProject(deleteTargetId);
         closeDeleteModal();
         await loadProjects();
+        showToast('Đã xóa project');
     } catch (err) {
-        alert('Lỗi: ' + err.message);
+        showToast('Lỗi: ' + err.message, 'danger');
     }
 }
 
@@ -428,8 +447,9 @@ async function approveContractorDraft(id) {
     try {
         await API.approveContractorDraft(id, note);
         await loadContractorDrafts();
+        showToast('Đã phê duyệt nháp nhà thầu');
     } catch (err) {
-        alert('Lỗi: ' + err.message);
+        showToast('Lỗi: ' + err.message, 'danger');
     }
 }
 
@@ -438,8 +458,9 @@ async function rejectContractorDraft(id) {
     try {
         await API.rejectContractorDraft(id, note);
         await loadContractorDrafts();
+        showToast('Đã từ chối nháp nhà thầu');
     } catch (err) {
-        alert('Lỗi: ' + err.message);
+        showToast('Lỗi: ' + err.message, 'danger');
     }
 }
 
@@ -468,13 +489,10 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // Sidebar toggle (users view)
-    const sidebarToggle2 = document.getElementById('sidebarToggle2');
-    if (sidebarToggle2) {
-        sidebarToggle2.addEventListener('click', () => {
-            document.getElementById('appSidebar')?.classList.toggle('open');
-        });
-    }
+    // Sidebar toggles
+    const toggleSidebar = () => document.getElementById('appSidebar')?.classList.toggle('open');
+    document.getElementById('sidebarToggle')?.addEventListener('click', toggleSidebar);
+    document.getElementById('sidebarToggle2')?.addEventListener('click', toggleSidebar);
 
     // Users: add / refresh
     document.getElementById('btnAddUser').addEventListener('click', openAddUserModal);
@@ -530,6 +548,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // Filter
     document.getElementById('filterStatus').addEventListener('change', renderProjectsTable);
     document.getElementById('btnRefresh').addEventListener('click', loadProjects);
+
+    // Load projects on initial page load (default active tab)
+    loadProjects();
 
     // Modal close
     document.getElementById('modalClose').addEventListener('click', closeProjectModal);
@@ -678,17 +699,19 @@ async function approveQuotation() {
         await API.approveQuotation(currentQuotationId);
         closeQuotationAdminModal();
         await loadQuotations();
-    } catch (err) { alert('Lỗi: ' + err.message); }
+        showToast('Đã phê duyệt báo giá');
+    } catch (err) { showToast('Lỗi: ' + err.message, 'danger'); }
 }
 
 async function confirmRejectQuotation() {
     const note = document.getElementById('qaRejectNote').value.trim();
-    if (!note) { alert('Vui lòng nhập lý do từ chối'); return; }
+    if (!note) { showToast('Vui lòng nhập lý do từ chối', 'danger'); return; }
     try {
         await API.rejectQuotation(currentQuotationId, note);
         closeQuotationAdminModal();
         await loadQuotations();
-    } catch (err) { alert('Lỗi: ' + err.message); }
+        showToast('Đã từ chối báo giá');
+    } catch (err) { showToast('Lỗi: ' + err.message, 'danger'); }
 }
 
 // ---- Session Modal ----
@@ -736,7 +759,8 @@ async function revokeSession(sessionId) {
         await API.revokeSession(sessionId);
         await refreshSessionList();
         await loadUsers();
-    } catch (err) { alert('Lỗi: ' + err.message); }
+        showToast('Đã thu hồi phiên đăng nhập');
+    } catch (err) { showToast('Lỗi: ' + err.message, 'danger'); }
 }
 
 async function saveMaxSessions() {
@@ -745,8 +769,8 @@ async function saveMaxSessions() {
         await API.setMaxSessions(sessionTargetId, max);
         await refreshSessionList();
         await loadUsers();
-        alert('Đã lưu giới hạn thiết bị');
-    } catch (err) { alert('Lỗi: ' + err.message); }
+        showToast('Đã lưu giới hạn thiết bị');
+    } catch (err) { showToast('Lỗi: ' + err.message, 'danger'); }
 }
 
 async function revokeAllSessions() {
@@ -755,7 +779,8 @@ async function revokeAllSessions() {
         await API.revokeAllSessions(sessionTargetId);
         await refreshSessionList();
         await loadUsers();
-    } catch (err) { alert('Lỗi: ' + err.message); }
+        showToast('Đã kick tất cả thiết bị');
+    } catch (err) { showToast('Lỗi: ' + err.message, 'danger'); }
 }
 
 // Called from auth.js after admin login

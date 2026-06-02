@@ -476,26 +476,28 @@ input, select, textarea, button {
 
 /* --- Main Content Area --- */
 .app-main {
-    padding: 40px;
+    padding: 40px 44px;
     display: flex;
     flex-direction: column;
-    gap: 30px;
+    gap: 32px;
     overflow-y: auto;
     height: 100vh;
 }
 
 /* Header */
 .app-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+    display: grid;
+    grid-template-columns: minmax(280px, 1fr) auto;
+    align-items: end;
+    gap: 16px 24px;
     border-bottom: 1px solid var(--border-glass);
-    padding-bottom: 20px;
+    padding-bottom: 18px;
 }
 
 .header-welcome h2 {
-    font-size: 26px;
+    font-size: clamp(21px, 2.1vw, 26px);
     font-weight: 800;
+    line-height: 1.18;
     background: linear-gradient(135deg, #ffffff 0%, #cbd5e0 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -504,12 +506,17 @@ input, select, textarea, button {
 .header-welcome p {
     font-size: 13px;
     color: var(--text-secondary);
+    margin-top: 4px;
+    max-width: 760px;
 }
 
 .header-actions {
     display: flex;
     align-items: center;
-    gap: 10px;
+    justify-content: flex-end;
+    gap: 8px;
+    flex-wrap: wrap;
+    min-width: 0;
 }
 
 .location-badge {
@@ -593,7 +600,7 @@ input, select, textarea, button {
 .workspace-grid {
     display: grid;
     grid-template-columns: 1fr 385px; /* Tăng độ rộng của cột Preview để hiển thị trọn vẹn số liệu */
-    gap: 24px;
+    gap: 28px;
 }
 
 /* Glass Cards Containers */
@@ -602,15 +609,15 @@ input, select, textarea, button {
     backdrop-filter: blur(12px);
     border: 1px solid var(--border-glass);
     border-radius: 12px;
-    padding: 24px;
+    padding: 28px;
     box-shadow: var(--shadow-glass);
 }
 
 .form-container h3, .preview-container h3, .chart-container-wrapper h3 {
     font-size: 16px;
     font-weight: 700;
-    margin-bottom: 20px;
-    padding-bottom: 10px;
+    margin-bottom: 24px;
+    padding-bottom: 12px;
     border-bottom: 1px solid var(--border-glass);
     display: flex;
     align-items: center;
@@ -625,7 +632,7 @@ input, select, textarea, button {
 .grid-form {
     display: grid;
     grid-template-columns: repeat(12, 1fr);
-    gap: 16px;
+    gap: 20px;
 }
 
 .col-12 { grid-column: span 12; }
@@ -637,11 +644,11 @@ input, select, textarea, button {
 .form-group {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 8px;
 }
 
 .form-group label {
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 600;
     color: var(--text-secondary);
 }
@@ -663,7 +670,7 @@ input, select, textarea, button {
     background: var(--bg-input);
     border: 1px solid var(--border-glass);
     border-radius: 8px;
-    padding: 10px 14px;
+    padding: 11px 14px;
     color: var(--text-primary);
     font-family: var(--font-primary);
     font-size: 14px;
@@ -1006,6 +1013,13 @@ input, select, textarea, button {
     border-bottom: 2px double rgba(0, 242, 254, 0.3);
 }
 
+.table-empty {
+    text-align: center !important;
+    color: var(--text-secondary) !important;
+    font-style: italic;
+    padding: 32px 16px !important;
+}
+
 .empty-boq-msg {
     text-align: center;
     color: var(--text-muted);
@@ -1333,7 +1347,7 @@ input, select, textarea, button {
         padding: 20px !important;
         height: auto !important;
         overflow-y: visible !important;
-        padding-bottom: 120px !important;
+        padding-bottom: 90px !important;
     }
     
     .workspace-grid {
@@ -1358,10 +1372,20 @@ input, select, textarea, button {
     }
 }
 
+@media (max-width: 1100px) {
+    .app-header {
+        grid-template-columns: 1fr;
+        align-items: stretch;
+    }
+    .header-actions {
+        justify-content: flex-start;
+    }
+}
+
 @media (max-width: 768px) {
     /* Premium Mobile Header Overrides */
     .app-header {
-        flex-direction: column !important;
+        grid-template-columns: 1fr !important;
         align-items: stretch !important;
         gap: 12px !important;
         padding-bottom: 16px !important;
@@ -1405,12 +1429,12 @@ input, select, textarea, button {
         padding-top: 12px !important;
     }
     
-    .header-actions .btn, 
-    .header-actions .location-badge, 
+    .header-actions .btn,
+    .header-actions .location-badge,
     .header-actions .user-badge {
         font-size: 11px !important;
         padding: 6px 10px !important;
-        height: auto !important;
+        min-height: 44px !important;
     }
 
     .grid-form {
@@ -1490,6 +1514,37 @@ input, select, textarea, button {
         text-align: center !important;
         font-size: 11px !important;
         padding: 8px 6px !important;
+    }
+}
+
+/* ==========================================================================
+   RESPONSIVE — 480px (small phones: iPhone SE, older Android)
+   ========================================================================== */
+@media (max-width: 480px) {
+    .app-main {
+        padding: 14px !important;
+        padding-bottom: 90px !important;
+    }
+
+    .form-container,
+    .preview-container,
+    .boq-section {
+        padding: 16px !important;
+        border-radius: 10px !important;
+    }
+
+    .grid-form {
+        gap: 14px !important;
+    }
+
+    .floating-summary-bar {
+        left: 8px !important;
+        right: 8px !important;
+        bottom: 8px !important;
+    }
+
+    .header-welcome h2 {
+        font-size: 16px !important;
     }
 }
 
@@ -2118,9 +2173,10 @@ input:checked + .slider:before {
 
 /* Base sidebar layout */
 .app-sidebar {
-    display: flex;
-    flex-direction: column;
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr) auto;
     height: 100vh;
+    height: 100dvh;
     overflow: hidden;
     background: linear-gradient(160deg, rgba(17,19,29,0.97) 0%, rgba(9,10,16,0.99) 100%);
     border-right: 1px solid rgba(0,242,254,0.12);
@@ -2184,7 +2240,7 @@ input:checked + .slider:before {
 
 /* --- Scrollable body --- */
 .sb-body {
-    flex: 1;
+    min-height: 0;
     overflow-y: auto;
     padding: 14px 14px 8px;
     display: flex;
@@ -2257,6 +2313,12 @@ input:checked + .slider:before {
     overflow: hidden;
 }
 .sb-nav .tab-btn i { width: 15px; height: 15px; flex-shrink: 0; }
+.sb-nav .tab-btn span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
 .sb-nav .tab-btn:hover {
     background: rgba(255,255,255,0.04);
     color: var(--text-primary);
@@ -2325,21 +2387,24 @@ input:checked + .slider:before {
 
 /* --- Footer --- */
 .sb-footer {
-    flex-shrink: 0;
+    min-width: 0;
     border-top: 1px solid var(--border-glass);
-    padding: 12px 14px;
-    padding-bottom: calc(12px + env(safe-area-inset-bottom));
+    padding: 10px 12px;
+    padding-bottom: calc(10px + env(safe-area-inset-bottom));
     background: var(--bg-sidebar-footer);
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 8px;
+    box-shadow: 0 -12px 24px rgba(0,0,0,0.18);
 }
 
 /* User row */
 .sb-user-row {
-    display: flex;
+    display: grid;
+    grid-template-columns: 32px minmax(72px, 1fr) auto auto;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
+    min-width: 0;
 }
 .sb-user-avatar {
     position: relative;
@@ -2361,7 +2426,6 @@ input:checked + .slider:before {
     box-shadow: 0 0 6px #00e676;
 }
 .sb-user-info {
-    flex: 1;
     min-width: 0;
     display: flex;
     flex-direction: column;
@@ -2395,10 +2459,27 @@ input:checked + .slider:before {
 /* Actions */
 .sb-actions { display: flex; flex-direction: column; gap: 7px; }
 .sb-actions-row {
-    display: flex;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 34px;
     gap: 6px;
 }
-.sb-action-btn { flex: 1; justify-content: center; }
+.sb-action-btn {
+    width: 100%;
+    min-width: 0;
+    justify-content: center;
+}
+.sb-action-btn,
+.sb-actions-row .sb-more-wrap > .sb-icon-btn,
+#btnSubmitProject {
+    min-height: 34px;
+    white-space: nowrap;
+}
+.sb-actions-row .sb-more-wrap {
+    min-width: 0;
+}
+.sb-actions-row .sb-more-wrap > .sb-icon-btn {
+    width: 34px;
+}
 
 /* More menu */
 .sb-more-wrap { position: relative; }
@@ -2446,21 +2527,78 @@ input:checked + .slider:before {
 #btnSubmitProject:hover { box-shadow: 0 5px 18px rgba(0,242,254,0.4); transform: translateY(-1px); }
 #btnSubmitProject:active { transform: translateY(1px); }
 
+/* Sidebar polish: keep the footer usable on short viewports. */
+.sb-user-row .sb-user-info {
+    margin-right: 0 !important;
+}
+.sb-user-row .noti-container {
+    margin-right: 0 !important;
+}
+.sb-user-row .sb-icon-btn {
+    width: 40px !important;
+    height: 40px !important;
+    padding: 0 !important;
+}
+.sb-actions .btn {
+    gap: 6px;
+}
+.sb-actions .btn i {
+    width: 15px;
+    height: 15px;
+    flex-shrink: 0;
+}
+
 /* --- Header Status Badge & Title Upgrade --- */
 .header-title-block {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 10px;
+    min-width: 0;
+    flex-wrap: wrap;
+}
+.header-title-block h2 {
+    min-width: min(100%, 340px);
+    max-width: 100%;
 }
 .status-badge {
     display: inline-flex;
     align-items: center;
+    flex-shrink: 0;
     font-size: 10px;
     font-weight: 700;
-    padding: 3px 8px;
+    line-height: 1;
+    padding: 5px 8px;
     border-radius: 12px;
     letter-spacing: 0.05em;
     text-transform: uppercase;
+}
+.header-actions .btn,
+.header-actions .location-badge,
+.header-actions .user-badge {
+    min-height: 40px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    white-space: nowrap;
+}
+.header-actions .btn {
+    gap: 7px;
+}
+.header-actions .btn i,
+.header-actions .location-badge i,
+.header-actions .user-badge i {
+    width: 15px;
+    height: 15px;
+    flex-shrink: 0;
+}
+.header-actions a.btn[title],
+.header-actions button.btn[title] {
+    min-width: 40px;
+}
+.header-actions a.btn:not(#adminPanelBtn):has(> i:only-child),
+.header-actions button.btn:has(> i:only-child) {
+    width: 40px;
+    padding-inline: 0;
 }
 .status-badge.status-draft {
     background: rgba(255, 255, 255, 0.05);
@@ -2488,7 +2626,7 @@ input:checked + .slider:before {
 .floating-summary-bar {
     position: fixed;
     bottom: 20px;
-    left: 320px;
+    left: calc(280px + 40px); /* sidebar width + gap */
     right: 40px;
     background: rgba(17, 19, 29, 0.85);
     backdrop-filter: blur(20px);
@@ -2550,7 +2688,7 @@ input:checked + .slider:before {
 
 /* Padding bottom for app-main to avoid being covered by floating summary bar */
 .app-main {
-    padding-bottom: 100px !important;
+    padding-bottom: 90px !important;
 }
 
 /* Hide original BOQ print buttons in standard view */
