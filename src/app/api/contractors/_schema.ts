@@ -1,0 +1,26 @@
+import { z } from 'zod'
+
+export const contractorSchema = z.object({
+  type: z.enum(['TEAM', 'COMPANY', 'INDIVIDUAL']).default('TEAM'),
+  name: z.string().trim().min(1).max(200),
+  contactName: z.string().trim().max(100).nullable().default(null),
+  phone: z.string().trim().max(20).nullable().default(null),
+  phone2: z.string().trim().max(20).nullable().default(null),
+  email: z.string().trim().email().max(200).nullable().default(null),
+  address: z.string().trim().max(500).nullable().default(null),
+  district: z.string().trim().max(100).nullable().default(null),
+  city: z.string().trim().max(100).default('Hà Nội'),
+  specialty: z.array(z.string()).nullable().default(null),
+  workScope: z.string().trim().max(200).nullable().default(null),
+  taxCode: z.string().trim().max(20).nullable().default(null),
+  bankAccount: z.string().trim().max(50).nullable().default(null),
+  bankName: z.string().trim().max(100).nullable().default(null),
+  rating: z.number().int().min(1).max(5).default(3),
+  ratingNote: z.string().trim().max(500).nullable().default(null),
+  projectCount: z.number().int().min(0).default(0),
+  totalValue: z.number().min(0).default(0),
+  lastProjectAt: z.string().nullable().default(null),
+  priceNotes: z.record(z.unknown()).nullable().default(null),
+  status: z.enum(['ACTIVE', 'INACTIVE', 'BLACKLIST']).default('ACTIVE'),
+  note: z.string().trim().max(1000).nullable().default(null),
+})

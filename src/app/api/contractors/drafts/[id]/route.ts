@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db/prisma'
 import { getRequestUser } from '@/lib/auth/middleware'
 import { parseId, badRequest, notFound, forbidden, serverError } from '@/lib/api/helpers'
-import { contractorSchema } from '../../route'
+import { contractorSchema } from '../../_schema'
 
 function canRead(draft: { submittedBy: number }, userId: number, role: string) {
   return role === 'ADMIN' || draft.submittedBy === userId

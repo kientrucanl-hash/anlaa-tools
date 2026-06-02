@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db/prisma'
 import { getRequestUser, requireAdmin } from '@/lib/auth/middleware'
 import { parseId, badRequest, notFound, serverError } from '@/lib/api/helpers'
-import { contractorSchema } from '../route'
+import { contractorSchema } from '../_schema'
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
