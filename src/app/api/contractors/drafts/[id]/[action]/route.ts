@@ -59,7 +59,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<Params
         const updated = await prisma.contractor.update({ where: { id: draft.contractorId }, data: payload as never })
         savedId = updated.id
       } else {
-        const created = await prisma.contractor.create({ data: { ...(payload as Record<string, never>), createdById: draft.submittedBy } })
+        const created = await prisma.contractor.create({ data: { ...(payload as Record<string, unknown>), createdById: draft.submittedBy } as never })
         savedId = created.id
       }
 
