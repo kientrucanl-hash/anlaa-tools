@@ -10,6 +10,7 @@ const STATUS_LABELS = {
 };
 
 let allProjects = [];
+let allContractorDrafts = [];
 let currentProjectId = null;
 
 function formatDate(iso) {
@@ -19,6 +20,18 @@ function formatDate(iso) {
 
 function statusBadgeHTML(status) {
     const s = STATUS_LABELS[status] || { text: status, cls: '' };
+    return `<span class="status-badge ${s.cls}">${s.text}</span>`;
+}
+
+const CONTRACTOR_DRAFT_STATUS = {
+    draft:    { text: 'Nháp',      cls: 'badge-draft' },
+    pending:  { text: 'Chờ duyệt', cls: 'badge-pending' },
+    approved: { text: 'Đã duyệt',  cls: 'badge-approved' },
+    rejected: { text: 'Từ chối',   cls: 'badge-rejected' },
+};
+
+function contractorDraftBadgeHTML(status) {
+    const s = CONTRACTOR_DRAFT_STATUS[status] || { text: status, cls: '' };
     return `<span class="status-badge ${s.cls}">${s.text}</span>`;
 }
 
@@ -355,6 +368,81 @@ async function confirmDelete() {
     }
 }
 
+// ---- Contractor Drafts view ----
+async function loadContractorDrafts() {
+    const tbody = document.getElementById('contractorDraftsBody');
+    if (!tbody) return;
+    tbody.innerHTML = `<tr><td colspan="8" class="table-empty">Đang tải...</td></tr>`;
+    try {
+        allContractorDrafts = await API.getContractorDrafts();
+        renderContractorDraftsTable();
+    } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="8" class="table-empty" style="color:var(--color-error);">${err.message}</td></tr>`;
+    }
+}
+
+function renderContractorDraftsTable() {
+    const tbody = document.getElementById('contractorDraftsBody');
+    if (!tbody) return;
+
+    const filter = document.getElementById('filterContractorDraftStatus')?.value || '';
+    const filtered = filter ? allContractorDrafts.filter(d => d.status === filter) : allContractorDrafts;
+
+    if (!filtered.length) {
+        tbody.innerHTML = `<tr><td colspan="8" class="table-empty">Không có nháp nhà thầu nào</td></tr>`;
+        return;
+    }
+
+    tbody.innerHTML = filtered.map((d, i) => {
+        const payload = d.payload || {};
+        const isPending = d.status === 'pending';
+        return `<tr>
+            <td>${i + 1}</td>
+            <td>
+                <strong>${escapeHtml(payload.name || '(chưa có tên)')}</strong>
+                ${payload.phone ? `<div style="font-size:0.78rem;color:var(--text-secondary);">${escapeHtml(payload.phone)}</div>` : ''}
+            </td>
+            <td>${d.contractor_id ? `Sửa #${d.contractor_id}` : 'Thêm mới'}</td>
+            <td>${escapeHtml(d.submitted_by_username || '—')}</td>
+            <td>${formatDate(d.updated_at)}</td>
+            <td>${contractorDraftBadgeHTML(d.status)}</td>
+            <td style="max-width:220px;color:var(--text-secondary);">${escapeHtml(d.admin_note || '—')}</td>
+            <td class="table-actions">
+                ${isPending ? `
+                    <button class="btn btn-success btn-xs" onclick="approveContractorDraft(${d.id})">
+                        <i data-lucide="check-circle"></i> Duyệt
+                    </button>
+                    <button class="btn btn-danger btn-xs" onclick="rejectContractorDraft(${d.id})">
+                        <i data-lucide="x-circle"></i> Từ chối
+                    </button>
+                ` : '<span style="font-size:0.78rem;color:var(--text-secondary);">Đã xử lý</span>'}
+            </td>
+        </tr>`;
+    }).join('');
+
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+async function approveContractorDraft(id) {
+    const note = prompt('Ghi chú phê duyệt (nếu có):', '') || '';
+    try {
+        await API.approveContractorDraft(id, note);
+        await loadContractorDrafts();
+    } catch (err) {
+        alert('Lỗi: ' + err.message);
+    }
+}
+
+async function rejectContractorDraft(id) {
+    const note = prompt('Lý do từ chối:', '') || '';
+    try {
+        await API.rejectContractorDraft(id, note);
+        await loadContractorDrafts();
+    } catch (err) {
+        alert('Lỗi: ' + err.message);
+    }
+}
+
 // ---- Utilities ----
 function escapeHtml(str) {
     return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -376,6 +464,7 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById(`view-${view}`).classList.add('active');
             if (view === 'users') loadUsers();
             if (view === 'quotations') loadQuotations();
+            if (view === 'contractor-drafts') loadContractorDrafts();
         });
     });
 
@@ -433,6 +522,10 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('quotationAdminModal').addEventListener('click', e => {
         if (e.target === e.currentTarget) closeQuotationAdminModal();
     });
+
+    // Contractor drafts tab
+    document.getElementById('filterContractorDraftStatus')?.addEventListener('change', renderContractorDraftsTable);
+    document.getElementById('btnRefreshContractorDrafts')?.addEventListener('click', loadContractorDrafts);
 
     // Filter
     document.getElementById('filterStatus').addEventListener('change', renderProjectsTable);

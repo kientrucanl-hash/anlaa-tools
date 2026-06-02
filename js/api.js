@@ -98,6 +98,16 @@ const API = {
     deleteQuotation: (id) =>
         apiFetch(`/quotations/${id}`, { method: 'DELETE' }),
 
+    // Contractor drafts
+    getContractorDrafts: (status = '') =>
+        apiFetch(`/contractors/drafts${status ? `?status=${encodeURIComponent(status)}` : ''}`),
+
+    approveContractorDraft: (id, admin_note = '') =>
+        apiFetch(`/contractors/drafts/${id}/approve`, { method: 'PUT', body: JSON.stringify({ admin_note }) }),
+
+    rejectContractorDraft: (id, admin_note = '') =>
+        apiFetch(`/contractors/drafts/${id}/reject`, { method: 'PUT', body: JSON.stringify({ admin_note }) }),
+
     // Users (admin only)
     getUsers: () => apiFetch('/users'),
 

@@ -89,6 +89,22 @@ CREATE TABLE IF NOT EXISTS contractors (
 CREATE INDEX IF NOT EXISTS idx_contractors_status ON contractors(status);
 CREATE INDEX IF NOT EXISTS idx_contractors_type   ON contractors(type);
 
+CREATE TABLE IF NOT EXISTS contractor_drafts (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    contractor_id   INTEGER REFERENCES contractors(id) ON DELETE SET NULL,
+    submitted_by    INTEGER NOT NULL REFERENCES users(id),
+    reviewed_by     INTEGER REFERENCES users(id),
+    payload         TEXT    NOT NULL,
+    status          TEXT    NOT NULL DEFAULT 'draft',
+    admin_note      TEXT,
+    created_at      TEXT    NOT NULL,
+    updated_at      TEXT    NOT NULL,
+    submitted_at    TEXT,
+    reviewed_at     TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_contractor_drafts_status ON contractor_drafts(status);
+CREATE INDEX IF NOT EXISTS idx_contractor_drafts_user   ON contractor_drafts(submitted_by);
+
 CREATE TABLE IF NOT EXISTS quotations (
     id          INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id     INTEGER NOT NULL REFERENCES users(id),

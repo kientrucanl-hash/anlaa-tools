@@ -4606,6 +4606,9 @@ const NOTIF_TYPE_MAP = {
     access_request:   { icon: 'key',              cat: 'warning' },
     access_approved:  { icon: 'unlock',           cat: 'success' },
     access_denied:    { icon: 'lock',             cat: 'error'   },
+    contractor_draft_submitted: { icon: 'hard-hat', cat: 'warning' },
+    contractor_draft_approved:  { icon: 'check-circle', cat: 'success' },
+    contractor_draft_rejected:  { icon: 'x-circle', cat: 'error' },
     role_changed:     { icon: 'shield',           cat: 'info'    },
     system:           { icon: 'bell',             cat: 'info'    },
 };
@@ -4768,4 +4771,3 @@ function formatNotifTime(ts) {
         return `${Math.floor(h / 24)} ngày trước`;
     } catch { return ts; }
 }
-

@@ -86,6 +86,38 @@ function ensureTargetContractor(contractorId, res) {
     return false;
 }
 
+function emitLatestNotification(req, userId) {
+    const io = req.app.get('io');
+    if (io) io.to(`user:${userId}`).emit('notification:new', db.notifications.byUser(userId, 1)[0]);
+}
+
+function notifyAdmins(req, draft) {
+    const admins = db.users.all().filter(user => user.role === 'admin');
+    for (const admin of admins) {
+        db.notifications.create({
+            user_id: admin.id,
+            type: 'contractor_draft_submitted',
+            title: 'Nháp nhà thầu chờ duyệt',
+            body: `${draft.submitted_by_username || 'User'} đã gửi nháp "${draft.payload.name}" để admin phê duyệt.`,
+            link: 'admin.html',
+            meta: { draftId: draft.id, contractorName: draft.payload.name, submittedBy: draft.submitted_by },
+        });
+        emitLatestNotification(req, admin.id);
+    }
+}
+
+function notifyDraftOwner(req, draft, type, title, body) {
+    db.notifications.create({
+        user_id: draft.submitted_by,
+        type,
+        title,
+        body,
+        link: 'contractors.html',
+        meta: { draftId: draft.id, contractorId: draft.contractor_id, contractorName: draft.payload.name },
+    });
+    emitLatestNotification(req, draft.submitted_by);
+}
+
 // Drafts must be registered before /:id routes.
 router.get('/drafts', requireAuth, (req, res) => {
     const { status } = req.query;
@@ -133,7 +165,9 @@ router.put('/drafts/:id/submit', requireAuth, (req, res) => {
     if (!draftWorkflow.canSubmitDraft(draft, req.user)) {
         return res.status(403).json({ error: 'Nhap nay khong the gui duyet' });
     }
-    res.json(db.contractorDrafts.submit(draft.id));
+    const submitted = db.contractorDrafts.submit(draft.id);
+    notifyAdmins(req, submitted);
+    res.json(submitted);
 });
 
 router.put('/drafts/:id/approve', requireAdmin, validate(reviewSchema), (req, res) => {
@@ -147,6 +181,13 @@ router.put('/drafts/:id/approve', requireAdmin, validate(reviewSchema), (req, re
         ? db.contractors.update(draft.contractor_id, draft.payload)
         : db.contractors.create({ ...draft.payload, created_by: draft.submitted_by });
     const reviewed = db.contractorDrafts.approve(draft.id, req.user.id, saved.id, req.body.admin_note);
+    notifyDraftOwner(
+        req,
+        reviewed,
+        'contractor_draft_approved',
+        'Nháp nhà thầu đã được duyệt',
+        `Nháp "${reviewed.payload.name}" đã được admin duyệt và lưu vào danh bạ nhà thầu.`
+    );
     res.json({ draft: reviewed, contractor: saved });
 });
 
@@ -156,7 +197,16 @@ router.put('/drafts/:id/reject', requireAdmin, validate(reviewSchema), (req, res
     if (!draftWorkflow.canReviewDraft(draft, req.user)) {
         return res.status(403).json({ error: 'Chi tu choi duoc nhap dang cho duyet' });
     }
-    res.json(db.contractorDrafts.reject(draft.id, req.user.id, req.body.admin_note));
+    const rejected = db.contractorDrafts.reject(draft.id, req.user.id, req.body.admin_note);
+    const note = req.body.admin_note ? ` Lý do: ${req.body.admin_note}` : '';
+    notifyDraftOwner(
+        req,
+        rejected,
+        'contractor_draft_rejected',
+        'Nháp nhà thầu bị từ chối',
+        `Nháp "${rejected.payload.name}" bị admin từ chối.${note}`
+    );
+    res.json(rejected);
 });
 
 router.delete('/drafts/:id', requireAuth, (req, res) => {

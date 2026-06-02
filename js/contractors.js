@@ -230,10 +230,10 @@ function getSorted(list) {
 
 function draftStatusBadge(status) {
     const map = {
-        draft: "Nhap",
-        pending: "Cho duyet",
-        approved: "Da duyet",
-        rejected: "Tu choi"
+        draft: "Nháp",
+        pending: "Chờ duyệt",
+        approved: "Đã duyệt",
+        rejected: "Từ chối"
     };
     return `<span class="status-badge status-${status === "approved" ? "active" : status === "rejected" ? "blacklist" : "inactive"}">${map[status] || status}</span>`;
 }
@@ -260,7 +260,7 @@ function renderDrafts(error = "") {
     const panel = ensureDraftPanel();
     if (!panel) return;
 
-    const title = isAdminUser() ? "Nhap nha thau can xu ly" : "Nhap nha thau cua toi";
+    const title = isAdminUser() ? "Nháp nhà thầu cần xử lý" : "Nháp nhà thầu của tôi";
     const visibleDrafts = isAdminUser()
         ? allDrafts
         : allDrafts.filter(d => d.status !== "approved" || d.reviewed_at);
@@ -274,7 +274,7 @@ function renderDrafts(error = "") {
         panel.innerHTML = `
             <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
                 <strong style="font-size:13px;color:var(--text-secondary);">${title}</strong>
-                <span style="font-size:12px;color:var(--text-muted);">Chua co nhap</span>
+                <span style="font-size:12px;color:var(--text-muted);">Chưa có nháp</span>
             </div>`;
         return;
     }
@@ -282,17 +282,17 @@ function renderDrafts(error = "") {
     panel.innerHTML = `
         <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px;">
             <strong style="font-size:13px;color:var(--text-secondary);">${title}</strong>
-            <span style="font-size:12px;color:var(--text-muted);">${visibleDrafts.length} ban ghi</span>
+            <span style="font-size:12px;color:var(--text-muted);">${visibleDrafts.length} bản ghi</span>
         </div>
         <div style="overflow:auto;">
             <table class="ctx-table" style="min-width:760px;">
                 <thead>
                     <tr>
-                        <th>Ten nha thau</th>
-                        <th>Trang thai</th>
-                        <th>Nguoi gui</th>
-                        <th>Cap nhat</th>
-                        <th>Ghi chu admin</th>
+                        <th>Tên nhà thầu</th>
+                        <th>Trạng thái</th>
+                        <th>Người gửi</th>
+                        <th>Cập nhật</th>
+                        <th>Ghi chú admin</th>
                         <th class="no-print"></th>
                     </tr>
                 </thead>
@@ -300,18 +300,18 @@ function renderDrafts(error = "") {
                     ${visibleDrafts.map(d => `
                         <tr>
                             <td>
-                                <div class="td-name">${escHtml(d.payload?.name || "(chua co ten)")}</div>
-                                ${d.contractor_id ? `<div style="font-size:11px;color:var(--text-muted);">Sua nha thau #${d.contractor_id}</div>` : `<div style="font-size:11px;color:var(--text-muted);">Them moi</div>`}
+                                <div class="td-name">${escHtml(d.payload?.name || "(chưa có tên)")}</div>
+                                ${d.contractor_id ? `<div style="font-size:11px;color:var(--text-muted);">Sửa nhà thầu #${d.contractor_id}</div>` : `<div style="font-size:11px;color:var(--text-muted);">Thêm mới</div>`}
                             </td>
                             <td>${draftStatusBadge(d.status)}</td>
                             <td style="font-size:12px;">${escHtml(d.submitted_by_username || "")}</td>
                             <td style="font-size:12px;color:var(--text-muted);">${escHtml(d.updated_at || "")}</td>
                             <td style="font-size:12px;color:var(--text-muted);">${escHtml(d.admin_note || "")}</td>
                             <td class="no-print" style="text-align:right;white-space:nowrap;">
-                                ${["draft","rejected"].includes(d.status) ? `<button class="btn btn-xs btn-secondary draft-edit" data-id="${d.id}">Sua</button>` : ""}
-                                ${["draft","rejected"].includes(d.status) ? `<button class="btn btn-xs btn-gradient draft-submit" data-id="${d.id}">Gui duyet</button>` : ""}
-                                ${isAdminUser() && d.status === "pending" ? `<button class="btn btn-xs btn-gradient draft-approve" data-id="${d.id}">Duyet</button><button class="btn btn-xs btn-danger draft-reject" data-id="${d.id}">Tu choi</button>` : ""}
-                                ${["draft","rejected"].includes(d.status) ? `<button class="btn btn-xs btn-danger draft-delete" data-id="${d.id}">Xoa</button>` : ""}
+                                ${["draft","rejected"].includes(d.status) ? `<button class="btn btn-xs btn-secondary draft-edit" data-id="${d.id}">Sửa</button>` : ""}
+                                ${["draft","rejected"].includes(d.status) ? `<button class="btn btn-xs btn-gradient draft-submit" data-id="${d.id}">Gửi duyệt</button>` : ""}
+                                ${isAdminUser() && d.status === "pending" ? `<button class="btn btn-xs btn-gradient draft-approve" data-id="${d.id}">Duyệt</button><button class="btn btn-xs btn-danger draft-reject" data-id="${d.id}">Từ chối</button>` : ""}
+                                ${["draft","rejected"].includes(d.status) ? `<button class="btn btn-xs btn-danger draft-delete" data-id="${d.id}">Xóa</button>` : ""}
                             </td>
                         </tr>
                     `).join("")}
@@ -325,34 +325,34 @@ function renderDrafts(error = "") {
             await submitDraftAPI(parseInt(btn.dataset.id));
             allDrafts = await fetchDrafts();
             renderDrafts();
-            toast("Da gui nhap cho admin duyet");
-        } catch (e) { toast("Loi: " + e.message); }
+            toast("Đã gửi nháp cho admin duyệt");
+        } catch (e) { toast("Lỗi: " + e.message); }
     }));
     panel.querySelectorAll(".draft-approve").forEach(btn => btn.addEventListener("click", async () => {
-        const note = prompt("Ghi chu phe duyet (neu co):", "") || "";
+        const note = prompt("Ghi chú phê duyệt (nếu có):", "") || "";
         try {
             await reviewDraftAPI(parseInt(btn.dataset.id), "approve", note);
             await loadAll();
-            toast("Da duyet va luu vao danh ba nha thau");
-        } catch (e) { toast("Loi: " + e.message); }
+            toast("Đã duyệt và lưu vào danh bạ nhà thầu");
+        } catch (e) { toast("Lỗi: " + e.message); }
     }));
     panel.querySelectorAll(".draft-reject").forEach(btn => btn.addEventListener("click", async () => {
-        const note = prompt("Ly do tu choi:", "") || "";
+        const note = prompt("Lý do từ chối:", "") || "";
         try {
             await reviewDraftAPI(parseInt(btn.dataset.id), "reject", note);
             allDrafts = await fetchDrafts();
             renderDrafts();
-            toast("Da tu choi nhap");
-        } catch (e) { toast("Loi: " + e.message); }
+            toast("Đã từ chối nháp");
+        } catch (e) { toast("Lỗi: " + e.message); }
     }));
     panel.querySelectorAll(".draft-delete").forEach(btn => btn.addEventListener("click", async () => {
-        if (!confirm("Xoa ban nhap nay?")) return;
+        if (!confirm("Xóa bản nháp này?")) return;
         try {
             await deleteDraftAPI(parseInt(btn.dataset.id));
             allDrafts = await fetchDrafts();
             renderDrafts();
-            toast("Da xoa nhap");
-        } catch (e) { toast("Loi: " + e.message); }
+            toast("Đã xóa nháp");
+        } catch (e) { toast("Lỗi: " + e.message); }
     }));
 }
 
@@ -506,7 +506,7 @@ function openModal(id = null, draft = null) {
     if (!modal || !form) return;
 
     document.getElementById("modalTitle").textContent = id ? "Sửa thông tin nhà thầu" : "Thêm nhà thầu mới";
-    if (draft) document.getElementById("modalTitle").textContent = "Sua nhap nha thau";
+    if (draft) document.getElementById("modalTitle").textContent = "Sửa nháp nhà thầu";
     form.reset();
 
     // Reset specialties
@@ -623,7 +623,7 @@ async function handleSave() {
             allDrafts = await fetchDrafts();
             closeModal();
             renderDrafts();
-            toast("Da luu nhap. Bam Gui duyet de chuyen admin phe duyet.");
+            toast("Đã lưu nháp. Bấm Gửi duyệt để chuyển admin phê duyệt.");
             return;
         }
 

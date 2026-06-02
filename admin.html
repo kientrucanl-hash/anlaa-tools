@@ -62,6 +62,10 @@
                 <i data-lucide="clipboard-list" style="width:14px;height:14px;vertical-align:middle;margin-right:5px;"></i>
                 Báo giá Nhà thầu
             </button>
+            <button class="prx-tab admin-nav-btn" data-view="contractor-drafts">
+                <i data-lucide="hard-hat" style="width:14px;height:14px;vertical-align:middle;margin-right:5px;"></i>
+                Nháp nhà thầu
+            </button>
         </div>
 
         <!-- Projects View -->
@@ -181,6 +185,49 @@
                         </tr>
                     </thead>
                     <tbody id="quotationsBody">
+                        <tr><td colspan="8" class="table-empty">Đang tải...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Contractor Drafts View -->
+        <section id="view-contractor-drafts" class="admin-view">
+            <div class="admin-toolbar">
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <button class="sidebar-toggle-btn" onclick="document.getElementById('appSidebar')?.classList.toggle('open')">
+                        <i data-lucide="menu"></i>
+                    </button>
+                    <h2>Nháp nhà thầu</h2>
+                </div>
+                <div class="toolbar-actions">
+                    <select id="filterContractorDraftStatus" class="filter-select">
+                        <option value="">Tất cả trạng thái</option>
+                        <option value="pending">Chờ duyệt</option>
+                        <option value="draft">Nháp</option>
+                        <option value="approved">Đã duyệt</option>
+                        <option value="rejected">Từ chối</option>
+                    </select>
+                    <button id="btnRefreshContractorDrafts" class="btn btn-secondary btn-sm">
+                        <i data-lucide="refresh-cw"></i> Làm mới
+                    </button>
+                </div>
+            </div>
+            <div class="admin-table-wrap">
+                <table class="admin-table">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Nhà thầu</th>
+                            <th>Loại nháp</th>
+                            <th>Người gửi</th>
+                            <th>Cập nhật</th>
+                            <th>Trạng thái</th>
+                            <th>Ghi chú admin</th>
+                            <th>Hành động</th>
+                        </tr>
+                    </thead>
+                    <tbody id="contractorDraftsBody">
                         <tr><td colspan="8" class="table-empty">Đang tải...</td></tr>
                     </tbody>
                 </table>
@@ -439,4 +486,3 @@
 </script>
 </body>
 </html>
-
