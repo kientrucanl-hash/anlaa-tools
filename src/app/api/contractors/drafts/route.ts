@@ -3,7 +3,7 @@ import { z } from 'zod'
 import { prisma } from '@/lib/db/prisma'
 import { getRequestUser } from '@/lib/auth/middleware'
 import { badRequest, serverError } from '@/lib/api/helpers'
-import { contractorSchema } from '../route'
+import { contractorSchema } from '../_schema'
 
 const draftSchema = contractorSchema.extend({
   contractorId: z.number().int().positive().nullable().default(null),
