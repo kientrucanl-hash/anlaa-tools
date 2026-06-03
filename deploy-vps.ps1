@@ -30,6 +30,7 @@ Write-Host "==========================================================" -Foregro
 if ($Rollback) {
     Write-Host "[ROLLBACK] Returning to old Express app..." -ForegroundColor Red
     ssh -o StrictHostKeyChecking=no $SERVER "bash $NEW_DIR/scripts/cutover.sh --rollback"
+    if ($LASTEXITCODE -ne 0) { throw "Remote rollback failed with exit code $LASTEXITCODE" }
     exit 0
 }
 
@@ -52,6 +53,7 @@ if ($Cutover) {
 
     $remoteScript = "set -e; if [ ! -d $NEW_DIR/.git ]; then git clone $REPO_URL $NEW_DIR; fi; cd $NEW_DIR; git pull origin main; chmod +x scripts/cutover.sh; bash scripts/cutover.sh"
     ssh -o StrictHostKeyChecking=no $SERVER "bash -lc '$remoteScript'"
+    if ($LASTEXITCODE -ne 0) { throw "Remote cutover failed with exit code $LASTEXITCODE" }
     Write-Host "Cutover complete!" -ForegroundColor Green
     exit 0
 }
@@ -61,6 +63,7 @@ if ($Force) {
 
     $remoteScript = "set -e; cd $NEW_DIR; echo ""[1/4] git pull...""; git pull origin main; echo ""[2/4] docker compose up...""; docker compose up --build --force-recreate -d; docker image prune -f; echo ""[3/4] Prisma migrate...""; docker compose exec -T nextjs npx prisma migrate deploy; echo ""[4/4] Health check...""; sleep 20; curl -sf http://127.0.0.1:3000/ > /dev/null && echo ""Next.js OK"" || (echo ""FAILED"" && docker compose logs --tail=30 nextjs && exit 1); curl -sf http://127.0.0.1:4000/health && echo ""Socket OK"" || echo ""Socket health endpoint not responding"""
     ssh -o StrictHostKeyChecking=no $SERVER "bash -lc '$remoteScript'"
+    if ($LASTEXITCODE -ne 0) { throw "Remote force deploy failed with exit code $LASTEXITCODE" }
     Write-Host "Force deploy complete!" -ForegroundColor Green
     exit 0
 }
@@ -80,6 +83,7 @@ if (-not $unpushed) {
 
 Write-Host "[1/2] Pushing to GitHub..." -ForegroundColor Yellow
 git push origin main
+if ($LASTEXITCODE -ne 0) { throw "git push failed with exit code $LASTEXITCODE" }
 Write-Host "[2/2] Pushed. GitHub Actions is deploying..." -ForegroundColor Green
 Write-Host ""
 Write-Host "Follow progress at: $ACTIONS_URL" -ForegroundColor Cyan
