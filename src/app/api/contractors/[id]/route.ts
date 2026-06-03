@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/db/prisma'
+import { prisma, toJson } from '@/lib/db/prisma'
 import { getRequestUser, requireAdmin } from '@/lib/auth/middleware'
 import { parseId, badRequest, notFound, serverError } from '@/lib/api/helpers'
 import { contractorSchema } from '../_schema'
@@ -26,7 +26,16 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     if (!(await prisma.contractor.findUnique({ where: { id } }))) return notFound('Không tìm thấy nhà thầu')
     const body = contractorSchema.partial().safeParse(await req.json())
     if (!body.success) return badRequest(body.error.errors.map((e) => e.message).join('; '))
-    const updated = await prisma.contractor.update({ where: { id }, data: body.data as never })
+    const { specialty, priceNotes, lastProjectAt, ...rest } = body.data
+    const updated = await prisma.contractor.update({
+      where: { id },
+      data: {
+        ...rest,
+        ...(specialty !== undefined && { specialty: toJson(specialty) }),
+        ...(priceNotes !== undefined && { priceNotes: toJson(priceNotes) }),
+        ...(lastProjectAt !== undefined && { lastProjectAt: lastProjectAt ? new Date(lastProjectAt) : null }),
+      },
+    })
     return NextResponse.json(updated)
   } catch (e: unknown) {
     if (e instanceof Error && e.message === 'Forbidden')

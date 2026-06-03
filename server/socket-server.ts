@@ -4,6 +4,7 @@ import { Server, Socket } from 'socket.io'
 import { PrismaClient } from '@prisma/client'
 import jwt from 'jsonwebtoken'
 import { createLogger, format, transports } from 'winston'
+import Redis from 'ioredis'
 
 // ── Env validation ─────────────────────────────────────────────────────────
 
@@ -290,16 +291,58 @@ io.on('connection', (rawSocket) => {
   })
 })
 
+// ── Redis subscriber (API → Socket.io bridge) ─────────────────────────────
+// Next.js API routes publish to 'socket:user' and 'socket:project' channels.
+// This subscriber receives those messages and emits to the relevant rooms.
+
+let redisSubscriber: Redis | null = null
+
+function startRedisSubscriber() {
+  if (!process.env.REDIS_URL) {
+    logger.warn('[Redis] REDIS_URL not set — real-time API notifications disabled')
+    return
+  }
+
+  redisSubscriber = new Redis(process.env.REDIS_URL, { lazyConnect: true })
+
+  redisSubscriber.on('error', (err) => {
+    logger.warn('[Redis] Subscriber error', { error: err.message })
+  })
+
+  redisSubscriber.subscribe('socket:user', 'socket:project', (err) => {
+    if (err) {
+      logger.warn('[Redis] Subscribe failed', { error: err.message })
+      return
+    }
+    logger.info('[Redis] Subscribed to socket:user, socket:project')
+  })
+
+  redisSubscriber.on('message', (channel, message) => {
+    try {
+      const payload = JSON.parse(message) as { userId?: number; projectId?: number; event: string; data: unknown }
+      if (channel === 'socket:user' && payload.userId) {
+        io.to(`user:${payload.userId}`).emit(payload.event, payload.data)
+      } else if (channel === 'socket:project' && payload.projectId) {
+        io.to(`project:${payload.projectId}`).emit(payload.event, payload.data)
+      }
+    } catch {
+      logger.warn('[Redis] Failed to parse message', { channel, message })
+    }
+  })
+}
+
 // ── Start ──────────────────────────────────────────────────────────────────
 
 httpServer.listen(PORT, '0.0.0.0', () => {
   logger.info(`Socket.io server running on port ${PORT}`)
+  startRedisSubscriber()
 })
 
 // ── Graceful shutdown ──────────────────────────────────────────────────────
 
 async function shutdown(signal: string) {
   logger.info(`${signal} received. Shutting down gracefully...`)
+  redisSubscriber?.disconnect()
   httpServer.close(async () => {
     await prisma.$disconnect()
     process.exit(0)

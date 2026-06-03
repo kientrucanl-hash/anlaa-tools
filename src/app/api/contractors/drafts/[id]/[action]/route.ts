@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { prisma } from '@/lib/db/prisma'
+import { Prisma } from '@prisma/client'
+import { prisma, toJson } from '@/lib/db/prisma'
 import { getRequestUser, requireAdmin } from '@/lib/auth/middleware'
 import { parseId, badRequest, notFound, forbidden, serverError } from '@/lib/api/helpers'
 
@@ -53,13 +54,42 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<Params
       if (draft.status !== 'PENDING') return forbidden('Chỉ duyệt được nháp đang chờ duyệt')
       const payload = draft.payload as Record<string, unknown>
 
-      // Create or update contractor
+      // Build typed contractor data from untyped draft payload
+      const contractorData: Prisma.ContractorUncheckedCreateInput = {
+        name: String(payload.name ?? ''),
+        type: (payload.type as Prisma.ContractorUncheckedCreateInput['type']) ?? 'TEAM',
+        status: (payload.status as Prisma.ContractorUncheckedCreateInput['status']) ?? 'ACTIVE',
+        contactName: (payload.contactName as string) ?? null,
+        phone: (payload.phone as string) ?? null,
+        phone2: (payload.phone2 as string) ?? null,
+        email: (payload.email as string) ?? null,
+        address: (payload.address as string) ?? null,
+        district: (payload.district as string) ?? null,
+        city: (payload.city as string) ?? 'Hà Nội',
+        workScope: (payload.workScope as string) ?? null,
+        taxCode: (payload.taxCode as string) ?? null,
+        bankAccount: (payload.bankAccount as string) ?? null,
+        bankName: (payload.bankName as string) ?? null,
+        rating: typeof payload.rating === 'number' ? payload.rating : 3,
+        ratingNote: (payload.ratingNote as string) ?? null,
+        projectCount: typeof payload.projectCount === 'number' ? payload.projectCount : 0,
+        totalValue: typeof payload.totalValue === 'number' ? payload.totalValue : 0,
+        lastProjectAt: typeof payload.lastProjectAt === 'string' ? new Date(payload.lastProjectAt) : null,
+        note: (payload.note as string) ?? null,
+        specialty: payload.specialty != null ? toJson(payload.specialty) : Prisma.JsonNull,
+        priceNotes: payload.priceNotes != null ? toJson(payload.priceNotes) : Prisma.JsonNull,
+        createdById: draft.submittedBy,
+      }
       let savedId: number
       if (draft.contractorId) {
-        const updated = await prisma.contractor.update({ where: { id: draft.contractorId }, data: payload as never })
+        const { createdById, ...updateData } = contractorData
+        const updated = await prisma.contractor.update({
+          where: { id: draft.contractorId },
+          data: updateData,
+        })
         savedId = updated.id
       } else {
-        const created = await prisma.contractor.create({ data: { ...(payload as Record<string, unknown>), createdById: draft.submittedBy } as never })
+        const created = await prisma.contractor.create({ data: contractorData })
         savedId = created.id
       }
 

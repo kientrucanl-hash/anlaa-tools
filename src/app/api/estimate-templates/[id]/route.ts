@@ -46,7 +46,10 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       return NextResponse.json({ error: 'Snapshot quá lớn' }, { status: 413 })
     }
 
-    const updated = await prisma.estimateTemplate.update({ where: { id }, data: data as never })
+    const updated = await prisma.estimateTemplate.update({
+      where: { id },
+      data: data as { name?: string; category?: string; description?: string | null; snapshot?: string; isActive?: boolean },
+    })
     return NextResponse.json(updated)
   } catch (e: unknown) {
     if (e instanceof Error && e.message === 'Forbidden')

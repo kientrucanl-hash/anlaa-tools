@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { ZodError } from 'zod'
+import Redis from 'ioredis'
 
 export function parseId(value: string): number | null {
   const id = parseInt(value, 10)
@@ -29,15 +30,39 @@ export function zodError(err: ZodError) {
   )
 }
 
-// Helper to get Socket.io instance for broadcasting from API routes
-// Socket.io runs in a separate server process — notifications are sent
-// directly to the socket server via its own event loop, so API routes
-// can only write to DB. Real-time push is handled by socket-server.ts.
-// This placeholder exists for future integration (e.g., Redis pub/sub).
-export function emitToUser(_userId: number, _event: string, _data: unknown) {
-  // TODO Phase 6: emit via Redis pub/sub to socket-server.ts
+// ── Redis pub/sub publisher ────────────────────────────────────────────────
+// Next.js API routes publish events here; socket-server.ts subscribes and
+// emits them to the relevant Socket.io rooms.
+
+const globalForRedis = globalThis as unknown as { redisPublisher: Redis | undefined }
+
+function getPublisher(): Redis | null {
+  if (!process.env.REDIS_URL) return null
+  if (!globalForRedis.redisPublisher) {
+    globalForRedis.redisPublisher = new Redis(process.env.REDIS_URL, {
+      maxRetriesPerRequest: 1,
+      enableOfflineQueue: false,
+      lazyConnect: true,
+    })
+    globalForRedis.redisPublisher.on('error', () => {})
+  }
+  return globalForRedis.redisPublisher
 }
 
-export function emitToProject(_projectId: number, _event: string, _data: unknown) {
-  // TODO Phase 6: emit via Redis pub/sub to socket-server.ts
+async function publish(channel: string, payload: unknown): Promise<void> {
+  const publisher = getPublisher()
+  if (!publisher) return
+  try {
+    await publisher.publish(channel, JSON.stringify(payload))
+  } catch {
+    // Redis unavailable — degrade gracefully, DB write already done
+  }
+}
+
+export async function emitToUser(userId: number, event: string, data: unknown): Promise<void> {
+  await publish('socket:user', { userId, event, data })
+}
+
+export async function emitToProject(projectId: number, event: string, data: unknown): Promise<void> {
+  await publish('socket:project', { projectId, event, data })
 }

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { prisma } from '@/lib/db/prisma'
+import { prisma, toJson } from '@/lib/db/prisma'
 import { getRequestUser } from '@/lib/auth/middleware'
 import { badRequest, serverError } from '@/lib/api/helpers'
 import { contractorSchema } from '../_schema'
@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
       if (!c) return NextResponse.json({ error: 'Không tìm thấy nhà thầu cần cập nhật' }, { status: 404 })
     }
     const draft = await prisma.contractorDraft.create({
-      data: { contractorId, submittedBy: user.id, payload },
+      data: { contractorId, submittedBy: user.id, payload: toJson(payload) },
     })
     return NextResponse.json(draft, { status: 201 })
   } catch {

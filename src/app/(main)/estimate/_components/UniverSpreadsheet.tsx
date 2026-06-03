@@ -17,13 +17,15 @@ export function UniverSpreadsheet({ projectId, initialSnapshot, onSave, readonly
   const apiRef = useRef<Record<string, unknown> | null>(null)
   const cleanupRef = useRef<(() => void) | null>(null)
   const setSaveBadge = useEstimateStore((s) => s.setSaveBadge)
+  const onSaveRef = useRef(onSave)
 
-  const handleSave = useCallback(
-    async (pid: number, snapshot: string) => {
-      await onSave(snapshot)
-    },
-    [onSave]
-  )
+  // Keep ref current so the auto-save closure always calls the latest onSave
+  // without triggering a Univer re-init on every render.
+  useEffect(() => { onSaveRef.current = onSave }, [onSave])
+
+  const handleSave = useCallback(async (_pid: number, snapshot: string) => {
+    await onSaveRef.current(snapshot)
+  }, [])
 
   useEffect(() => {
     if (!containerRef.current) return
@@ -52,7 +54,8 @@ export function UniverSpreadsheet({ projectId, initialSnapshot, onSave, readonly
       cancelled = true
       cleanupRef.current?.()
     }
-    // projectId / readonly should not re-init; only on mount
+    // Univer instance is initialized once on mount — projectId/readonly changes
+    // do not re-init the spreadsheet engine to avoid losing in-memory state.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 

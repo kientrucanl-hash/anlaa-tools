@@ -1,8 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { prisma } from '@/lib/db/prisma'
+import { prisma, toJson } from '@/lib/db/prisma'
 import { getRequestUser } from '@/lib/auth/middleware'
 import { badRequest, serverError } from '@/lib/api/helpers'
+
+type ProjectWithUser = {
+  id: number
+  name: string
+  address: string
+  status: string
+  createdAt: Date
+  updatedAt: Date
+  userId: number
+  user: { username: string }
+  [key: string]: unknown
+}
+
+type CollabWithProject = {
+  projectId: number
+  role: string
+  project: ProjectWithUser
+}
 
 const createSchema = z.object({
   name: z.string().trim().min(1, 'Tên dự án không được để trống').max(200, 'Tên dự án không được vượt quá 200 ký tự'),
@@ -18,9 +36,8 @@ export async function GET(req: NextRequest) {
         include: { user: { select: { username: true } } },
         orderBy: { updatedAt: 'desc' },
       })
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      return NextResponse.json(
-        (projects as any[]).map((p: any) => ({ ...p, ownerName: p.user.username, myRole: 'admin', user: undefined }))
+        return NextResponse.json(
+        (projects as ProjectWithUser[]).map((p) => ({ ...p, ownerName: p.user.username, myRole: 'admin', user: undefined }))
       )
     }
 
@@ -39,17 +56,12 @@ export async function GET(req: NextRequest) {
       },
     })
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const ownIds = new Set((own as any[]).map((p: any) => p.id as number))
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const sharedProjects = (shared as any[])
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      .filter((c: any) => !ownIds.has(c.projectId))
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      .map((c: any) => ({ ...c.project, ownerName: c.project.user.username, myRole: c.role.toLowerCase(), user: undefined }))
+    const ownIds = new Set((own as ProjectWithUser[]).map((p) => p.id))
+    const sharedProjects = (shared as CollabWithProject[])
+      .filter((c) => !ownIds.has(c.projectId))
+      .map((c) => ({ ...c.project, ownerName: c.project.user.username, myRole: c.role.toLowerCase(), user: undefined }))
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const ownMapped = (own as any[]).map((p: any) => ({ ...p, ownerName: p.user.username, myRole: 'owner', user: undefined }))
+    const ownMapped = (own as ProjectWithUser[]).map((p) => ({ ...p, ownerName: p.user.username, myRole: 'owner', user: undefined }))
     return NextResponse.json([...ownMapped, ...sharedProjects])
   } catch {
     return serverError()
@@ -67,7 +79,7 @@ export async function POST(req: NextRequest) {
         userId: user.id,
         name: body.data.name,
         address: body.data.address,
-        data: body.data.data,
+        data: toJson(body.data.data),
       },
     })
     return NextResponse.json(project, { status: 201 })

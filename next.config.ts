@@ -2,10 +2,6 @@ import type { NextConfig } from 'next'
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
-  typescript: {
-    // Prisma JSON field types cause build-time errors but code is runtime-correct
-    ignoreBuildErrors: true,
-  },
   experimental: {
     // Required for @univerjs/presets large bundle
     largePageDataBytes: 128 * 1024,

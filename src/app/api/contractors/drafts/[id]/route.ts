@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/db/prisma'
+import { prisma, toJson } from '@/lib/db/prisma'
 import { getRequestUser } from '@/lib/auth/middleware'
 import { parseId, badRequest, notFound, forbidden, serverError } from '@/lib/api/helpers'
 import { contractorSchema } from '../../_schema'
@@ -38,7 +38,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     if (!body.success) return badRequest(body.error.errors.map((e) => e.message).join('; '))
 
     const payload = { ...(draft.payload as Record<string, unknown>), ...body.data }
-    const updated = await prisma.contractorDraft.update({ where: { id }, data: { payload } })
+    const updated = await prisma.contractorDraft.update({ where: { id }, data: { payload: toJson(payload) } })
     return NextResponse.json(updated)
   } catch {
     return serverError()

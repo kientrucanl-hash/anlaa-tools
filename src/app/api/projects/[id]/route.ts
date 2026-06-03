@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { prisma } from '@/lib/db/prisma'
+import { prisma, toJson } from '@/lib/db/prisma'
 import { getRequestUser, requireAdmin } from '@/lib/auth/middleware'
 import { parseId, badRequest, notFound, forbidden, serverError } from '@/lib/api/helpers'
 import { getCollabRole } from '@/lib/api/collab'
@@ -73,7 +73,11 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     if (!['DRAFT', 'REJECTED'].includes(project.status))
       return badRequest('Project đang chờ duyệt hoặc đã được duyệt, không thể chỉnh sửa')
 
-    const updated = await prisma.project.update({ where: { id }, data: body.data })
+    const { data: projectData, ...rest } = body.data
+    const updated = await prisma.project.update({
+      where: { id },
+      data: { ...rest, ...(projectData !== undefined && { data: toJson(projectData) }) },
+    })
     return NextResponse.json(updated)
   } catch {
     return serverError()

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/db/prisma'
+import { prisma, toJson } from '@/lib/db/prisma'
 import { getRequestUser, requireAdmin } from '@/lib/auth/middleware'
 import { badRequest, serverError } from '@/lib/api/helpers'
 import { contractorSchema } from './_schema'
@@ -36,8 +36,15 @@ export async function POST(req: NextRequest) {
     requireAdmin(user)
     const body = contractorSchema.safeParse(await req.json())
     if (!body.success) return badRequest(body.error.errors.map((e) => e.message).join('; '))
+    const { specialty, priceNotes, lastProjectAt, ...rest } = body.data
     const contractor = await prisma.contractor.create({
-      data: { ...body.data, createdById: user.id } as never,
+      data: {
+        ...rest,
+        createdById: user.id,
+        specialty: toJson(specialty),
+        priceNotes: toJson(priceNotes),
+        lastProjectAt: lastProjectAt ? new Date(lastProjectAt) : null,
+      },
     })
     return NextResponse.json(contractor, { status: 201 })
   } catch (e: unknown) {
