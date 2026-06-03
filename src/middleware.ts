@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyToken } from '@/lib/auth/jwt'
 
-// Prisma cannot run in Edge Runtime — session revocation is enforced
-// in individual API route handlers via getRequestUser() which hits the DB.
+// jsonwebtoken uses Node.js crypto — must run in nodejs runtime, not Edge.
+export const runtime = 'nodejs'
 
 const PUBLIC_PATHS = [
   '/api/auth/login',
