@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useMemo, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { useQuery } from '@tanstack/react-query'
 import { ArrowLeft, Download, Package } from 'lucide-react'
@@ -88,6 +88,10 @@ async function fetchProject(id: string) {
 // ── Page ────────────────────────────────────────────────────────────────────
 
 export default function MaterialsPage() {
+  return <Suspense fallback={<div style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '3rem' }}>Đang tải...</div>}><MaterialsContent /></Suspense>
+}
+
+function MaterialsContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const projectId = searchParams.get('projectId')

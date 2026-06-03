@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { useQuery } from '@tanstack/react-query'
 import { ArrowLeft, BarChart2, Save } from 'lucide-react'
@@ -47,6 +47,10 @@ function getQty(item: Record<string, unknown>): number {
 // ── Page ────────────────────────────────────────────────────────────────────
 
 export default function PricingPage() {
+  return <Suspense fallback={<div style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '3rem' }}>Đang tải...</div>}><PricingContent /></Suspense>
+}
+
+function PricingContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const { showToast } = useToast()
