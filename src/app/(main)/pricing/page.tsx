@@ -1,53 +1,81 @@
 'use client'
 
-import { useState, useCallback, Suspense } from 'react'
+import { Suspense, useEffect, useMemo, useState } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { useQuery } from '@tanstack/react-query'
-import { ArrowLeft, BarChart2, Save } from 'lucide-react'
+import { ArrowLeft, BarChart2, Download, Save, Table2 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { useToast } from '@/components/ui/Toast'
 import { formatNumber } from '@/lib/utils'
+import {
+  DEFAULT_WORK_ITEM_PRICES,
+  LEGACY_PROJECT_TEMPLATES,
+  buildTemplateConstructionItems,
+  type LegacyProjectTemplate,
+} from '@/lib/templates/legacy'
+import { WORK_ITEM_DIMS } from '@/lib/constants'
 import type { Contractor } from '@/lib/types/models'
+import type { ConstructionItem } from '@/lib/univer/types'
 
-// ── Types ──────────────────────────────────────────────────────────────────
+type TabKey = 'subcontractor' | 'selling' | 'templates'
+type SourceKey = 'estimate' | `template:${string}`
 
 interface PriceRow {
   itemId: string
+  workItemKey: string
   itemName: string
   unit: string
   qty: number
-  prices: (number | null)[]
-  chosen: number // index of chosen contractor 0-2
+  sectionName?: string
+  costPrice: number
 }
 
-// ── Fetch ──────────────────────────────────────────────────────────────────
+interface SubState {
+  names: [string, string, string]
+  contractorIds: [(number | null), (number | null), (number | null)]
+  prices: [Record<string, number>, Record<string, number>, Record<string, number>]
+  chosen: Record<string, number | 'lowest' | -1>
+  notes: Record<string, string>
+}
+
+interface SellState {
+  defaultMargin: number
+  margins: Record<string, number>
+  overrideSell: Record<string, number>
+}
+
+const DEFAULT_SUB_STATE: SubState = {
+  names: ['Nhà thầu 1', 'Nhà thầu 2', 'Nhà thầu 3'],
+  contractorIds: [null, null, null],
+  prices: [{}, {}, {}],
+  chosen: {},
+  notes: {},
+}
+
+const DEFAULT_SELL_STATE: SellState = {
+  defaultMargin: 1.15,
+  margins: {},
+  overrideSell: {},
+}
 
 async function fetchProject(id: string) {
   const res = await fetch(`/api/projects/${id}`)
   if (!res.ok) throw new Error('Không tìm thấy dự án')
   return res.json()
 }
+
 async function fetchContractors(): Promise<Contractor[]> {
   const res = await fetch('/api/contractors?status=ACTIVE')
   if (!res.ok) return []
   return res.json()
 }
 
-function getUnit(type?: string): string {
-  if (type === 'masonry') return 'm²'
-  if (type === 'plastering') return 'm²'
-  if (type === 'tiling') return 'm²'
-  return 'm²'
-}
-function getQty(item: Record<string, unknown>): number {
-  const r = (item.results ?? {}) as Record<string, unknown>
-  return typeof r.netArea === 'number' ? r.netArea : (typeof r.area === 'number' ? r.area : 0)
-}
-
-// ── Page ────────────────────────────────────────────────────────────────────
-
 export default function PricingPage() {
-  return <Suspense fallback={<div style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '3rem' }}>Đang tải...</div>}><PricingContent /></Suspense>
+  return (
+    <Suspense fallback={<div style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '3rem' }}>Đang tải...</div>}>
+      <PricingContent />
+    </Suspense>
+  )
 }
 
 function PricingContent() {
@@ -56,55 +84,113 @@ function PricingContent() {
   const { showToast } = useToast()
   const projectId = searchParams.get('projectId')
 
-  const { data: project, isLoading } = useQuery({ queryKey: ['project', projectId], queryFn: () => fetchProject(projectId!), enabled: !!projectId })
+  const { data: project, isLoading } = useQuery({
+    queryKey: ['project', projectId],
+    queryFn: () => fetchProject(projectId!),
+    enabled: !!projectId,
+  })
   const { data: contractors = [] } = useQuery({ queryKey: ['contractors', 'ACTIVE'], queryFn: fetchContractors })
 
-  const [ntpNames, setNtpNames] = useState(['', '', ''])
-  const [rows, setRows] = useState<PriceRow[] | null>(null)
+  const [tab, setTab] = useState<TabKey>('subcontractor')
+  const [source, setSource] = useState<SourceKey>('estimate')
+  const [subState, setSubState] = useState<SubState>(DEFAULT_SUB_STATE)
+  const [sellState, setSellState] = useState<SellState>(DEFAULT_SELL_STATE)
 
-  // Init rows from project data when loaded
-  const initRows = useCallback(() => {
-    if (!project?.data) return
-    return (project.data as Array<Record<string, unknown>>).map((item) => ({
-      itemId: String(item.id ?? ''),
-      itemName: String(item.name ?? 'Hạng mục'),
-      unit: getUnit(String(item.type ?? '')),
-      qty: getQty(item),
-      prices: [null, null, null] as (number | null)[],
-      chosen: 0,
-    }))
-  }, [project])
+  const rows = useMemo(() => {
+    if (source === 'estimate') return buildRowsFromProject(project)
+    const template = LEGACY_PROJECT_TEMPLATES.find((item) => `template:${item.id}` === source)
+    return template ? buildRowsFromTemplate(template) : []
+  }, [project, source])
 
-  const displayRows: PriceRow[] = rows ?? (project ? (initRows() ?? []) : [])
+  const storageKey = projectId ? `anlaa_pricing_state:${projectId}:${source}` : null
 
-  function updatePrice(rowIdx: number, colIdx: number, val: string) {
-    const next = [...displayRows]
-    if (next[rowIdx]) {
-      const prices = [...next[rowIdx].prices]
-      prices[colIdx] = val === '' ? null : parseFloat(val) || 0
-      next[rowIdx] = { ...next[rowIdx], prices }
-      setRows(next)
+  useEffect(() => {
+    if (!storageKey) return
+    try {
+      const saved = JSON.parse(localStorage.getItem(storageKey) || 'null') as { subState?: SubState; sellState?: SellState } | null
+      setSubState(normalizeSubState(saved?.subState))
+      setSellState({ ...DEFAULT_SELL_STATE, ...(saved?.sellState ?? {}) })
+    } catch {
+      setSubState(DEFAULT_SUB_STATE)
+      setSellState(DEFAULT_SELL_STATE)
     }
+  }, [storageKey])
+
+  function persist(nextSub = subState, nextSell = sellState) {
+    if (!storageKey) return
+    localStorage.setItem(storageKey, JSON.stringify({ subState: nextSub, sellState: nextSell }))
   }
 
-  function updateChosen(rowIdx: number, val: number) {
-    const next = [...displayRows]
-    if (next[rowIdx]) { next[rowIdx] = { ...next[rowIdx], chosen: val }; setRows(next) }
+  function updateSub(next: SubState) {
+    setSubState(next)
+    persist(next, sellState)
   }
 
-  function totals() {
-    return [0, 1, 2].map((ci) => displayRows.reduce((sum, r) => sum + (r.prices[ci] ?? 0) * r.qty, 0))
+  function updateSell(next: SellState) {
+    setSellState(next)
+    persist(subState, next)
   }
 
-  function cheapestIdx() {
-    const t = totals()
-    const valid = t.filter(v => v > 0)
-    if (valid.length === 0) return -1
-    return t.indexOf(Math.min(...valid.filter(v => v > 0)))
+  function updateContractor(slot: number, rawId: string) {
+    const contractorId = rawId ? Number(rawId) : null
+    const contractor = contractors.find((item) => item.id === contractorId)
+    const next = cloneSubState(subState)
+    next.contractorIds[slot] = contractorId
+    next.names[slot] = contractor?.name ?? `Nhà thầu ${slot + 1}`
+
+    if (contractor?.priceNotes) {
+      const notes = contractor.priceNotes as Record<string, unknown>
+      rows.forEach((row) => {
+        const val = notes[row.workItemKey]
+        if (typeof val === 'number' && val > 0) slotPrices(next, slot)[row.itemId] = val
+      })
+    }
+    updateSub(next)
   }
 
-  function handleSave() {
-    showToast('Đã lưu bảng giá', 'success')
+  function updateNtpPrice(slot: number, itemId: string, value: string) {
+    const next = cloneSubState(subState)
+    const price = value === '' ? 0 : Number(value) || 0
+    if (price > 0) slotPrices(next, slot)[itemId] = price
+    else delete slotPrices(next, slot)[itemId]
+    updateSub(next)
+  }
+
+  function updateChosen(itemId: string, value: string) {
+    const next = cloneSubState(subState)
+    next.chosen[itemId] = value === 'lowest' ? 'lowest' : Number(value)
+    updateSub(next)
+  }
+
+  function updateNote(itemId: string, value: string) {
+    const next = cloneSubState(subState)
+    next.notes[itemId] = value
+    updateSub(next)
+  }
+
+  function updateMargin(itemId: string, value: string) {
+    const next = { ...sellState, margins: { ...sellState.margins }, overrideSell: { ...sellState.overrideSell } }
+    next.margins[itemId] = Number(value) || 1
+    delete next.overrideSell[itemId]
+    updateSell(next)
+  }
+
+  function updateSellUnit(itemId: string, value: string) {
+    const next = { ...sellState, overrideSell: { ...sellState.overrideSell } }
+    const price = value === '' ? 0 : Number(value) || 0
+    if (price > 0) next.overrideSell[itemId] = price
+    else delete next.overrideSell[itemId]
+    updateSell(next)
+  }
+
+  function exportCsv(kind: 'ntp' | 'selling') {
+    const csv = kind === 'ntp' ? buildNtpCsv(rows, subState) : buildSellingCsv(rows, sellState)
+    const blob = new Blob([`\ufeff${csv}`], { type: 'text/csv;charset=utf-8;' })
+    const a = document.createElement('a')
+    a.href = URL.createObjectURL(blob)
+    a.download = kind === 'ntp' ? 'so-sanh-nha-thau.csv' : 'bang-gia-ban-cong-ty.csv'
+    a.click()
+    URL.revokeObjectURL(a.href)
   }
 
   if (!projectId) {
@@ -120,126 +206,442 @@ function PricingContent() {
 
   if (isLoading) return <div style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '3rem' }}>Đang tải...</div>
 
-  const t = totals()
-  const cheap = cheapestIdx()
-
   return (
     <div>
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.25rem', flexWrap: 'wrap' }}>
-        <div style={{ flex: 1, minWidth: 0 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
+        <div style={{ flex: 1, minWidth: 240 }}>
           <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)' }}>Bảng Giá & NTP</h2>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.8125rem', marginTop: 2 }}>{project?.name} · So sánh 3 nhà thầu phụ</p>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.8125rem', marginTop: 2 }}>
+            {project?.name} · {rows.length} hạng mục · nguồn {source === 'estimate' ? 'dự toán' : 'template'}
+          </p>
         </div>
         <Button variant="secondary" size="sm" onClick={() => router.push(`/estimate?projectId=${projectId}`)}>
           <ArrowLeft size={13} /> Về dự toán
         </Button>
-        <Button size="sm" onClick={handleSave}><Save size={13} /> Lưu</Button>
+        <Button variant="secondary" size="sm" onClick={() => exportCsv(tab === 'selling' ? 'selling' : 'ntp')}>
+          <Download size={13} /> CSV
+        </Button>
+        <Button size="sm" onClick={() => { persist(); showToast('Đã lưu bảng giá trên trình duyệt', 'success') }}>
+          <Save size={13} /> Lưu
+        </Button>
       </div>
 
-      {/* NTP name row */}
       <div className="glass-card" style={{ padding: '0.875rem 1rem', marginBottom: '1rem' }}>
-        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.5rem', fontWeight: 600 }}>CHỌN / ĐẶT TÊN NHÀ THẦU PHỤ</div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.6rem' }}>
-          {[0, 1, 2].map((i) => (
-            <div key={i}>
-              <select className="input-base" style={{ width: '100%', marginBottom: '0.3rem', fontSize: '0.8rem' }}
-                value={ntpNames[i] || ''}
-                onChange={(e) => {
-                  const next = [...ntpNames]; next[i] = e.target.value; setNtpNames(next)
-                }}>
-                <option value="">-- Tự nhập --</option>
-                {(contractors as Contractor[]).map((c) => <option key={c.id} value={c.name}>{c.name}</option>)}
-              </select>
-              <input className="input-base" style={{ width: '100%', fontWeight: 600 }}
-                placeholder={`NTP ${i + 1}`} value={ntpNames[i] ?? ''}
-                onChange={(e) => { const next = [...ntpNames]; next[i] = e.target.value; setNtpNames(next) }} />
-            </div>
-          ))}
-        </div>
-      </div>
+        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center' }}>
+          <select className="input-base" value={source} onChange={(e) => setSource(e.target.value as SourceKey)} style={{ minWidth: 250 }}>
+            <option value="estimate">Dự toán hiện tại</option>
+            {LEGACY_PROJECT_TEMPLATES.map((template) => (
+              <option key={template.id} value={`template:${template.id}`}>{template.name}</option>
+            ))}
+          </select>
 
-      {/* Pricing table */}
-      {displayRows.length === 0 ? (
-        <div className="glass-card" style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>
-          <BarChart2 size={40} style={{ margin: '0 auto 1rem', opacity: 0.4 }} />
-          <p style={{ fontWeight: 600, color: 'var(--text-secondary)' }}>Dự án chưa có hạng mục nào</p>
-        </div>
-      ) : (
-        <div className="glass-card" style={{ overflow: 'hidden', padding: 0 }}>
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem', minWidth: 800 }}>
-              <thead>
-                <tr style={{ borderBottom: '1px solid var(--border-glass)', background: 'var(--bg-card)' }}>
-                  <th style={th}>#</th>
-                  <th style={{ ...th, width: '25%' }}>Hạng mục</th>
-                  <th style={th}>ĐVT</th>
-                  <th style={th}>KL</th>
-                  {[0, 1, 2].map((i) => (
-                    <th key={i} style={{ ...th, color: i === cheap && t[i]! > 0 ? '#22c55e' : undefined }}>
-                      {ntpNames[i] || `NTP ${i + 1}`} (đ/ĐVT)
-                    </th>
-                  ))}
-                  {[0, 1, 2].map((i) => (
-                    <th key={`t${i}`} style={{ ...th, color: i === cheap && t[i]! > 0 ? '#22c55e' : undefined }}>
-                      Thành tiền {i + 1}
-                    </th>
-                  ))}
-                  <th style={th}>Chọn</th>
-                </tr>
-              </thead>
-              <tbody>
-                {displayRows.map((row, ri) => (
-                  <tr key={row.itemId} style={{ borderBottom: '1px solid var(--border-glass)' }}>
-                    <td style={{ ...td, color: 'var(--text-muted)' }}>{ri + 1}</td>
-                    <td style={{ ...td, fontWeight: 600, color: 'var(--text-primary)' }}>{row.itemName}</td>
-                    <td style={{ ...td, color: 'var(--text-muted)' }}>{row.unit}</td>
-                    <td style={{ ...td, textAlign: 'right', color: 'var(--text-secondary)' }}>{formatNumber(row.qty, 1)}</td>
-                    {[0, 1, 2].map((ci) => (
-                      <td key={ci} style={td}>
-                        <input className="input-base" type="number" style={{ width: 90, textAlign: 'right' }}
-                          value={row.prices[ci] ?? ''} placeholder="0"
-                          onChange={(e) => updatePrice(ri, ci, e.target.value)} />
-                      </td>
-                    ))}
-                    {[0, 1, 2].map((ci) => {
-                      const val = (row.prices[ci] ?? 0) * row.qty
-                      const isMin = val > 0 && [0, 1, 2].every((x) => x === ci || (row.prices[x] ?? 0) * row.qty >= val || (row.prices[x] ?? 0) === 0)
-                      return (
-                        <td key={`t${ci}`} style={{ ...td, textAlign: 'right', fontWeight: val > 0 ? 600 : undefined, color: isMin ? '#22c55e' : 'var(--text-secondary)' }}>
-                          {val > 0 ? val.toLocaleString('vi-VN') : '—'}
-                        </td>
-                      )
-                    })}
-                    <td style={td}>
-                      <select className="input-base" style={{ fontSize: '0.78rem', padding: '0.3rem 0.5rem' }}
-                        value={row.chosen} onChange={(e) => updateChosen(ri, parseInt(e.target.value))}>
-                        {[0, 1, 2].map((i) => <option key={i} value={i}>{ntpNames[i] || `NTP ${i + 1}`}</option>)}
-                      </select>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-              <tfoot>
-                <tr style={{ borderTop: '2px solid var(--border-glass)', background: 'var(--bg-card)' }}>
-                  <td colSpan={4} style={{ ...td, fontWeight: 700, color: 'var(--text-primary)' }}>Tổng cộng</td>
-                  {t.map((total, i) => <td key={i} style={{ ...td }} />)}
-                  {t.map((total, i) => (
-                    <td key={`t${i}`} style={{ ...td, textAlign: 'right', fontWeight: 700, color: i === cheap && total > 0 ? '#22c55e' : 'var(--color-primary)', fontSize: '0.88rem' }}>
-                      {total > 0 ? total.toLocaleString('vi-VN') + 'đ' : '—'}
-                      {i === cheap && total > 0 && <span style={{ fontSize: '0.65rem', marginLeft: 3 }}>✓ rẻ nhất</span>}
-                    </td>
-                  ))}
-                  <td style={td} />
-                </tr>
-              </tfoot>
-            </table>
+          <div style={{ display: 'inline-flex', border: '1px solid var(--border-glass)', borderRadius: 8, overflow: 'hidden' }}>
+            {[
+              ['subcontractor', 'So sánh NTP'],
+              ['selling', 'Giá bán công ty'],
+              ['templates', 'Catalog template'],
+            ].map(([key, label]) => (
+              <button
+                key={key}
+                onClick={() => setTab(key as TabKey)}
+                style={{
+                  border: 0,
+                  padding: '0.5rem 0.75rem',
+                  background: tab === key ? 'var(--color-primary)' : 'transparent',
+                  color: tab === key ? '#001018' : 'var(--text-secondary)',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                }}
+              >
+                {label}
+              </button>
+            ))}
           </div>
         </div>
+      </div>
+
+      {tab === 'subcontractor' && (
+        <SubcontractorPanel
+          rows={rows}
+          contractors={contractors}
+          subState={subState}
+          onContractorChange={updateContractor}
+          onPriceChange={updateNtpPrice}
+          onChosenChange={updateChosen}
+          onNoteChange={updateNote}
+        />
       )}
+
+      {tab === 'selling' && (
+        <SellingPanel
+          rows={rows}
+          sellState={sellState}
+          onDefaultMargin={(value) => updateSell({ ...sellState, defaultMargin: value })}
+          onMarginChange={updateMargin}
+          onSellUnitChange={updateSellUnit}
+        />
+      )}
+
+      {tab === 'templates' && <TemplateCatalog />}
     </div>
   )
 }
 
-const th: React.CSSProperties = { padding: '0.6rem 0.75rem', textAlign: 'left', fontWeight: 600, color: 'var(--text-muted)', fontSize: '0.72rem', whiteSpace: 'nowrap' }
-const td: React.CSSProperties = { padding: '0.55rem 0.75rem' }
+function SubcontractorPanel({ rows, contractors, subState, onContractorChange, onPriceChange, onChosenChange, onNoteChange }: {
+  rows: PriceRow[]
+  contractors: Contractor[]
+  subState: SubState
+  onContractorChange: (slot: number, rawId: string) => void
+  onPriceChange: (slot: number, itemId: string, value: string) => void
+  onChosenChange: (itemId: string, value: string) => void
+  onNoteChange: (itemId: string, value: string) => void
+}) {
+  const totals = [0, 1, 2].map((slot) => rows.reduce((sum, row) => sum + (slotPrices(subState, slot)[row.itemId] || 0) * row.qty, 0))
+  const best = getBestIndex(totals)
+
+  return (
+    <>
+      <div className="glass-card" style={{ padding: '0.875rem 1rem', marginBottom: '1rem' }}>
+        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.5rem', fontWeight: 700 }}>NHÀ THẦU PHỤ</div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.6rem' }}>
+          {[0, 1, 2].map((slot) => (
+            <select key={slot} className="input-base" value={subState.contractorIds[slot] ?? ''} onChange={(e) => onContractorChange(slot, e.target.value)}>
+              <option value="">Nhà thầu {slot + 1}</option>
+              {contractors.map((contractor) => <option key={contractor.id} value={contractor.id}>{contractor.name}</option>)}
+            </select>
+          ))}
+        </div>
+      </div>
+
+      <PricingTableShell empty={rows.length === 0} emptyText="Chưa có hạng mục để so sánh. Chọn template hoặc mở dự toán có hạng mục.">
+        <table style={tableStyle}>
+          <thead>
+            <tr style={headRowStyle}>
+              <th style={th}>#</th>
+              <th style={{ ...th, minWidth: 240 }}>Hạng mục</th>
+              <th style={th}>ĐVT</th>
+              <th style={th}>KL</th>
+              {[0, 1, 2].map((slot) => <th key={slot} style={th}>{subState.names[slot]}</th>)}
+              {[0, 1, 2].map((slot) => <th key={`total-${slot}`} style={th}>Tổng {slot + 1}</th>)}
+              <th style={th}>Chọn</th>
+              <th style={{ ...th, minWidth: 160 }}>Ghi chú</th>
+            </tr>
+          </thead>
+          <tbody>{renderNtpRows(rows, subState, onPriceChange, onChosenChange, onNoteChange)}</tbody>
+          <tfoot>
+            <tr style={footRowStyle}>
+              <td colSpan={4} style={{ ...td, fontWeight: 800 }}>Tổng cộng</td>
+              {[0, 1, 2].map((slot) => <td key={slot} style={td} />)}
+              {totals.map((total, slot) => (
+                <td key={slot} style={{ ...td, textAlign: 'right', fontWeight: 800, color: best === slot ? '#22c55e' : 'var(--color-primary)' }}>
+                  {total > 0 ? `${total.toLocaleString('vi-VN')}đ` : '-'}
+                </td>
+              ))}
+              <td style={td} />
+              <td style={td} />
+            </tr>
+          </tfoot>
+        </table>
+      </PricingTableShell>
+    </>
+  )
+}
+
+function SellingPanel({ rows, sellState, onDefaultMargin, onMarginChange, onSellUnitChange }: {
+  rows: PriceRow[]
+  sellState: SellState
+  onDefaultMargin: (value: number) => void
+  onMarginChange: (itemId: string, value: string) => void
+  onSellUnitChange: (itemId: string, value: string) => void
+}) {
+  const summary = rows.reduce((acc, row) => {
+    const margin = sellState.margins[row.itemId] ?? sellState.defaultMargin
+    const sellUnit = sellState.overrideSell[row.itemId] ?? row.costPrice * margin
+    acc.cost += row.costPrice * row.qty
+    acc.sell += sellUnit * row.qty
+    return acc
+  }, { cost: 0, sell: 0 })
+
+  return (
+    <>
+      <div className="glass-card" style={{ padding: '0.875rem 1rem', marginBottom: '1rem', display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center' }}>
+        <label style={{ color: 'var(--text-secondary)', fontSize: '0.8125rem', fontWeight: 700 }}>Hệ số mặc định</label>
+        <input className="input-base" type="number" value={sellState.defaultMargin} min={0.5} step={0.01} onChange={(e) => onDefaultMargin(Number(e.target.value) || 1)} style={{ width: 100 }} />
+        <SummaryPill label="Tổng vốn" value={summary.cost} />
+        <SummaryPill label="Tổng bán" value={summary.sell} />
+        <SummaryPill label="Lợi nhuận" value={summary.sell - summary.cost} />
+      </div>
+
+      <PricingTableShell empty={rows.length === 0} emptyText="Chưa có hạng mục để lập bảng giá bán.">
+        <table style={tableStyle}>
+          <thead>
+            <tr style={headRowStyle}>
+              <th style={th}>#</th>
+              <th style={{ ...th, minWidth: 260 }}>Hạng mục</th>
+              <th style={th}>ĐVT</th>
+              <th style={th}>KL</th>
+              <th style={th}>Đơn giá vốn</th>
+              <th style={th}>Tổng vốn</th>
+              <th style={th}>Hệ số</th>
+              <th style={th}>Đơn giá bán</th>
+              <th style={th}>Thành tiền bán</th>
+              <th style={th}>LN%</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row, index) => {
+              const margin = sellState.margins[row.itemId] ?? sellState.defaultMargin
+              const sellUnit = sellState.overrideSell[row.itemId] ?? row.costPrice * margin
+              const profitPct = row.costPrice > 0 ? ((sellUnit - row.costPrice) / row.costPrice) * 100 : 0
+              return (
+                <tr key={row.itemId} style={bodyRowStyle}>
+                  <td style={td}>{index + 1}</td>
+                  <td style={{ ...td, fontWeight: 700, color: 'var(--text-primary)' }}>{row.itemName}</td>
+                  <td style={td}>{row.unit}</td>
+                  <td style={{ ...td, textAlign: 'right' }}>{formatNumber(row.qty, 2)}</td>
+                  <td style={{ ...td, textAlign: 'right' }}>{formatCurrency(row.costPrice)}</td>
+                  <td style={{ ...td, textAlign: 'right' }}>{formatCurrency(row.costPrice * row.qty)}</td>
+                  <td style={td}><input className="input-base" type="number" value={margin} min={0.5} step={0.01} onChange={(e) => onMarginChange(row.itemId, e.target.value)} style={{ width: 82 }} /></td>
+                  <td style={td}><input className="input-base" type="number" value={Math.round(sellUnit) || ''} onChange={(e) => onSellUnitChange(row.itemId, e.target.value)} style={{ width: 110, textAlign: 'right' }} /></td>
+                  <td style={{ ...td, textAlign: 'right', fontWeight: 800, color: 'var(--color-primary)' }}>{formatCurrency(sellUnit * row.qty)}</td>
+                  <td style={{ ...td, color: profitPct >= 0 ? '#22c55e' : '#ef4444', fontWeight: 700 }}>{profitPct.toFixed(1)}%</td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+      </PricingTableShell>
+    </>
+  )
+}
+
+function TemplateCatalog() {
+  const rows = LEGACY_PROJECT_TEMPLATES.flatMap((template) =>
+    template.sections.flatMap((section) =>
+      section.items.map((item) => ({
+        template,
+        section: section.name,
+        item,
+        price: item.price ?? DEFAULT_WORK_ITEM_PRICES[item.key]?.price ?? 0,
+        unit: item.unit ?? WORK_ITEM_DIMS[item.key]?.unit ?? DEFAULT_WORK_ITEM_PRICES[item.key]?.unit ?? 'm2',
+      }))
+    )
+  )
+
+  return (
+    <PricingTableShell empty={false} emptyText="">
+      <table style={tableStyle}>
+        <thead>
+          <tr style={headRowStyle}>
+            <th style={th}>Template</th>
+            <th style={th}>Phần</th>
+            <th style={{ ...th, minWidth: 260 }}>Hạng mục</th>
+            <th style={th}>ĐVT</th>
+            <th style={th}>Đơn giá mẫu</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row, index) => (
+            <tr key={`${row.template.id}-${index}`} style={bodyRowStyle}>
+              <td style={{ ...td, fontWeight: 700 }}>{row.template.name}</td>
+              <td style={td}>{row.section}</td>
+              <td style={{ ...td, color: 'var(--text-primary)' }}>{row.item.name}</td>
+              <td style={td}>{row.unit}</td>
+              <td style={{ ...td, textAlign: 'right', fontWeight: 700 }}>{formatCurrency(row.price)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </PricingTableShell>
+  )
+}
+
+function PricingTableShell({ empty, emptyText, children }: { empty: boolean; emptyText: string; children: React.ReactNode }) {
+  if (empty) {
+    return (
+      <div className="glass-card" style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>
+        <Table2 size={40} style={{ margin: '0 auto 1rem', opacity: 0.4 }} />
+        <p style={{ fontWeight: 700, color: 'var(--text-secondary)' }}>{emptyText}</p>
+      </div>
+    )
+  }
+  return <div className="glass-card" style={{ overflow: 'hidden', padding: 0 }}><div style={{ overflowX: 'auto' }}>{children}</div></div>
+}
+
+function renderNtpRows(
+  rows: PriceRow[],
+  subState: SubState,
+  onPriceChange: (slot: number, itemId: string, value: string) => void,
+  onChosenChange: (itemId: string, value: string) => void,
+  onNoteChange: (itemId: string, value: string) => void
+) {
+  let sectionName = ''
+  let visibleIndex = 0
+  const rendered: React.ReactNode[] = []
+
+  rows.forEach((row) => {
+    if (row.sectionName && row.sectionName !== sectionName) {
+      sectionName = row.sectionName
+      rendered.push(<tr key={`section-${sectionName}`} style={sectionRowStyle}><td colSpan={12} style={td}>{sectionName}</td></tr>)
+    }
+    visibleIndex += 1
+    const rowTotals = [0, 1, 2].map((slot) => (slotPrices(subState, slot)[row.itemId] || 0) * row.qty)
+    const best = getBestIndex(rowTotals)
+    rendered.push(
+      <tr key={row.itemId} style={bodyRowStyle}>
+        <td style={td}>{visibleIndex}</td>
+        <td style={{ ...td, fontWeight: 700, color: 'var(--text-primary)' }}>{row.itemName}</td>
+        <td style={td}>{row.unit}</td>
+        <td style={{ ...td, textAlign: 'right' }}>{row.qty > 0 ? formatNumber(row.qty, 2) : '-'}</td>
+        {[0, 1, 2].map((slot) => (
+          <td key={slot} style={td}>
+            <input className="input-base" type="number" value={slotPrices(subState, slot)[row.itemId] || ''} placeholder="0" onChange={(e) => onPriceChange(slot, row.itemId, e.target.value)} style={{ width: 96, textAlign: 'right' }} />
+          </td>
+        ))}
+        {rowTotals.map((total, slot) => (
+          <td key={slot} style={{ ...td, textAlign: 'right', color: best === slot ? '#22c55e' : 'var(--text-secondary)', fontWeight: total > 0 ? 700 : 400 }}>
+            {total > 0 ? formatCurrency(total) : '-'}
+          </td>
+        ))}
+        <td style={td}>
+          <select className="input-base" value={subState.chosen[row.itemId] ?? -1} onChange={(e) => onChosenChange(row.itemId, e.target.value)} style={{ minWidth: 110 }}>
+            <option value={-1}>-</option>
+            <option value="lowest">Rẻ nhất</option>
+            {[0, 1, 2].map((slot) => <option key={slot} value={slot}>{subState.names[slot]}</option>)}
+          </select>
+        </td>
+        <td style={td}><input className="input-base" value={subState.notes[row.itemId] || ''} onChange={(e) => onNoteChange(row.itemId, e.target.value)} style={{ minWidth: 150 }} /></td>
+      </tr>
+    )
+  })
+
+  return rendered
+}
+
+function buildRowsFromProject(project: Record<string, unknown> | undefined): PriceRow[] {
+  const items = Array.isArray(project?.data) ? project.data as Array<Record<string, unknown>> : []
+  return items.map((item) => {
+    const type = String(item.type ?? item.workItemKey ?? 'custom')
+    const results = (item.results ?? {}) as Record<string, unknown>
+    const qty = numberValue(results.netArea) || numberValue(results.area) || numberValue(item.qty)
+    const dim = WORK_ITEM_DIMS[type]
+    return {
+      itemId: String(item.id ?? `${type}-${item.name ?? ''}`),
+      workItemKey: type,
+      itemName: String(item.name ?? dim?.label ?? 'Hạng mục'),
+      unit: String(item.unit ?? dim?.unit ?? DEFAULT_WORK_ITEM_PRICES[type]?.unit ?? 'm2'),
+      qty,
+      costPrice: numberValue(item.unitPriceMat) + numberValue(item.unitPriceLab) || DEFAULT_WORK_ITEM_PRICES[type]?.price || 0,
+    }
+  })
+}
+
+function buildRowsFromTemplate(template: LegacyProjectTemplate): PriceRow[] {
+  let sectionName = ''
+  return buildTemplateConstructionItems(template)
+    .flatMap((item: ConstructionItem) => {
+      if (item.type === 'section') {
+        sectionName = item.name ?? ''
+        return []
+      }
+      return [{
+        itemId: item.id,
+        workItemKey: item.type,
+        itemName: item.name ?? 'Hạng mục',
+        unit: item.unit ?? 'm2',
+        qty: numberValue(item.qty),
+        sectionName,
+        costPrice: numberValue(item.unitPriceMat) + numberValue(item.unitPriceLab),
+      }]
+    })
+}
+
+function normalizeSubState(value: SubState | undefined): SubState {
+  if (!value) return cloneSubState(DEFAULT_SUB_STATE)
+  return {
+    names: (value.names?.length === 3 ? value.names : DEFAULT_SUB_STATE.names) as [string, string, string],
+    contractorIds: (value.contractorIds?.length === 3 ? value.contractorIds : DEFAULT_SUB_STATE.contractorIds) as [(number | null), (number | null), (number | null)],
+    prices: (value.prices?.length === 3 ? value.prices : DEFAULT_SUB_STATE.prices) as [Record<string, number>, Record<string, number>, Record<string, number>],
+    chosen: value.chosen ?? {},
+    notes: value.notes ?? {},
+  }
+}
+
+function cloneSubState(value: SubState): SubState {
+  return {
+    names: [...value.names] as [string, string, string],
+    contractorIds: [...value.contractorIds] as [(number | null), (number | null), (number | null)],
+    prices: value.prices.map((item) => ({ ...item })) as [Record<string, number>, Record<string, number>, Record<string, number>],
+    chosen: { ...value.chosen },
+    notes: { ...value.notes },
+  }
+}
+
+function slotPrices(state: SubState, slot: number): Record<string, number> {
+  return state.prices[slot] ?? state.prices[0]
+}
+
+function numberValue(value: unknown): number {
+  const parsed = typeof value === 'number' ? value : Number(value)
+  return Number.isFinite(parsed) ? parsed : 0
+}
+
+function getBestIndex(values: number[]): number {
+  const positive = values.filter((value) => value > 0)
+  return positive.length ? values.indexOf(Math.min(...positive)) : -1
+}
+
+function formatCurrency(value: number): string {
+  return value > 0 ? `${Math.round(value).toLocaleString('vi-VN')}đ` : '-'
+}
+
+function SummaryPill({ label, value }: { label: string; value: number }) {
+  return (
+    <div style={{ border: '1px solid var(--border-glass)', borderRadius: 8, padding: '0.45rem 0.75rem' }}>
+      <div style={{ color: 'var(--text-muted)', fontSize: '0.7rem', fontWeight: 700 }}>{label}</div>
+      <div style={{ color: 'var(--text-primary)', fontSize: '0.9rem', fontWeight: 800 }}>{formatCurrency(value)}</div>
+    </div>
+  )
+}
+
+function buildNtpCsv(rows: PriceRow[], subState: SubState): string {
+  const csvRows = [['STT', 'Hạng mục', 'ĐVT', 'KL', ...subState.names.flatMap((name) => [`ĐG ${name}`, `Tổng ${name}`]), 'Chọn', 'Ghi chú']]
+  rows.forEach((row, index) => {
+    csvRows.push([
+      String(index + 1),
+      row.itemName,
+      row.unit,
+      String(row.qty),
+      ...[0, 1, 2].flatMap((slot) => {
+        const price = slotPrices(subState, slot)[row.itemId] || 0
+        return [String(price), String(price * row.qty)]
+      }),
+      String(subState.chosen[row.itemId] ?? ''),
+      subState.notes[row.itemId] ?? '',
+    ])
+  })
+  return csvRows.map((row) => row.map(csvCell).join(',')).join('\n')
+}
+
+function buildSellingCsv(rows: PriceRow[], sellState: SellState): string {
+  const csvRows = [['STT', 'Hạng mục', 'ĐVT', 'KL', 'Đơn giá vốn', 'Tổng vốn', 'Hệ số', 'Đơn giá bán', 'Thành tiền bán', 'LN%']]
+  rows.forEach((row, index) => {
+    const margin = sellState.margins[row.itemId] ?? sellState.defaultMargin
+    const sellUnit = sellState.overrideSell[row.itemId] ?? row.costPrice * margin
+    const profitPct = row.costPrice > 0 ? ((sellUnit - row.costPrice) / row.costPrice) * 100 : 0
+    csvRows.push([String(index + 1), row.itemName, row.unit, String(row.qty), String(row.costPrice), String(row.costPrice * row.qty), String(margin), String(sellUnit), String(sellUnit * row.qty), profitPct.toFixed(1)])
+  })
+  return csvRows.map((row) => row.map(csvCell).join(',')).join('\n')
+}
+
+function csvCell(value: string): string {
+  return `"${value.replace(/"/g, '""')}"`
+}
+
+const tableStyle: React.CSSProperties = { width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem', minWidth: 980 }
+const th: React.CSSProperties = { padding: '0.6rem 0.75rem', textAlign: 'left', fontWeight: 700, color: 'var(--text-muted)', fontSize: '0.72rem', whiteSpace: 'nowrap' }
+const td: React.CSSProperties = { padding: '0.55rem 0.75rem', verticalAlign: 'middle' }
+const headRowStyle: React.CSSProperties = { borderBottom: '1px solid var(--border-glass)', background: 'var(--bg-card)' }
+const bodyRowStyle: React.CSSProperties = { borderBottom: '1px solid var(--border-glass)' }
+const sectionRowStyle: React.CSSProperties = { borderBottom: '1px solid var(--border-glass)', background: 'rgba(255,255,255,0.035)', color: 'var(--color-primary)', fontWeight: 800 }
+const footRowStyle: React.CSSProperties = { borderTop: '2px solid var(--border-glass)', background: 'var(--bg-card)' }

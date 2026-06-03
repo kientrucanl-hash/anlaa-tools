@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { prisma } from '@/lib/db/prisma'
 import { getRequestUser, requireAdmin } from '@/lib/auth/middleware'
 import { badRequest, serverError } from '@/lib/api/helpers'
+import { LEGACY_PROJECT_TEMPLATES, toBuiltinTemplateSummary } from '@/lib/templates/legacy'
 
 const createSchema = z.object({
   name: z.string().trim().min(1).max(200),
@@ -23,7 +24,7 @@ export async function GET(req: NextRequest) {
       select: { id: true, name: true, category: true, description: true, isActive: true, createdAt: true, updatedAt: true },
       orderBy: { name: 'asc' },
     })
-    return NextResponse.json(templates)
+    return NextResponse.json([...templates, ...LEGACY_PROJECT_TEMPLATES.map(toBuiltinTemplateSummary)])
   } catch {
     return serverError()
   }

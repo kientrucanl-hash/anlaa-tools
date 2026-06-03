@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { prisma } from '@/lib/db/prisma'
 import { getRequestUser, requireAdmin } from '@/lib/auth/middleware'
 import { parseId, badRequest, notFound, serverError } from '@/lib/api/helpers'
+import { buildBuiltinTemplateSnapshot, findBuiltinTemplate, toBuiltinTemplateSummary } from '@/lib/templates/legacy'
 
 const updateSchema = z.object({
   name: z.string().trim().min(1).max(200).optional(),
@@ -17,6 +18,14 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     const user = getRequestUser(req)
     const id = parseId((await params).id)
     if (!id) return badRequest('ID không hợp lệ')
+    const builtin = findBuiltinTemplate(id)
+    if (builtin) {
+      return NextResponse.json({
+        ...toBuiltinTemplateSummary(builtin),
+        snapshot: buildBuiltinTemplateSnapshot(builtin),
+      })
+    }
+
     const tmpl = await prisma.estimateTemplate.findUnique({ where: { id } })
     if (!tmpl || (!tmpl.isActive && user.role !== 'ADMIN')) return notFound('Không tìm thấy mẫu dự toán')
     let snapshot: unknown = tmpl.snapshot
