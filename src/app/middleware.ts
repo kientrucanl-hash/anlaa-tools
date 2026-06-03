@@ -41,11 +41,11 @@ export async function middleware(req: NextRequest) {
       throw new Error('Session revoked')
     }
 
-    const res = NextResponse.next()
-    res.headers.set('x-user-id', String(payload.id))
-    res.headers.set('x-user-role', payload.role)
-    res.headers.set('x-user-username', payload.username)
-    return res
+    const requestHeaders = new Headers(req.headers)
+    requestHeaders.set('x-user-id', String(payload.id))
+    requestHeaders.set('x-user-role', payload.role)
+    requestHeaders.set('x-user-username', payload.username)
+    return NextResponse.next({ request: { headers: requestHeaders } })
   } catch {
     if (pathname.startsWith('/api/')) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
