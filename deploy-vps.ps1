@@ -50,18 +50,8 @@ if ($Cutover) {
         exit 0
     }
 
-    $remoteScript = @(
-        'set -e',
-        'if [ ! -d "' + $NEW_DIR + '/.git" ]; then',
-        '  git clone "' + $REPO_URL + '" "' + $NEW_DIR + '"',
-        'fi',
-        'cd "' + $NEW_DIR + '"',
-        'git pull origin main',
-        'chmod +x scripts/cutover.sh',
-        'bash scripts/cutover.sh'
-    ) -join "`n"
-
-    ssh -o StrictHostKeyChecking=no $SERVER $remoteScript
+    $remoteScript = "set -e; if [ ! -d $NEW_DIR/.git ]; then git clone $REPO_URL $NEW_DIR; fi; cd $NEW_DIR; git pull origin main; chmod +x scripts/cutover.sh; bash scripts/cutover.sh"
+    ssh -o StrictHostKeyChecking=no $SERVER "bash -lc '$remoteScript'"
     Write-Host "Cutover complete!" -ForegroundColor Green
     exit 0
 }
@@ -69,23 +59,8 @@ if ($Cutover) {
 if ($Force) {
     Write-Host "[FORCE] Deploying directly to VPS..." -ForegroundColor Yellow
 
-    $remoteScript = @(
-        'set -e',
-        'cd "' + $NEW_DIR + '"',
-        'echo "[1/4] git pull..."',
-        'git pull origin main',
-        'echo "[2/4] docker compose up..."',
-        'docker compose up --build --force-recreate -d',
-        'docker image prune -f',
-        'echo "[3/4] Prisma migrate..."',
-        'docker compose exec -T nextjs npx prisma migrate deploy',
-        'echo "[4/4] Health check..."',
-        'sleep 20',
-        'curl -sf http://127.0.0.1:3000/ > /dev/null && echo "Next.js OK" || (echo "FAILED" && docker compose logs --tail=30 nextjs && exit 1)',
-        'curl -sf http://127.0.0.1:4000/health && echo "Socket OK" || echo "Socket health endpoint not responding"'
-    ) -join "`n"
-
-    ssh -o StrictHostKeyChecking=no $SERVER $remoteScript
+    $remoteScript = "set -e; cd $NEW_DIR; echo ""[1/4] git pull...""; git pull origin main; echo ""[2/4] docker compose up...""; docker compose up --build --force-recreate -d; docker image prune -f; echo ""[3/4] Prisma migrate...""; docker compose exec -T nextjs npx prisma migrate deploy; echo ""[4/4] Health check...""; sleep 20; curl -sf http://127.0.0.1:3000/ > /dev/null && echo ""Next.js OK"" || (echo ""FAILED"" && docker compose logs --tail=30 nextjs && exit 1); curl -sf http://127.0.0.1:4000/health && echo ""Socket OK"" || echo ""Socket health endpoint not responding"""
+    ssh -o StrictHostKeyChecking=no $SERVER "bash -lc '$remoteScript'"
     Write-Host "Force deploy complete!" -ForegroundColor Green
     exit 0
 }
