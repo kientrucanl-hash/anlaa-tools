@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyToken } from '@/lib/auth/jwt'
-import { prisma } from '@/lib/db/prisma'
+
+// Prisma cannot run in Edge Runtime — session revocation is enforced
+// in individual API route handlers via getRequestUser() which hits the DB.
 
 const PUBLIC_PATHS = [
   '/api/auth/login',
@@ -13,12 +15,10 @@ const PUBLIC_PATHS = [
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl
 
-  // Allow public paths and static assets
   if (PUBLIC_PATHS.some((p) => pathname.startsWith(p))) {
     return NextResponse.next()
   }
 
-  // Allow login page
   if (pathname === '/login') return NextResponse.next()
 
   const token =
@@ -34,12 +34,6 @@ export async function middleware(req: NextRequest) {
 
   try {
     const payload = verifyToken(token)
-    const session = await prisma.session.findUnique({
-      where: { sessionToken: payload.sid },
-    })
-    if (!session || session.userId !== payload.id) {
-      throw new Error('Session revoked')
-    }
 
     const requestHeaders = new Headers(req.headers)
     requestHeaders.set('x-user-id', String(payload.id))
