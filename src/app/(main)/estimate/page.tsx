@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useMemo, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { ChevronLeft, Download, FolderPlus, LayoutTemplate, Plus, Save, Send, Trash2 } from 'lucide-react'
+import { BarChart2, ChevronLeft, Copy, Download, FolderPlus, LayoutTemplate, Plus, Save, Send, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
@@ -60,6 +60,9 @@ function EstimateContent() {
   const [items, setItems] = useState<EstimateItem[]>([])
   const [contingencyEnabled, setContingencyEnabled] = useState(false)
   const [contingencyPct, setContingencyPct] = useState(5)
+  const [vatEnabled, setVatEnabled] = useState(false)
+  const [vatPct, setVatPct] = useState(10)
+  const [roundingEnabled, setRoundingEnabled] = useState(false)
   const [saveState, setSaveState] = useState<SaveState>('idle')
   const [showTemplates, setShowTemplates] = useState(false)
 
@@ -70,14 +73,50 @@ function EstimateContent() {
     setItems(normalizeItems(Array.isArray(project.data) ? project.data as unknown[] : []))
   }, [project])
 
+  useEffect(() => {
+    if (!projectId) return
+    try {
+      const saved = JSON.parse(localStorage.getItem(`anlaa_estimate_settings:${projectId}`) || 'null') as {
+        contingencyEnabled?: boolean
+        contingencyPct?: number
+        vatEnabled?: boolean
+        vatPct?: number
+        roundingEnabled?: boolean
+      } | null
+      if (!saved) return
+      setContingencyEnabled(!!saved.contingencyEnabled)
+      setContingencyPct(Number(saved.contingencyPct) || 5)
+      setVatEnabled(!!saved.vatEnabled)
+      setVatPct(Number(saved.vatPct) || 10)
+      setRoundingEnabled(!!saved.roundingEnabled)
+    } catch {
+      // Ignore broken local settings and keep sane defaults.
+    }
+  }, [projectId])
+
+  useEffect(() => {
+    if (!projectId) return
+    localStorage.setItem(`anlaa_estimate_settings:${projectId}`, JSON.stringify({
+      contingencyEnabled,
+      contingencyPct,
+      vatEnabled,
+      vatPct,
+      roundingEnabled,
+    }))
+  }, [projectId, contingencyEnabled, contingencyPct, vatEnabled, vatPct, roundingEnabled])
+
   const totals = useMemo(() => {
     const subtotal = items.reduce((sum, item) => {
       if (isSection(item)) return sum
       return sum + calcItemTotalQty(item) * getUnitPrice(item)
     }, 0)
     const contingency = contingencyEnabled ? subtotal * (contingencyPct / 100) : 0
-    return { subtotal, contingency, grand: subtotal + contingency }
-  }, [items, contingencyEnabled, contingencyPct])
+    const beforeVat = subtotal + contingency
+    const vat = vatEnabled ? beforeVat * (vatPct / 100) : 0
+    const beforeRound = beforeVat + vat
+    const grand = roundingEnabled ? Math.round(beforeRound / 1000) * 1000 : beforeRound
+    return { subtotal, contingency, beforeVat, vat, beforeRound, rounding: grand - beforeRound, grand }
+  }, [items, contingencyEnabled, contingencyPct, vatEnabled, vatPct, roundingEnabled])
 
   function setAndSave(next: EstimateItem[]) {
     const normalized = normalizeItems(next)
@@ -158,6 +197,21 @@ function EstimateContent() {
 
   function removeItem(itemId: string) {
     setAndSave(items.filter((item) => item.id !== itemId))
+  }
+
+  function cloneItem(itemId: string) {
+    const index = items.findIndex((item) => item.id === itemId)
+    if (index < 0) return
+    const source = items[index]
+    if (!source) return
+    const clone = normalizeItem({
+      ...source,
+      id: genId(),
+      name: isSection(source) ? `${source.name ?? 'Phần'} copy` : `${source.name ?? 'Hạng mục'} copy`,
+      expanded: true,
+      rows: normalizeRows(source.rows).map((row) => ({ ...row })),
+    })
+    setAndSave([...items.slice(0, index + 1), clone, ...items.slice(index + 1)])
   }
 
   function exportCsv() {
@@ -241,6 +295,7 @@ function EstimateContent() {
         </div>
         <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
           <SaveBadge state={saveState} />
+          <Button variant="secondary" size="sm" onClick={() => router.push(`/pricing?projectId=${projectId}`)}><BarChart2 size={13} /> Bảng giá & NTP</Button>
           <Button variant="secondary" size="sm" onClick={exportCsv}><Download size={13} /> Xuất Excel</Button>
           {canEdit && <Button size="sm" onClick={handleSubmit} loading={submitProject.isPending}><Send size={13} /> Nộp duyệt</Button>}
         </div>
@@ -264,7 +319,7 @@ function EstimateContent() {
                   </td>
                 </tr>
               ) : (
-                renderRows({ items, canEdit, updateItem, updateRow, addDetailRow, removeDetailRow, removeItem })
+                renderRows({ items, canEdit, updateItem, updateRow, addDetailRow, removeDetailRow, removeItem, cloneItem })
               )}
             </tbody>
           </table>
@@ -290,7 +345,28 @@ function EstimateContent() {
           <input className="input-base" type="number" value={contingencyPct} onChange={(e) => setContingencyPct(Number(e.target.value) || 0)} style={{ width: 72, textAlign: 'right' }} />
           <span style={{ color: '#fbbf24', textAlign: 'right', fontWeight: 800 }}>+{formatCurrency(totals.contingency)}</span>
         </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr auto auto', gap: '0.6rem', alignItems: 'center', padding: '0.45rem 0' }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--text-secondary)', fontWeight: 700 }}>
+            <input type="checkbox" checked={vatEnabled} onChange={(e) => setVatEnabled(e.target.checked)} />
+            VAT
+          </label>
+          <input className="input-base" type="number" value={vatPct} onChange={(e) => setVatPct(Number(e.target.value) || 0)} style={{ width: 72, textAlign: 'right' }} />
+          <span style={{ color: '#fbbf24', textAlign: 'right', fontWeight: 800 }}>+{formatCurrency(totals.vat)}</span>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '0.6rem', alignItems: 'center', padding: '0.45rem 0' }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--text-secondary)', fontWeight: 700 }}>
+            <input type="checkbox" checked={roundingEnabled} onChange={(e) => setRoundingEnabled(e.target.checked)} />
+            Làm tròn 1.000 VNĐ
+          </label>
+          <span style={{ color: totals.rounding >= 0 ? '#22c55e' : '#ef4444', textAlign: 'right', fontWeight: 800 }}>{formatCurrency(totals.rounding)}</span>
+        </div>
         <TotalLine label="TỔNG DỰ TOÁN" value={totals.grand} strong accent />
+        <div style={{ borderTop: '1px solid var(--border-glass)', marginTop: '0.5rem', paddingTop: '0.5rem' }}>
+          <div style={{ color: 'var(--text-muted)', fontSize: '0.72rem', fontWeight: 800, marginBottom: '0.25rem' }}>LỊCH THANH TOÁN MẪU</div>
+          <TotalLine label="Đợt 1 - tạm ứng 30%" value={totals.grand * 0.3} />
+          <TotalLine label="Đợt 2 - thi công 40%" value={totals.grand * 0.4} />
+          <TotalLine label="Đợt 3 - quyết toán 30%" value={totals.grand * 0.3} />
+        </div>
       </div>
 
       <Modal open={showTemplates} onClose={() => setShowTemplates(false)} title="Chọn mẫu dự toán" width={620}>
@@ -311,7 +387,7 @@ function EstimateContent() {
   )
 }
 
-function renderRows({ items, canEdit, updateItem, updateRow, addDetailRow, removeDetailRow, removeItem }: {
+function renderRows({ items, canEdit, updateItem, updateRow, addDetailRow, removeDetailRow, removeItem, cloneItem }: {
   items: EstimateItem[]
   canEdit: boolean
   updateItem: (itemId: string, patch: Partial<EstimateItem>) => void
@@ -319,6 +395,7 @@ function renderRows({ items, canEdit, updateItem, updateRow, addDetailRow, remov
   addDetailRow: (itemId: string) => void
   removeDetailRow: (itemId: string, rowIndex: number) => void
   removeItem: (itemId: string) => void
+  cloneItem: (itemId: string) => void
 }) {
   const rendered: React.ReactNode[] = []
   let stt = 1
@@ -329,7 +406,7 @@ function renderRows({ items, canEdit, updateItem, updateRow, addDetailRow, remov
         <tr key={item.id} style={{ background: 'rgba(255,255,255,0.04)' }}>
           <td style={{ ...td, fontWeight: 900, color: 'var(--color-primary)' }}>{item.stt ?? ''}</td>
           <td colSpan={12} style={{ ...td, fontWeight: 900, color: 'var(--color-primary)' }}>{item.name}</td>
-          <td style={td}>{canEdit && <IconButton onClick={() => removeItem(item.id)} />}</td>
+          <td style={td}>{canEdit && <RowActions onClone={() => cloneItem(item.id)} onRemove={() => removeItem(item.id)} />}</td>
         </tr>
       )
       return
@@ -358,7 +435,7 @@ function renderRows({ items, canEdit, updateItem, updateRow, addDetailRow, remov
         <td style={{ ...td, textAlign: 'right', color: 'var(--text-muted)' }}>{formatCurrency(Number(item.unitPriceLab) || 0)}</td>
         <td style={{ ...td, textAlign: 'right', fontWeight: 900, color: 'var(--color-primary)' }}>{formatCurrency(totalQty * unitPrice)}</td>
         <td style={td}>{item.workItemKey ?? item.type}</td>
-        <td style={td}>{canEdit && <IconButton onClick={() => removeItem(item.id)} />}</td>
+        <td style={td}>{canEdit && <RowActions onClone={() => cloneItem(item.id)} onRemove={() => removeItem(item.id)} />}</td>
       </tr>
     )
 
@@ -440,6 +517,15 @@ function SaveBadge({ state }: { state: SaveState }) {
   const label = state === 'syncing' ? 'Đang lưu...' : state === 'saved' ? 'Đã lưu' : state === 'error' ? 'Lỗi lưu' : 'Chưa lưu'
   const color = state === 'saved' ? '#22c55e' : state === 'error' ? '#ef4444' : state === 'syncing' ? '#fbbf24' : 'var(--text-muted)'
   return <span style={{ fontSize: '0.75rem', color, border: '1px solid var(--border-glass)', borderRadius: 6, padding: '0.35rem 0.6rem', fontWeight: 800 }}>{label}</span>
+}
+
+function RowActions({ onClone, onRemove }: { onClone: () => void; onRemove: () => void }) {
+  return (
+    <div style={{ display: 'inline-flex', gap: 6 }}>
+      <button type="button" onClick={onClone} style={copyButton} aria-label="Nhân bản"><Copy size={14} /></button>
+      <IconButton onClick={onRemove} />
+    </div>
+  )
 }
 
 function IconButton({ onClick }: { onClick: () => void }) {
@@ -606,6 +692,13 @@ const iconButton: React.CSSProperties = {
   alignItems: 'center',
   justifyContent: 'center',
   cursor: 'pointer',
+}
+
+const copyButton: React.CSSProperties = {
+  ...iconButton,
+  border: '1px solid rgba(0,242,254,0.25)',
+  background: 'rgba(0,242,254,0.08)',
+  color: 'var(--color-primary)',
 }
 
 export default function EstimatePage() {
