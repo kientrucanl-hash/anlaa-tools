@@ -1,7 +1,7 @@
 'use client'
 
 import { Suspense, useEffect, useMemo, useState } from 'react'
-import { useSearchParams, useRouter } from 'next/navigation'
+import { usePathname, useSearchParams, useRouter } from 'next/navigation'
 import { useQuery } from '@tanstack/react-query'
 import { ArrowLeft, BarChart2, CheckCircle2, Download, Save, Table2 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
@@ -32,7 +32,7 @@ import type { ConstructionItem } from '@/lib/univer/types'
 type TabKey = 'subcontractor' | 'selling' | 'templates'
 type SourceKey = 'estimate' | `template:${string}`
 
-const TAB_QUERY: Record<TabKey, string> = {
+const TAB_PATH: Record<TabKey, string> = {
   subcontractor: 'ntp',
   selling: 'selling',
   templates: 'templates',
@@ -111,12 +111,14 @@ export default function PricingPage() {
 
 function PricingContent() {
   const searchParams = useSearchParams()
+  const pathname = usePathname()
   const router = useRouter()
   const { showToast } = useToast()
   const projectId = searchParams.get('projectId')
   const viewParam = searchParams.get('view') ?? ''
   const sourceParam = searchParams.get('source') ?? ''
-  const selectedTab = TAB_FROM_QUERY[viewParam] ?? (projectId ? 'subcontractor' : 'templates')
+  const pathView = pathname.split('/').filter(Boolean).at(-1) ?? ''
+  const selectedTab = TAB_FROM_QUERY[viewParam] ?? TAB_FROM_QUERY[pathView] ?? (projectId ? 'subcontractor' : 'templates')
   const selectedSource = normalizeSourceParam(sourceParam, projectId)
 
   const { data: project, isLoading, refetch: refetchProject } = useQuery({
@@ -171,10 +173,9 @@ function PricingContent() {
 
   function pricingHref(nextTab = tab, nextSource = source) {
     const params = new URLSearchParams()
-    params.set('view', TAB_QUERY[nextTab])
     params.set('source', nextSource)
     if (projectId) params.set('projectId', projectId)
-    return `/pricing?${params.toString()}`
+    return `/pricing/${TAB_PATH[nextTab]}?${params.toString()}`
   }
 
   function goPricing(nextTab = tab, nextSource = source) {
@@ -182,11 +183,11 @@ function PricingContent() {
   }
 
   useEffect(() => {
-    const hasValidView = Boolean(TAB_FROM_QUERY[viewParam])
-    if (!hasValidView || sourceParam !== selectedSource) {
+    const hasValidView = Boolean(TAB_FROM_QUERY[viewParam] ?? TAB_FROM_QUERY[pathView])
+    if (pathname === '/pricing' || !hasValidView || sourceParam !== selectedSource) {
       router.replace(pricingHref(selectedTab, selectedSource), { scroll: false })
     }
-  }, [router, viewParam, sourceParam, selectedTab, selectedSource])
+  }, [router, pathname, pathView, viewParam, sourceParam, selectedTab, selectedSource])
 
   function updateContractor(slot: number, rawId: string) {
     const contractorId = rawId ? Number(rawId) : null

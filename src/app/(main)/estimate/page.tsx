@@ -376,7 +376,7 @@ function EstimateContent() {
               <ChevronLeft size={14} />
             </Button>
           <SaveBadge state={saveState} />
-          <Button variant="secondary" size="sm" onClick={() => router.push(`/pricing?view=ntp&source=estimate&projectId=${projectId}`)}><BarChart2 size={13} /> Bảng giá & NTP</Button>
+          <Button variant="secondary" size="sm" onClick={() => router.push(`/pricing/ntp?source=estimate&projectId=${projectId}`)}><BarChart2 size={13} /> Bảng giá & NTP</Button>
           <Button variant="secondary" size="sm" onClick={exportCsv}><Download size={13} /> Xuất Excel</Button>
           {canEdit && <Button size="sm" onClick={handleSubmit} loading={submitProject.isPending}><Send size={13} /> Nộp duyệt</Button>}
           </>

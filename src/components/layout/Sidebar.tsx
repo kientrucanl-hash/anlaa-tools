@@ -27,7 +27,7 @@ const NAV_TOOLS = [
 const NAV_MAIN = [
   { href: '/estimate',    icon: FileSpreadsheet, label: 'Dự toán Chi phí' },
   { href: '/materials',   icon: Package,         label: 'Vật tư cần mua' },
-  { href: '/pricing?view=ntp', icon: BarChart2,        label: 'Bảng Giá & NTP' },
+  { href: '/pricing/ntp', icon: BarChart2,        label: 'Bảng Giá & NTP' },
   { href: '/contractors', icon: Users,            label: 'Nhà thầu phụ' },
   null,
   { href: '/quotations',  icon: FileSpreadsheet,  label: 'Báo giá so sánh' },

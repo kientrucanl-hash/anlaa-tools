@@ -7,6 +7,13 @@ const nextConfig: NextConfig = {
     largePageDataBytes: 128 * 1024,
   },
   // Allow Socket.io server URL cross-origin in dev
+  async rewrites() {
+    return [
+      { source: '/pricing/ntp', destination: '/pricing?view=ntp' },
+      { source: '/pricing/selling', destination: '/pricing?view=selling' },
+      { source: '/pricing/templates', destination: '/pricing?view=templates' },
+    ]
+  },
   async headers() {
     return [
       {
