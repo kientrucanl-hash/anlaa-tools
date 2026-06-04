@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Plus, Search, Star, Phone, MapPin, Edit2, Trash2, ChevronDown, ChevronUp, Users } from 'lucide-react'
+import { CheckCircle2, Plus, Search, Star, Phone, MapPin, Edit2, Trash2, ChevronDown, ChevronUp, Send, Users, XCircle } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/lib/hooks/useAuth'
 import { useToast } from '@/components/ui/Toast'
@@ -27,6 +27,39 @@ async function updateContractor(id: number, data: Partial<Contractor>): Promise<
 }
 async function deleteContractor(id: number): Promise<void> {
   const res = await fetch(`/api/contractors/${id}`, { method: 'DELETE' })
+  if (!res.ok) { const e = await res.json(); throw new Error(e.error) }
+}
+interface ContractorDraft {
+  id: number
+  contractorId?: number | null
+  status: 'DRAFT' | 'PENDING' | 'APPROVED' | 'REJECTED'
+  payload: Partial<Contractor>
+  adminNote?: string | null
+  submitter?: { username: string } | null
+  updatedAt: string
+}
+async function fetchDrafts(): Promise<ContractorDraft[]> {
+  const res = await fetch('/api/contractors/drafts')
+  if (!res.ok) return []
+  return res.json()
+}
+async function createDraft(data: Partial<Contractor>): Promise<ContractorDraft> {
+  const res = await fetch('/api/contractors/drafts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...data, contractorId: null }) })
+  if (!res.ok) { const e = await res.json(); throw new Error(e.error) }
+  return res.json()
+}
+async function submitDraft(id: number): Promise<ContractorDraft> {
+  const res = await fetch(`/api/contractors/drafts/${id}/submit`, { method: 'PUT' })
+  if (!res.ok) { const e = await res.json(); throw new Error(e.error) }
+  return res.json()
+}
+async function reviewDraft(id: number, action: 'approve' | 'reject'): Promise<ContractorDraft> {
+  const res = await fetch(`/api/contractors/drafts/${id}/${action}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ adminNote: null }) })
+  if (!res.ok) { const e = await res.json(); throw new Error(e.error) }
+  return res.json()
+}
+async function deleteDraft(id: number): Promise<void> {
+  const res = await fetch(`/api/contractors/drafts/${id}`, { method: 'DELETE' })
   if (!res.ok) { const e = await res.json(); throw new Error(e.error) }
 }
 
@@ -78,6 +111,62 @@ function Field({ label, children, span }: { label: string; children: React.React
   )
 }
 
+function ContractorDraftPanel({ drafts, isAdmin, onSubmit, onApprove, onReject, onDelete }: {
+  drafts: ContractorDraft[]
+  isAdmin: boolean
+  onSubmit: (id: number) => void
+  onApprove: (id: number) => void
+  onReject: (id: number) => void
+  onDelete: (id: number) => void
+}) {
+  const visible = drafts.filter((draft) => isAdmin ? draft.status === 'PENDING' : ['DRAFT', 'PENDING', 'REJECTED'].includes(draft.status))
+  if (visible.length === 0) return null
+
+  return (
+    <div className="glass-card" style={{ padding: '0.875rem 1rem', marginBottom: '1rem' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.75rem', alignItems: 'center', marginBottom: '0.65rem', flexWrap: 'wrap' }}>
+        <div>
+          <div style={{ color: 'var(--text-primary)', fontWeight: 800 }}>{isAdmin ? 'Nháp nhà thầu chờ duyệt' : 'Nháp nhà thầu của tôi'}</div>
+          <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>{visible.length} nháp cần xử lý</div>
+        </div>
+      </div>
+      <div style={{ display: 'grid', gap: '0.5rem' }}>
+        {visible.map((draft) => {
+          const payload = draft.payload ?? {}
+          return (
+            <div key={draft.id} style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '0.75rem', alignItems: 'center', border: '1px solid var(--border-glass)', borderRadius: 8, padding: '0.65rem 0.75rem' }}>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                  <span style={{ color: 'var(--text-primary)', fontWeight: 800 }}>{payload.name ?? 'Chưa đặt tên'}</span>
+                  <span style={{ color: draft.status === 'REJECTED' ? '#ef4444' : draft.status === 'PENDING' ? '#fbbf24' : 'var(--text-muted)', fontSize: '0.72rem', fontWeight: 800 }}>{draft.status}</span>
+                </div>
+                <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem', marginTop: 2 }}>
+                  {payload.phone || 'Chưa có SĐT'} · {payload.city || 'Chưa có thành phố'}{isAdmin && draft.submitter?.username ? ` · ${draft.submitter.username}` : ''}
+                </div>
+                {draft.adminNote && <div style={{ color: '#ef4444', fontSize: '0.75rem', marginTop: 3 }}>Lý do: {draft.adminNote}</div>}
+              </div>
+              <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                {isAdmin && draft.status === 'PENDING' && (
+                  <>
+                    <Button size="sm" onClick={() => onApprove(draft.id)}><CheckCircle2 size={12} /> Duyệt</Button>
+                    <Button size="sm" variant="danger" onClick={() => onReject(draft.id)}><XCircle size={12} /> Từ chối</Button>
+                  </>
+                )}
+                {!isAdmin && ['DRAFT', 'REJECTED'].includes(draft.status) && (
+                  <>
+                    <Button size="sm" onClick={() => onSubmit(draft.id)}><Send size={12} /> Gửi duyệt</Button>
+                    <Button size="sm" variant="danger" onClick={() => onDelete(draft.id)}><Trash2 size={12} /> Xóa</Button>
+                  </>
+                )}
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 export default function ContractorsPage() {
   const { user } = useAuth()
   const { showToast } = useToast()
@@ -90,6 +179,7 @@ export default function ContractorsPage() {
   const [sortCol, setSortCol] = useState<'name' | 'rating' | 'projectCount'>('name')
   const [sortAsc, setSortAsc] = useState(true)
   const [showForm, setShowForm] = useState(false)
+  const [draftMode, setDraftMode] = useState(false)
   const [editTarget, setEditTarget] = useState<Contractor | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<Contractor | null>(null)
   const [detail, setDetail] = useState<Contractor | null>(null)
@@ -103,17 +193,24 @@ export default function ContractorsPage() {
     queryKey: ['contractors', statusFilter, typeFilter],
     queryFn: () => fetchContractors(params.toString()),
   })
+  const { data: drafts = [] } = useQuery({ queryKey: ['contractor-drafts'], queryFn: fetchDrafts })
 
   const createMut = useMutation({ mutationFn: createContractor, onSuccess: () => { qc.invalidateQueries({ queryKey: ['contractors'] }); showToast('Đã thêm nhà thầu', 'success'); closeForm() }, onError: (e: Error) => showToast(e.message, 'error') })
   const updateMut = useMutation({ mutationFn: ({ id, data }: { id: number; data: Partial<Contractor> }) => updateContractor(id, data), onSuccess: () => { qc.invalidateQueries({ queryKey: ['contractors'] }); showToast('Đã cập nhật', 'success'); closeForm() }, onError: (e: Error) => showToast(e.message, 'error') })
   const deleteMut = useMutation({ mutationFn: deleteContractor, onSuccess: () => { qc.invalidateQueries({ queryKey: ['contractors'] }); showToast('Đã xóa', 'success'); setDeleteTarget(null) }, onError: (e: Error) => showToast(e.message, 'error') })
+  const draftMut = useMutation({ mutationFn: createDraft, onSuccess: () => { qc.invalidateQueries({ queryKey: ['contractor-drafts'] }); showToast('Đã lưu nháp nhà thầu', 'success'); closeForm() }, onError: (e: Error) => showToast(e.message, 'error') })
+  const submitDraftMut = useMutation({ mutationFn: submitDraft, onSuccess: () => { qc.invalidateQueries({ queryKey: ['contractor-drafts'] }); showToast('Đã gửi admin duyệt', 'success') }, onError: (e: Error) => showToast(e.message, 'error') })
+  const reviewDraftMut = useMutation({ mutationFn: ({ id, action }: { id: number; action: 'approve' | 'reject' }) => reviewDraft(id, action), onSuccess: () => { qc.invalidateQueries({ queryKey: ['contractor-drafts'] }); qc.invalidateQueries({ queryKey: ['contractors'] }); showToast('Đã xử lý nháp', 'success') }, onError: (e: Error) => showToast(e.message, 'error') })
+  const deleteDraftMut = useMutation({ mutationFn: deleteDraft, onSuccess: () => { qc.invalidateQueries({ queryKey: ['contractor-drafts'] }); showToast('Đã xóa nháp', 'success') }, onError: (e: Error) => showToast(e.message, 'error') })
 
-  function openCreate() { setForm(emptyForm()); setEditTarget(null); setShowForm(true) }
-  function openEdit(c: Contractor) { setForm({ ...c }); setEditTarget(c); setShowForm(true) }
-  function closeForm() { setShowForm(false); setEditTarget(null) }
+  function openCreate() { setDraftMode(false); setForm(emptyForm()); setEditTarget(null); setShowForm(true) }
+  function openDraftCreate() { setDraftMode(true); setForm(emptyForm()); setEditTarget(null); setShowForm(true) }
+  function openEdit(c: Contractor) { setDraftMode(false); setForm({ ...c }); setEditTarget(c); setShowForm(true) }
+  function closeForm() { setShowForm(false); setEditTarget(null); setDraftMode(false) }
   function handleSave() {
     if (!form.name?.trim()) return showToast('Tên nhà thầu không được để trống', 'error')
-    if (editTarget) updateMut.mutate({ id: editTarget.id, data: form })
+    if (draftMode) draftMut.mutate(form)
+    else if (editTarget) updateMut.mutate({ id: editTarget.id, data: form })
     else createMut.mutate(form)
   }
   function toggleSort(col: typeof sortCol) {
@@ -151,8 +248,19 @@ export default function ContractorsPage() {
           <option value="">Tất cả trạng thái</option>
           {Object.entries(STATUS_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
         </select>
-        {isAdmin && <Button size="sm" onClick={openCreate}><Plus size={13} /> Thêm</Button>}
+        {isAdmin ? <Button size="sm" onClick={openCreate}><Plus size={13} /> Thêm</Button> : <Button size="sm" onClick={openDraftCreate}><Plus size={13} /> Đề xuất</Button>}
       </div>
+
+      {drafts.length > 0 && (
+        <ContractorDraftPanel
+          drafts={drafts}
+          isAdmin={isAdmin}
+          onSubmit={(id) => submitDraftMut.mutate(id)}
+          onApprove={(id) => reviewDraftMut.mutate({ id, action: 'approve' })}
+          onReject={(id) => reviewDraftMut.mutate({ id, action: 'reject' })}
+          onDelete={(id) => deleteDraftMut.mutate(id)}
+        />
+      )}
 
       {/* Stats */}
       {!isLoading && all.length > 0 && (
@@ -278,7 +386,7 @@ export default function ContractorsPage() {
       </Modal>
 
       {/* Create/Edit form */}
-      <Modal open={showForm} onClose={closeForm} title={editTarget ? 'Sửa nhà thầu' : 'Thêm nhà thầu'} width={620}>
+      <Modal open={showForm} onClose={closeForm} title={draftMode ? 'Đề xuất nhà thầu' : editTarget ? 'Sửa nhà thầu' : 'Thêm nhà thầu'} width={620}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem', fontSize: '0.84rem' }}>
           <FormSection title="Thông tin cơ bản">
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.6rem' }}>
@@ -319,7 +427,7 @@ export default function ContractorsPage() {
           </FormSection>
           <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
             <Button variant="secondary" size="sm" onClick={closeForm}>Hủy</Button>
-            <Button size="sm" onClick={handleSave} loading={createMut.isPending || updateMut.isPending}>{editTarget ? 'Lưu' : 'Thêm'}</Button>
+            <Button size="sm" onClick={handleSave} loading={createMut.isPending || updateMut.isPending || draftMut.isPending}>{draftMode ? 'Lưu nháp' : editTarget ? 'Lưu' : 'Thêm'}</Button>
           </div>
         </div>
       </Modal>
