@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
 import { buildEstimateWorkbookData } from '@/lib/univer/template'
-import type { IWorkbookData } from '@/lib/univer/types'
+import type { ConstructionItem, IWorkbookData } from '@/lib/univer/types'
 
 // Dynamic import so Univer only loads client-side (heavy bundle)
 const UniverSpreadsheet = dynamic(
@@ -59,17 +59,34 @@ function EstimateContent() {
 
   // Load snapshot from API
   useEffect(() => {
-    if (!projectId) return
+    if (!projectId || !project) return
+    const projectData = project as unknown as Record<string, unknown>
     setSnapshotLoading(true)
     projectsApi.getSnapshot(projectId)
       .then((res) => {
         if (res.snapshot) {
           try { setSnapshot(JSON.parse(res.snapshot)) } catch { setSnapshot(null) }
+        } else {
+          setSnapshot(buildEstimateWorkbookData(
+            {
+              name: String(projectData.name ?? ''),
+              address: String(projectData.address ?? ''),
+            },
+            (Array.isArray(projectData.data) ? projectData.data : []) as ConstructionItem[]
+          ))
         }
       })
-      .catch(() => {})
+      .catch(() => {
+        setSnapshot(buildEstimateWorkbookData(
+          {
+            name: String(projectData.name ?? ''),
+            address: String(projectData.address ?? ''),
+          },
+          (Array.isArray(projectData.data) ? projectData.data : []) as ConstructionItem[]
+        ))
+      })
       .finally(() => setSnapshotLoading(false))
-  }, [projectId])
+  }, [projectId, project])
 
   const handleSave = useCallback(async (snapshotStr: string) => {
     if (!projectId) return
