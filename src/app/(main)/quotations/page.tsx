@@ -11,6 +11,10 @@ import { PageHeader } from '@/components/layout/PageHeader'
 import { formatDateTime, statusLabel, statusClass, generateId } from '@/lib/utils'
 import type { Quotation, QuotationRow, ProjectStatus } from '@/lib/types/models'
 
+type QuotationCellKey = 'description' | 'unit' | 'qty' | 'price0' | 'price1' | 'price2'
+
+const QUOTATION_CELL_ORDER: QuotationCellKey[] = ['description', 'unit', 'qty', 'price0', 'price1', 'price2']
+
 // ── API ────────────────────────────────────────────────────────────────────
 
 async function fetchQuotations(): Promise<Quotation[]> {
@@ -112,11 +116,87 @@ export default function QuotationsPage() {
   }
   function updatePrice(rowIdx: number, colIdx: number, val: string) {
     const prices = [...(rows[rowIdx]?.prices ?? [null, null, null])]
-    prices[colIdx] = val === '' ? null : parseFloat(val) || 0
+    prices[colIdx] = val === '' ? null : parseGridNumber(val)
     updateRow(rowIdx, { prices })
   }
   function addRow() { setRows([...rows, newRow()]) }
   function removeRow(i: number) { setRows(rows.filter((_, idx) => idx !== i)) }
+
+  function focusQuotationCell(rowIndex: number, field: QuotationCellKey) {
+    window.requestAnimationFrame(() => {
+      const input = document.querySelector<HTMLInputElement>(`[data-quotation-cell="${rowIndex}:${field}"]`)
+      input?.focus()
+      input?.select()
+    })
+  }
+
+  function moveQuotationCell(rowIndex: number, field: QuotationCellKey, rowDelta: number, colDelta: number) {
+    const colIndex = QUOTATION_CELL_ORDER.indexOf(field)
+    const nextCol = colIndex + colDelta
+    const wrappedCol = ((nextCol % QUOTATION_CELL_ORDER.length) + QUOTATION_CELL_ORDER.length) % QUOTATION_CELL_ORDER.length
+    const wrapDelta = nextCol >= QUOTATION_CELL_ORDER.length ? 1 : nextCol < 0 ? -1 : 0
+    const targetRow = rowIndex + rowDelta + wrapDelta
+    if (targetRow >= rows.length) {
+      setRows([...rows, newRow()])
+      focusQuotationCell(rows.length, QUOTATION_CELL_ORDER[wrappedCol]!)
+      return
+    }
+    focusQuotationCell(Math.max(0, targetRow), QUOTATION_CELL_ORDER[wrappedCol]!)
+  }
+
+  function handleQuotationKeyDown(e: React.KeyboardEvent<HTMLInputElement>, rowIndex: number, field: QuotationCellKey) {
+    if (!canEdit) return
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+      e.preventDefault()
+      setRows([...rows, newRow()])
+      focusQuotationCell(rows.length, 'description')
+    } else if (e.key === 'Enter') {
+      e.preventDefault()
+      moveQuotationCell(rowIndex, field, e.shiftKey ? -1 : 1, 0)
+    } else if (e.key === 'Tab') {
+      e.preventDefault()
+      moveQuotationCell(rowIndex, field, 0, e.shiftKey ? -1 : 1)
+    } else if (e.key === 'Escape') {
+      e.currentTarget.blur()
+    }
+  }
+
+  function handleQuotationPaste(e: React.ClipboardEvent<HTMLInputElement>, rowIndex: number, field: QuotationCellKey) {
+    if (!canEdit) return
+    const text = e.clipboardData.getData('text')
+    if (!text.includes('\t') && !text.includes('\n')) return
+    e.preventDefault()
+
+    const startCol = QUOTATION_CELL_ORDER.indexOf(field)
+    const pastedRows = text.replace(/\r/g, '').split('\n').filter((line) => line.length > 0)
+    const nextRows = [...rows]
+    while (nextRows.length < rowIndex + pastedRows.length) nextRows.push(newRow())
+
+    pastedRows.forEach((line, rowOffset) => {
+      const targetRowIndex = rowIndex + rowOffset
+      const current = nextRows[targetRowIndex] ?? newRow()
+      const prices = [...(current.prices ?? [null, null, null])] as [number | null, number | null, number | null]
+      let patched: QuotationRow = { ...current, prices }
+
+      line.split('\t').forEach((cell, colOffset) => {
+        const targetField = QUOTATION_CELL_ORDER[startCol + colOffset]
+        if (!targetField) return
+        if (targetField === 'description') patched = { ...patched, description: cell.trim() }
+        else if (targetField === 'unit') patched = { ...patched, unit: cell.trim() }
+        else if (targetField === 'qty') patched = { ...patched, qty: parseGridNumber(cell) }
+        else {
+          const priceIndex = Number(targetField.replace('price', ''))
+          prices[priceIndex] = cell.trim() === '' ? null : parseGridNumber(cell)
+        }
+      })
+      nextRows[targetRowIndex] = patched
+    })
+
+    setRows(nextRows)
+    const lastLine = pastedRows.at(-1) ?? ''
+    const lastCol = Math.min(QUOTATION_CELL_ORDER.length - 1, startCol + Math.max(0, lastLine.split('\t').length - 1))
+    focusQuotationCell(rowIndex + Math.max(0, pastedRows.length - 1), QUOTATION_CELL_ORDER[lastCol]!)
+  }
 
   const currentQ = editQuotation ?? (quotations as Quotation[]).find(q => q.id === editId)
   const canEdit = currentQ ? ['DRAFT', 'REJECTED'].includes(currentQ.status) : false
@@ -194,21 +274,43 @@ export default function QuotationsPage() {
                     <td style={tdStyle}><span style={{ color: 'var(--text-muted)' }}>{i + 1}</span></td>
                     <td style={tdStyle}>
                       <input className={canEdit ? 'input-base' : ''} style={{ width: '100%', background: 'none', border: canEdit ? undefined : 'none', padding: canEdit ? undefined : 0, color: 'var(--text-primary)' }}
-                        value={row.description} disabled={!canEdit} onChange={(e) => updateRow(i, { description: e.target.value })} placeholder="Tên hạng mục..." />
+                        data-quotation-cell={`${i}:description`}
+                        value={row.description}
+                        disabled={!canEdit}
+                        onChange={(e) => updateRow(i, { description: e.target.value })}
+                        onKeyDown={(e) => handleQuotationKeyDown(e, i, 'description')}
+                        onPaste={(e) => handleQuotationPaste(e, i, 'description')}
+                        placeholder="Tên hạng mục..." />
                     </td>
                     <td style={tdStyle}>
                       <input className={canEdit ? 'input-base' : ''} style={{ width: 60, background: 'none', border: canEdit ? undefined : 'none', padding: canEdit ? undefined : 0, textAlign: 'center' }}
-                        value={row.unit} disabled={!canEdit} onChange={(e) => updateRow(i, { unit: e.target.value })} placeholder="m²" />
+                        data-quotation-cell={`${i}:unit`}
+                        value={row.unit}
+                        disabled={!canEdit}
+                        onChange={(e) => updateRow(i, { unit: e.target.value })}
+                        onKeyDown={(e) => handleQuotationKeyDown(e, i, 'unit')}
+                        onPaste={(e) => handleQuotationPaste(e, i, 'unit')}
+                        placeholder="m²" />
                     </td>
                     <td style={tdStyle}>
                       <input className={canEdit ? 'input-base' : ''} type="number" style={{ width: 70, background: 'none', border: canEdit ? undefined : 'none', padding: canEdit ? undefined : 0, textAlign: 'right' }}
-                        value={row.qty} disabled={!canEdit} onChange={(e) => updateRow(i, { qty: parseFloat(e.target.value) || 0 })} />
+                        data-quotation-cell={`${i}:qty`}
+                        value={row.qty}
+                        disabled={!canEdit}
+                        onChange={(e) => updateRow(i, { qty: parseGridNumber(e.target.value) })}
+                        onKeyDown={(e) => handleQuotationKeyDown(e, i, 'qty')}
+                        onPaste={(e) => handleQuotationPaste(e, i, 'qty')} />
                     </td>
                     {[0, 1, 2].map((ci) => (
                       <td key={ci} style={tdStyle}>
                         <input className={canEdit ? 'input-base' : ''} type="number" style={{ width: 100, background: 'none', border: canEdit ? undefined : 'none', padding: canEdit ? undefined : 0, textAlign: 'right' }}
-                          value={row.prices[ci] ?? ''} disabled={!canEdit} placeholder="0"
-                          onChange={(e) => updatePrice(i, ci, e.target.value)} />
+                          data-quotation-cell={`${i}:price${ci}`}
+                          value={row.prices[ci] ?? ''}
+                          disabled={!canEdit}
+                          placeholder="0"
+                          onChange={(e) => updatePrice(i, ci, e.target.value)}
+                          onKeyDown={(e) => handleQuotationKeyDown(e, i, `price${ci}` as QuotationCellKey)}
+                          onPaste={(e) => handleQuotationPaste(e, i, `price${ci}` as QuotationCellKey)} />
                       </td>
                     ))}
                     {canEdit && (
@@ -346,3 +448,10 @@ export default function QuotationsPage() {
 
 const thStyle: React.CSSProperties = { padding: '0.6rem 0.875rem', textAlign: 'left', fontWeight: 600, color: 'var(--text-muted)', fontSize: '0.73rem', whiteSpace: 'nowrap' }
 const tdStyle: React.CSSProperties = { padding: '0.65rem 0.875rem' }
+
+function parseGridNumber(value: string): number {
+  const compact = value.trim().replace(/\s/g, '')
+  const normalized = compact.includes(',') ? compact.replace(/\./g, '').replace(',', '.') : compact
+  const parsed = Number(normalized)
+  return Number.isFinite(parsed) ? parsed : 0
+}

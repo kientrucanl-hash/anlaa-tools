@@ -160,10 +160,65 @@ function PricingContent() {
 
   function updateNtpPrice(slot: number, itemId: string, value: string) {
     const next = cloneSubState(subState)
-    const price = value === '' ? 0 : Number(value) || 0
+    const price = value === '' ? 0 : parseGridNumber(value)
     if (price > 0) slotPrices(next, slot)[itemId] = price
     else delete slotPrices(next, slot)[itemId]
     updateSub(next)
+  }
+
+  function pasteNtpPrices(startIndex: number, startSlot: number, text: string) {
+    const next = cloneSubState(subState)
+    text.replace(/\r/g, '').split('\n').filter((line) => line.length > 0).forEach((line, rowOffset) => {
+      const row = rows[startIndex + rowOffset]
+      if (!row) return
+      line.split('\t').forEach((cell, colOffset) => {
+        const slot = startSlot + colOffset
+        if (slot < 0 || slot > 2) return
+        const price = parseGridNumber(cell)
+        if (price > 0) slotPrices(next, slot)[row.itemId] = price
+        else delete slotPrices(next, slot)[row.itemId]
+      })
+    })
+    updateSub(next)
+  }
+
+  function focusNtpCell(rowIndex: number, slot: number) {
+    window.requestAnimationFrame(() => {
+      const input = document.querySelector<HTMLInputElement>(`[data-ntp-cell="${rowIndex}:${slot}"]`)
+      input?.focus()
+      input?.select()
+    })
+  }
+
+  function moveNtpCell(rowIndex: number, slot: number, rowDelta: number, slotDelta: number) {
+    const nextSlot = slot + slotDelta
+    const wrappedSlot = ((nextSlot % 3) + 3) % 3
+    const wrapDelta = nextSlot > 2 ? 1 : nextSlot < 0 ? -1 : 0
+    const nextRow = Math.max(0, Math.min(rows.length - 1, rowIndex + rowDelta + wrapDelta))
+    focusNtpCell(nextRow, wrappedSlot)
+  }
+
+  function handleNtpKeyDown(e: React.KeyboardEvent<HTMLInputElement>, rowIndex: number, slot: number) {
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      moveNtpCell(rowIndex, slot, e.shiftKey ? -1 : 1, 0)
+    } else if (e.key === 'Tab') {
+      e.preventDefault()
+      moveNtpCell(rowIndex, slot, 0, e.shiftKey ? -1 : 1)
+    } else if (e.key === 'Escape') {
+      e.currentTarget.blur()
+    }
+  }
+
+  function handleNtpPaste(e: React.ClipboardEvent<HTMLInputElement>, rowIndex: number, slot: number) {
+    const text = e.clipboardData.getData('text')
+    if (!text.includes('\t') && !text.includes('\n')) return
+    e.preventDefault()
+    pasteNtpPrices(rowIndex, slot, text)
+    const pastedRows = text.replace(/\r/g, '').split('\n').filter((line) => line.length > 0)
+    const lastRow = Math.min(rows.length - 1, rowIndex + Math.max(0, pastedRows.length - 1))
+    const lastSlot = Math.min(2, slot + Math.max(0, (pastedRows.at(-1) ?? '').split('\t').length - 1))
+    focusNtpCell(lastRow, lastSlot)
   }
 
   function updateChosen(itemId: string, value: string) {
@@ -355,6 +410,8 @@ function PricingContent() {
           subState={subState}
           onContractorChange={updateContractor}
           onPriceChange={updateNtpPrice}
+          onPriceKeyDown={handleNtpKeyDown}
+          onPricePaste={handleNtpPaste}
           onChosenChange={updateChosen}
           onNoteChange={updateNote}
           onSaveToContractors={savePricesToContractors}
@@ -381,12 +438,14 @@ function PricingContent() {
   )
 }
 
-function SubcontractorPanel({ rows, contractors, subState, onContractorChange, onPriceChange, onChosenChange, onNoteChange, onSaveToContractors, onApplyLowest, onApplyChosen, canApplyToEstimate }: {
+function SubcontractorPanel({ rows, contractors, subState, onContractorChange, onPriceChange, onPriceKeyDown, onPricePaste, onChosenChange, onNoteChange, onSaveToContractors, onApplyLowest, onApplyChosen, canApplyToEstimate }: {
   rows: PriceRow[]
   contractors: Contractor[]
   subState: SubState
   onContractorChange: (slot: number, rawId: string) => void
   onPriceChange: (slot: number, itemId: string, value: string) => void
+  onPriceKeyDown: (e: React.KeyboardEvent<HTMLInputElement>, rowIndex: number, slot: number) => void
+  onPricePaste: (e: React.ClipboardEvent<HTMLInputElement>, rowIndex: number, slot: number) => void
   onChosenChange: (itemId: string, value: string) => void
   onNoteChange: (itemId: string, value: string) => void
   onSaveToContractors: () => void
@@ -430,7 +489,7 @@ function SubcontractorPanel({ rows, contractors, subState, onContractorChange, o
               <th style={{ ...th, minWidth: 160 }}>Ghi chú</th>
             </tr>
           </thead>
-          <tbody>{renderNtpRows(rows, subState, onPriceChange, onChosenChange, onNoteChange)}</tbody>
+          <tbody>{renderNtpRows(rows, subState, onPriceChange, onPriceKeyDown, onPricePaste, onChosenChange, onNoteChange)}</tbody>
           <tfoot>
             <tr style={footRowStyle}>
               <td colSpan={4} style={{ ...td, fontWeight: 800 }}>Tổng cộng</td>
@@ -578,6 +637,8 @@ function renderNtpRows(
   rows: PriceRow[],
   subState: SubState,
   onPriceChange: (slot: number, itemId: string, value: string) => void,
+  onPriceKeyDown: (e: React.KeyboardEvent<HTMLInputElement>, rowIndex: number, slot: number) => void,
+  onPricePaste: (e: React.ClipboardEvent<HTMLInputElement>, rowIndex: number, slot: number) => void,
   onChosenChange: (itemId: string, value: string) => void,
   onNoteChange: (itemId: string, value: string) => void
 ) {
@@ -585,7 +646,7 @@ function renderNtpRows(
   let visibleIndex = 0
   const rendered: React.ReactNode[] = []
 
-  rows.forEach((row) => {
+  rows.forEach((row, rowIndex) => {
     if (row.sectionName && row.sectionName !== sectionName) {
       sectionName = row.sectionName
       rendered.push(<tr key={`section-${sectionName}`} style={sectionRowStyle}><td colSpan={12} style={td}>{sectionName}</td></tr>)
@@ -601,7 +662,17 @@ function renderNtpRows(
         <td style={{ ...td, textAlign: 'right' }}>{row.qty > 0 ? formatNumber(row.qty, 2) : '-'}</td>
         {[0, 1, 2].map((slot) => (
           <td key={slot} style={td}>
-            <input className="input-base" type="number" value={slotPrices(subState, slot)[row.itemId] || ''} placeholder="0" onChange={(e) => onPriceChange(slot, row.itemId, e.target.value)} style={{ width: 96, textAlign: 'right' }} />
+            <input
+              className="input-base"
+              type="number"
+              data-ntp-cell={`${rowIndex}:${slot}`}
+              value={slotPrices(subState, slot)[row.itemId] || ''}
+              placeholder="0"
+              onChange={(e) => onPriceChange(slot, row.itemId, e.target.value)}
+              onKeyDown={(e) => onPriceKeyDown(e, rowIndex, slot)}
+              onPaste={(e) => onPricePaste(e, rowIndex, slot)}
+              style={{ width: 96, textAlign: 'right' }}
+            />
           </td>
         ))}
         {rowTotals.map((total, slot) => (
@@ -687,6 +758,13 @@ function slotPrices(state: SubState, slot: number): Record<string, number> {
 
 function numberValue(value: unknown): number {
   const parsed = typeof value === 'number' ? value : Number(value)
+  return Number.isFinite(parsed) ? parsed : 0
+}
+
+function parseGridNumber(value: string): number {
+  const compact = value.trim().replace(/\s/g, '')
+  const normalized = compact.includes(',') ? compact.replace(/\./g, '').replace(',', '.') : compact
+  const parsed = Number(normalized)
   return Number.isFinite(parsed) ? parsed : 0
 }
 

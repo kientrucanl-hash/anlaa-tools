@@ -15,6 +15,7 @@ import { LEGACY_PROJECT_TEMPLATES, buildTemplateConstructionItems } from '@/lib/
 import type { ConstructionItem } from '@/lib/univer/types'
 
 type SaveState = 'idle' | 'syncing' | 'saved' | 'error'
+type EstimateCellKey = 'desc' | 'l' | 'w' | 'h' | 'n' | 'hs'
 
 interface EstimateRow {
   desc?: string
@@ -48,6 +49,7 @@ interface EstimateItem {
 }
 
 const DEFAULT_PRICES = REGION_PRICES[DEFAULT_REGION].prices
+const DETAIL_CELL_ORDER: EstimateCellKey[] = ['desc', 'l', 'w', 'h', 'n', 'hs']
 const UNITS = ['m²', 'm³', 'md', 'm', 'cái', 'bộ', 'kg', 'tấm', 'bao', 'viên']
 
 function EstimateContent() {
@@ -200,6 +202,88 @@ function EstimateContent() {
     setAndSave(items.filter((item) => item.id !== itemId))
   }
 
+  function focusCell(itemId: string, rowIndex: number, field: EstimateCellKey) {
+    requestAnimationFrame(() => {
+      const el = document.querySelector<HTMLInputElement | HTMLSelectElement>(`[data-est-cell="${itemId}:${rowIndex}:${field}"]`)
+      el?.focus()
+      if (el instanceof HTMLInputElement) el.select()
+    })
+  }
+
+  function moveCell(itemId: string, rowIndex: number, field: EstimateCellKey, rowDelta: number, colDelta: number) {
+    const item = items.find((entry) => entry.id === itemId)
+    if (!item) return
+    const rows = normalizeRows(item.rows)
+    const currentCol = DETAIL_CELL_ORDER.indexOf(field)
+    let nextCol = Math.max(0, Math.min(DETAIL_CELL_ORDER.length - 1, currentCol + colDelta))
+    let nextRow = rowIndex + rowDelta
+
+    if (colDelta > 0 && currentCol === DETAIL_CELL_ORDER.length - 1) {
+      nextCol = 0
+      nextRow = rowIndex + 1
+    } else if (colDelta < 0 && currentCol === 0) {
+      nextCol = DETAIL_CELL_ORDER.length - 1
+      nextRow = rowIndex - 1
+    }
+
+    if (nextRow < 0) nextRow = 0
+    if (nextRow >= rows.length) {
+      setAndSave(items.map((entry) => entry.id === itemId ? normalizeItem({ ...entry, rows: [...rows, blankRow()] }) : entry))
+    }
+    focusCell(itemId, nextRow, DETAIL_CELL_ORDER[nextCol] ?? field)
+  }
+
+  function handleDetailKeyDown(e: React.KeyboardEvent<HTMLInputElement | HTMLSelectElement>, itemId: string, rowIndex: number, field: EstimateCellKey) {
+    if (!canEdit) return
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      if (e.ctrlKey || e.metaKey) {
+        addDetailRow(itemId)
+        const item = items.find((entry) => entry.id === itemId)
+        focusCell(itemId, normalizeRows(item?.rows).length, 'desc')
+      } else {
+        moveCell(itemId, rowIndex, field, e.shiftKey ? -1 : 1, 0)
+      }
+    } else if (e.key === 'Tab') {
+      e.preventDefault()
+      moveCell(itemId, rowIndex, field, 0, e.shiftKey ? -1 : 1)
+    } else if (e.key === 'Escape') {
+      e.currentTarget.blur()
+    }
+  }
+
+  function handleDetailPaste(e: React.ClipboardEvent<HTMLInputElement>, itemId: string, rowIndex: number, field: EstimateCellKey) {
+    if (!canEdit) return
+    const text = e.clipboardData.getData('text')
+    if (!text.includes('\t') && !text.includes('\n')) return
+    e.preventDefault()
+
+    const startCol = DETAIL_CELL_ORDER.indexOf(field)
+    const pastedRows = text.replace(/\r/g, '').split('\n').filter((line, index, all) => line.length > 0 || index < all.length - 1)
+    if (startCol < 0 || pastedRows.length === 0) return
+
+    setAndSave(items.map((entry) => {
+      if (entry.id !== itemId) return entry
+      const rows = normalizeRows(entry.rows)
+      const nextRows = [...rows]
+
+      pastedRows.forEach((line, lineIndex) => {
+        const targetIndex = rowIndex + lineIndex
+        while (nextRows.length <= targetIndex) nextRows.push(blankRow())
+        const target = { ...blankRow(), ...nextRows[targetIndex] }
+        line.split('\t').forEach((rawCell, cellIndex) => {
+          const key = DETAIL_CELL_ORDER[startCol + cellIndex]
+          if (!key) return
+          assignRowCell(target, key, rawCell)
+        })
+        nextRows[targetIndex] = target
+      })
+
+      return normalizeItem({ ...entry, rows: nextRows })
+    }))
+    focusCell(itemId, rowIndex + pastedRows.length - 1, DETAIL_CELL_ORDER[Math.min(DETAIL_CELL_ORDER.length - 1, startCol + pastedRows[0]!.split('\t').length - 1)] ?? field)
+  }
+
   function cloneItem(itemId: string) {
     const index = items.findIndex((item) => item.id === itemId)
     if (index < 0) return
@@ -317,7 +401,7 @@ function EstimateContent() {
                   </td>
                 </tr>
               ) : (
-                renderRows({ items, canEdit, updateItem, updateRow, addDetailRow, removeDetailRow, removeItem, cloneItem })
+                renderRows({ items, canEdit, updateItem, updateRow, addDetailRow, removeDetailRow, removeItem, cloneItem, handleDetailKeyDown, handleDetailPaste })
               )}
             </tbody>
           </table>
@@ -379,7 +463,7 @@ function EstimateContent() {
   )
 }
 
-function renderRows({ items, canEdit, updateItem, updateRow, addDetailRow, removeDetailRow, removeItem, cloneItem }: {
+function renderRows({ items, canEdit, updateItem, updateRow, addDetailRow, removeDetailRow, removeItem, cloneItem, handleDetailKeyDown, handleDetailPaste }: {
   items: EstimateItem[]
   canEdit: boolean
   updateItem: (itemId: string, patch: Partial<EstimateItem>) => void
@@ -388,6 +472,8 @@ function renderRows({ items, canEdit, updateItem, updateRow, addDetailRow, remov
   removeDetailRow: (itemId: string, rowIndex: number) => void
   removeItem: (itemId: string) => void
   cloneItem: (itemId: string) => void
+  handleDetailKeyDown: (e: React.KeyboardEvent<HTMLInputElement | HTMLSelectElement>, itemId: string, rowIndex: number, field: EstimateCellKey) => void
+  handleDetailPaste: (e: React.ClipboardEvent<HTMLInputElement>, itemId: string, rowIndex: number, field: EstimateCellKey) => void
 }) {
   const rendered: React.ReactNode[] = []
   let stt = 1
@@ -438,15 +524,33 @@ function renderRows({ items, canEdit, updateItem, updateRow, addDetailRow, remov
           <tr key={`${item.id}-${rowIndex}`}>
             <td style={td} />
             <td style={{ ...td, minWidth: 260 }}>
-              <input className="input-base" disabled={!canEdit} value={getRowDesc(row)} onChange={(e) => updateRow(item.id, rowIndex, { desc: e.target.value, name: e.target.value })} placeholder="Diễn giải..." style={{ width: '100%' }} />
+              <input
+                className="input-base"
+                disabled={!canEdit}
+                value={getRowDesc(row)}
+                data-est-cell={`${item.id}:${rowIndex}:desc`}
+                onKeyDown={(e) => handleDetailKeyDown(e, item.id, rowIndex, 'desc')}
+                onPaste={(e) => handleDetailPaste(e, item.id, rowIndex, 'desc')}
+                onChange={(e) => updateRow(item.id, rowIndex, { desc: e.target.value, name: e.target.value })}
+                placeholder="Diễn giải..."
+                style={{ width: '100%' }}
+              />
             </td>
             <td style={td} />
-            <DimInput disabled={!canEdit || !dims.includes('l')} value={getRowValue(row, 'l')} onChange={(value) => updateRow(item.id, rowIndex, { l: value, length: value })} />
-            <DimInput disabled={!canEdit || !dims.includes('w')} value={getRowValue(row, 'w')} onChange={(value) => updateRow(item.id, rowIndex, { w: value, width: value })} />
-            <DimInput disabled={!canEdit || !dims.includes('h')} value={getRowValue(row, 'h')} onChange={(value) => updateRow(item.id, rowIndex, { h: value, height: value })} />
-            <DimInput disabled={!canEdit} value={row.n ?? 1} onChange={(value) => updateRow(item.id, rowIndex, { n: value })} />
+            <DimInput field="l" itemId={item.id} rowIndex={rowIndex} disabled={!canEdit || !dims.includes('l')} value={getRowValue(row, 'l')} onKeyDown={handleDetailKeyDown} onPaste={handleDetailPaste} onChange={(value) => updateRow(item.id, rowIndex, { l: value, length: value })} />
+            <DimInput field="w" itemId={item.id} rowIndex={rowIndex} disabled={!canEdit || !dims.includes('w')} value={getRowValue(row, 'w')} onKeyDown={handleDetailKeyDown} onPaste={handleDetailPaste} onChange={(value) => updateRow(item.id, rowIndex, { w: value, width: value })} />
+            <DimInput field="h" itemId={item.id} rowIndex={rowIndex} disabled={!canEdit || !dims.includes('h')} value={getRowValue(row, 'h')} onKeyDown={handleDetailKeyDown} onPaste={handleDetailPaste} onChange={(value) => updateRow(item.id, rowIndex, { h: value, height: value })} />
+            <DimInput field="n" itemId={item.id} rowIndex={rowIndex} disabled={!canEdit} value={row.n ?? 1} onKeyDown={handleDetailKeyDown} onPaste={handleDetailPaste} onChange={(value) => updateRow(item.id, rowIndex, { n: value })} />
             <td style={td}>
-              <select className="input-base" disabled={!canEdit} value={Number(row.hs ?? row.coeff ?? 1) < 0 ? -1 : 1} onChange={(e) => updateRow(item.id, rowIndex, { hs: Number(e.target.value), coeff: Number(e.target.value) })} style={{ width: 64 }}>
+              <select
+                className="input-base"
+                disabled={!canEdit}
+                value={Number(row.hs ?? row.coeff ?? 1) < 0 ? -1 : 1}
+                data-est-cell={`${item.id}:${rowIndex}:hs`}
+                onKeyDown={(e) => handleDetailKeyDown(e, item.id, rowIndex, 'hs')}
+                onChange={(e) => updateRow(item.id, rowIndex, { hs: Number(e.target.value), coeff: Number(e.target.value) })}
+                style={{ width: 64 }}
+              >
                 <option value={1}>+</option>
                 <option value={-1}>-</option>
               </select>
@@ -488,10 +592,29 @@ function updateItemName(item: EstimateItem, value: string, updateItem: (itemId: 
   }
 }
 
-function DimInput({ value, disabled, onChange }: { value: unknown; disabled?: boolean; onChange: (value: number | string) => void }) {
+function DimInput({ field, itemId, rowIndex, value, disabled, onChange, onKeyDown, onPaste }: {
+  field: EstimateCellKey
+  itemId: string
+  rowIndex: number
+  value: unknown
+  disabled?: boolean
+  onChange: (value: number | string) => void
+  onKeyDown: (e: React.KeyboardEvent<HTMLInputElement | HTMLSelectElement>, itemId: string, rowIndex: number, field: EstimateCellKey) => void
+  onPaste: (e: React.ClipboardEvent<HTMLInputElement>, itemId: string, rowIndex: number, field: EstimateCellKey) => void
+}) {
   return (
     <td style={td}>
-      <input className="input-base" type="number" disabled={disabled} value={value === null || value === undefined ? '' : String(value)} onChange={(e) => onChange(e.target.value === '' ? '' : Number(e.target.value))} style={{ width: 82, textAlign: 'right' }} />
+      <input
+        className="input-base"
+        type="number"
+        disabled={disabled}
+        value={value === null || value === undefined ? '' : String(value)}
+        data-est-cell={`${itemId}:${rowIndex}:${field}`}
+        onKeyDown={(e) => onKeyDown(e, itemId, rowIndex, field)}
+        onPaste={(e) => onPaste(e, itemId, rowIndex, field)}
+        onChange={(e) => onChange(e.target.value === '' ? '' : Number(e.target.value))}
+        style={{ width: 82, textAlign: 'right' }}
+      />
     </td>
   )
 }
@@ -594,6 +717,41 @@ function fromTemplateItem(item: ConstructionItem): EstimateItem {
 
 function blankRow(): EstimateRow {
   return { desc: '', l: '', w: '', h: '', n: 1, hs: 1 }
+}
+
+function assignRowCell(row: EstimateRow, key: EstimateCellKey, value: string) {
+  const raw = value.trim()
+  if (key === 'desc') {
+    row.desc = value
+    row.name = value
+    return
+  }
+  if (key === 'hs') {
+    const hs = raw === '-' || raw === '(-)' ? -1 : raw === '+' || raw === '' ? 1 : parseExcelNumber(raw) || 1
+    row.hs = hs < 0 ? -1 : 1
+    row.coeff = row.hs
+    return
+  }
+  const parsed = raw === '' ? '' : parseExcelNumber(raw)
+  if (key === 'l') {
+    row.l = parsed
+    row.length = parsed
+  } else if (key === 'w') {
+    row.w = parsed
+    row.width = parsed
+  } else if (key === 'h') {
+    row.h = parsed
+    row.height = parsed
+  } else if (key === 'n') {
+    row.n = parsed === '' ? 1 : parsed
+  }
+}
+
+function parseExcelNumber(value: string): number | '' {
+  const compact = value.replace(/\s/g, '')
+  const normalized = compact.includes(',') ? compact.replace(/\./g, '').replace(',', '.') : compact
+  const parsed = Number(normalized)
+  return Number.isFinite(parsed) ? parsed : ''
 }
 
 function isSection(item: EstimateItem): boolean {
