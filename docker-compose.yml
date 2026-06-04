@@ -30,13 +30,9 @@ services:
       context: .
       dockerfile: Dockerfile.nextjs
     restart: unless-stopped
+    env_file: .env
     environment:
       DATABASE_URL: postgresql://mecalc:${POSTGRES_PASSWORD}@postgres:5432/mecalc
-      JWT_SECRET: ${JWT_SECRET}
-      NEXT_PUBLIC_SOCKET_URL: ${SOCKET_PUBLIC_URL:-http://localhost:4100}
-      REDIS_URL: redis://redis:6379
-      # Optional: path to SQLite DB for one-time data migration
-      SQLITE_DB_PATH: ${SQLITE_DB_PATH:-}
       NODE_ENV: production
     ports:
       - "127.0.0.1:3100:3000"
@@ -51,12 +47,10 @@ services:
       context: .
       dockerfile: Dockerfile.socket
     restart: unless-stopped
+    env_file: .env
     environment:
       DATABASE_URL: postgresql://mecalc:${POSTGRES_PASSWORD}@postgres:5432/mecalc
-      JWT_SECRET: ${JWT_SECRET}
       SOCKET_PORT: 4000
-      REDIS_URL: redis://redis:6379
-      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-*}
       NODE_ENV: production
     ports:
       - "127.0.0.1:4100:4000"
