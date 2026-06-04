@@ -61,7 +61,7 @@ if ($Cutover) {
 if ($Force) {
     Write-Host "[FORCE] Deploying directly to VPS..." -ForegroundColor Yellow
 
-    $remoteScript = "set -e; cd $NEW_DIR; echo ""[1/4] git pull...""; git pull origin main; echo ""[2/4] docker compose up...""; docker compose up --build --force-recreate -d; docker image prune -f; echo ""[3/4] Prisma migrate...""; docker compose exec -T nextjs npx prisma migrate deploy; echo ""[4/4] Health check...""; sleep 20; curl -sf http://127.0.0.1:3000/ > /dev/null && echo ""Next.js OK"" || (echo ""FAILED"" && docker compose logs --tail=30 nextjs && exit 1); curl -sf http://127.0.0.1:4000/health && echo ""Socket OK"" || echo ""Socket health endpoint not responding"""
+    $remoteScript = "set -e; cd $NEW_DIR; echo ""[1/4] git pull...""; git pull origin main; echo ""[2/4] docker compose up...""; docker compose up --build --force-recreate -d; docker image prune -f; echo ""[3/4] Prisma migrate...""; docker compose exec -T nextjs npx prisma migrate deploy; echo ""[4/4] Health check...""; sleep 20; curl -sf http://127.0.0.1:3100/ > /dev/null && echo ""Next.js OK"" || (echo ""FAILED"" && docker compose logs --tail=30 nextjs && exit 1); curl -sf http://127.0.0.1:4100/health && echo ""Socket OK"" || echo ""Socket health endpoint not responding"""
     ssh -o StrictHostKeyChecking=no $SERVER "bash -lc '$remoteScript'"
     if ($LASTEXITCODE -ne 0) { throw "Remote force deploy failed with exit code $LASTEXITCODE" }
     Write-Host "Force deploy complete!" -ForegroundColor Green
