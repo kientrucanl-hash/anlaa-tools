@@ -19,7 +19,7 @@ interface Props {
 }
 
 const NAV_TOOLS = [
-  { href: '/materials', icon: Square,      label: 'Xây & Trát' },
+  { href: '/masonry',   icon: Square,      label: 'Xây & Trát' },
   { href: '/screeding', icon: Layers,      label: 'Cán nền' },
   { href: '/tiling',    icon: Grid3x3,     label: 'Ốp lát gạch' },
   null,
