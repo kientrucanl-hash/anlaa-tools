@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Plus, Trash2, KeyRound, ShieldCheck, ShieldOff, CheckCircle, XCircle } from 'lucide-react'
 import { usersApi, projectsApi } from '@/lib/api/client'
@@ -9,6 +9,7 @@ import { useToast } from '@/components/ui/Toast'
 import { Modal } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
+import { PageHeader } from '@/components/layout/PageHeader'
 import { formatDateTime, statusLabel, statusClass } from '@/lib/utils'
 import { useRouter } from 'next/navigation'
 
@@ -27,13 +28,20 @@ export default function AdminPage() {
   const { user } = useAuth()
   const router = useRouter()
   const [tab, setTab] = useState<Tab>('users')
-  if (user?.role !== 'ADMIN') { router.replace('/dashboard'); return null }
+  useEffect(() => {
+    if (user && user.role !== 'ADMIN') router.replace('/dashboard')
+  }, [router, user])
+
+  if (user?.role !== 'ADMIN') return null
+
   return (
     <div>
-      <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '1.25rem' }}>
-        Quản lý Admin
-      </h2>
-      <div style={{ display: 'flex', gap: '0.25rem', marginBottom: '1.25rem', background: 'rgba(255,255,255,0.04)', borderRadius: 10, padding: '0.25rem', width: 'fit-content', border: '1px solid var(--border-glass)' }}>
+      <PageHeader
+        eyebrow="Quản trị hệ thống"
+        title="Admin Console"
+        subtitle="Quản lý người dùng, duyệt dự án và kiểm soát dữ liệu ANLAA Estimate."
+      />
+      <div style={{ display: 'flex', gap: '0.25rem', marginBottom: '1.25rem', background: 'rgba(255,255,255,0.04)', borderRadius: 8, padding: '0.25rem', width: 'fit-content', border: '1px solid var(--border-glass)' }}>
         {(['users', 'projects'] as Tab[]).map((t) => (
           <button key={t} onClick={() => setTab(t)} style={{ padding: '0.4rem 1rem', borderRadius: 8, fontSize: '0.8125rem', fontWeight: 600, cursor: 'pointer', border: 'none', background: tab === t ? 'rgba(0,242,254,0.1)' : 'none', color: tab === t ? 'var(--border-focus)' : 'var(--text-muted)' }}>
             {t === 'users' ? 'Người dùng' : 'Dự án'}
