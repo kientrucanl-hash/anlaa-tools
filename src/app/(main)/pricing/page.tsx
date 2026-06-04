@@ -91,8 +91,8 @@ function PricingContent() {
   })
   const { data: contractors = [] } = useQuery({ queryKey: ['contractors', 'ACTIVE'], queryFn: fetchContractors })
 
-  const [tab, setTab] = useState<TabKey>('subcontractor')
-  const [source, setSource] = useState<SourceKey>('estimate')
+  const [tab, setTab] = useState<TabKey>(projectId ? 'subcontractor' : 'templates')
+  const [source, setSource] = useState<SourceKey>(projectId ? 'estimate' : `template:${LEGACY_PROJECT_TEMPLATES[0]!.id}`)
   const [subState, setSubState] = useState<SubState>(DEFAULT_SUB_STATE)
   const [sellState, setSellState] = useState<SellState>(DEFAULT_SELL_STATE)
 
@@ -102,10 +102,9 @@ function PricingContent() {
     return template ? buildRowsFromTemplate(template) : []
   }, [project, source])
 
-  const storageKey = projectId ? `anlaa_pricing_state:${projectId}:${source}` : null
+  const storageKey = `anlaa_pricing_state:${projectId ?? 'catalog'}:${source}`
 
   useEffect(() => {
-    if (!storageKey) return
     try {
       const saved = JSON.parse(localStorage.getItem(storageKey) || 'null') as { subState?: SubState; sellState?: SellState } | null
       setSubState(normalizeSubState(saved?.subState))
@@ -117,7 +116,6 @@ function PricingContent() {
   }, [storageKey])
 
   function persist(nextSub = subState, nextSell = sellState) {
-    if (!storageKey) return
     localStorage.setItem(storageKey, JSON.stringify({ subState: nextSub, sellState: nextSell }))
   }
 
@@ -193,7 +191,7 @@ function PricingContent() {
     URL.revokeObjectURL(a.href)
   }
 
-  if (!projectId) {
+  if (projectId === '__legacy-empty-state__') {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: 300, gap: '1rem', color: 'var(--text-muted)' }}>
         <BarChart2 size={48} style={{ opacity: 0.3 }} />
@@ -212,11 +210,11 @@ function PricingContent() {
         <div style={{ flex: 1, minWidth: 240 }}>
           <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)' }}>Bảng Giá & NTP</h2>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.8125rem', marginTop: 2 }}>
-            {project?.name} · {rows.length} hạng mục · nguồn {source === 'estimate' ? 'dự toán' : 'template'}
+            {(projectId ? project?.name : 'Catalog mẫu') ?? 'Dự án'} · {rows.length} hạng mục · nguồn {source === 'estimate' ? 'dự toán' : 'template'}
           </p>
         </div>
-        <Button variant="secondary" size="sm" onClick={() => router.push(`/estimate?projectId=${projectId}`)}>
-          <ArrowLeft size={13} /> Về dự toán
+        <Button variant="secondary" size="sm" onClick={() => router.push(projectId ? `/estimate?projectId=${projectId}` : '/dashboard')}>
+          <ArrowLeft size={13} /> {projectId ? 'Về dự toán' : 'Về Dashboard'}
         </Button>
         <Button variant="secondary" size="sm" onClick={() => exportCsv(tab === 'selling' ? 'selling' : 'ntp')}>
           <Download size={13} /> CSV
