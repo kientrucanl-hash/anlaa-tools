@@ -27,7 +27,7 @@ const NAV_TOOLS = [
 const NAV_MAIN = [
   { href: '/estimate',    icon: FileSpreadsheet, label: 'Dự toán Chi phí' },
   { href: '/materials',   icon: Package,         label: 'Vật tư cần mua' },
-  { href: '/pricing',     icon: BarChart2,        label: 'Bảng Giá & NTP' },
+  { href: '/pricing?view=ntp', icon: BarChart2,        label: 'Bảng Giá & NTP' },
   { href: '/contractors', icon: Users,            label: 'Nhà thầu phụ' },
   null,
   { href: '/quotations',  icon: FileSpreadsheet,  label: 'Báo giá so sánh' },
@@ -97,7 +97,7 @@ export function Sidebar({ open, onClose }: Props) {
             {NAV_MAIN.map((item, i) =>
               item === null
                 ? <div key={i} style={{ height: 1, background: 'var(--border-glass)', margin: '4px 8px' }} />
-                : <NavItem key={item.href + item.label} {...item} active={pathname === item.href} onClick={onClose} />
+                : <NavItem key={item.href + item.label} {...item} active={pathname === item.href.split('?')[0]} onClick={onClose} />
             )}
             {user?.role === 'ADMIN' && (
               <NavItem href="/admin" icon={ShieldCheck} label="Quản lý Admin" active={pathname === '/admin'} onClick={onClose} />

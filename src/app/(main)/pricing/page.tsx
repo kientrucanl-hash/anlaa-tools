@@ -32,6 +32,19 @@ import type { ConstructionItem } from '@/lib/univer/types'
 type TabKey = 'subcontractor' | 'selling' | 'templates'
 type SourceKey = 'estimate' | `template:${string}`
 
+const TAB_QUERY: Record<TabKey, string> = {
+  subcontractor: 'ntp',
+  selling: 'selling',
+  templates: 'templates',
+}
+
+const TAB_FROM_QUERY: Record<string, TabKey> = {
+  ntp: 'subcontractor',
+  subcontractor: 'subcontractor',
+  selling: 'selling',
+  templates: 'templates',
+}
+
 interface PriceRow {
   itemId: string
   workItemKey: string
@@ -82,6 +95,12 @@ async function fetchContractors(): Promise<Contractor[]> {
   return res.json()
 }
 
+function normalizeSourceParam(value: string, projectId: string | null): SourceKey {
+  if (value === 'estimate' && projectId) return 'estimate'
+  if (value.startsWith('template:') && LEGACY_PROJECT_TEMPLATES.some((item) => `template:${item.id}` === value)) return value as SourceKey
+  return projectId ? 'estimate' : `template:${LEGACY_PROJECT_TEMPLATES[0]!.id}`
+}
+
 export default function PricingPage() {
   return (
     <Suspense fallback={<div style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '3rem' }}>Đang tải...</div>}>
@@ -95,6 +114,10 @@ function PricingContent() {
   const router = useRouter()
   const { showToast } = useToast()
   const projectId = searchParams.get('projectId')
+  const viewParam = searchParams.get('view') ?? ''
+  const sourceParam = searchParams.get('source') ?? ''
+  const selectedTab = TAB_FROM_QUERY[viewParam] ?? (projectId ? 'subcontractor' : 'templates')
+  const selectedSource = normalizeSourceParam(sourceParam, projectId)
 
   const { data: project, isLoading, refetch: refetchProject } = useQuery({
     queryKey: ['project', projectId],
@@ -103,10 +126,15 @@ function PricingContent() {
   })
   const { data: contractors = [] } = useQuery({ queryKey: ['contractors', 'ACTIVE'], queryFn: fetchContractors })
 
-  const [tab, setTab] = useState<TabKey>(projectId ? 'subcontractor' : 'templates')
-  const [source, setSource] = useState<SourceKey>(projectId ? 'estimate' : `template:${LEGACY_PROJECT_TEMPLATES[0]!.id}`)
+  const [tab, setTab] = useState<TabKey>(selectedTab)
+  const [source, setSource] = useState<SourceKey>(selectedSource)
   const [subState, setSubState] = useState<SubState>(DEFAULT_SUB_STATE)
   const [sellState, setSellState] = useState<SellState>(DEFAULT_SELL_STATE)
+
+  useEffect(() => {
+    setTab(selectedTab)
+    setSource(selectedSource)
+  }, [selectedTab, selectedSource])
 
   const rows = useMemo(() => {
     if (source === 'estimate') return buildRowsFromProject(project)
@@ -140,6 +168,25 @@ function PricingContent() {
     setSellState(next)
     persist(subState, next)
   }
+
+  function pricingHref(nextTab = tab, nextSource = source) {
+    const params = new URLSearchParams()
+    params.set('view', TAB_QUERY[nextTab])
+    params.set('source', nextSource)
+    if (projectId) params.set('projectId', projectId)
+    return `/pricing?${params.toString()}`
+  }
+
+  function goPricing(nextTab = tab, nextSource = source) {
+    router.push(pricingHref(nextTab, nextSource))
+  }
+
+  useEffect(() => {
+    const hasValidView = Boolean(TAB_FROM_QUERY[viewParam])
+    if (!hasValidView || sourceParam !== selectedSource) {
+      router.replace(pricingHref(selectedTab, selectedSource), { scroll: false })
+    }
+  }, [router, viewParam, sourceParam, selectedTab, selectedSource])
 
   function updateContractor(slot: number, rawId: string) {
     const contractorId = rawId ? Number(rawId) : null
@@ -371,7 +418,7 @@ function PricingContent() {
 
       <div className="glass-card" style={{ padding: '0.875rem 1rem', marginBottom: '1rem' }}>
         <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center' }}>
-          <select className="input-base" value={source} onChange={(e) => setSource(e.target.value as SourceKey)} style={{ minWidth: 250 }}>
+          <select className="input-base" value={source} onChange={(e) => goPricing(tab, e.target.value as SourceKey)} style={{ minWidth: 250 }}>
             <option value="estimate">Dự toán hiện tại</option>
             {LEGACY_PROJECT_TEMPLATES.map((template) => (
               <option key={template.id} value={`template:${template.id}`}>{template.name}</option>
@@ -386,7 +433,7 @@ function PricingContent() {
             ].map(([key, label]) => (
               <button
                 key={key}
-                onClick={() => setTab(key as TabKey)}
+                onClick={() => goPricing(key as TabKey)}
                 style={{
                   border: 0,
                   padding: '0.5rem 0.75rem',
