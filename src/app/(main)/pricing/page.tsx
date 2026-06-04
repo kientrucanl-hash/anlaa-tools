@@ -404,7 +404,7 @@ function PricingContent() {
         subtitle={`${(projectId ? project?.name : 'Catalog mẫu') ?? 'Dự án'} · ${rows.length} hạng mục · nguồn ${source === 'estimate' ? 'dự toán' : 'template'}`}
         actions={(
           <>
-        <Button variant="secondary" size="sm" onClick={() => router.push(projectId ? `/estimate/${projectId}` : '/dashboard')}>
+        <Button variant="secondary" size="sm" onClick={() => router.push(projectId ? `/estimate?projectId=${projectId}` : '/dashboard')}>
           <ArrowLeft size={13} /> {projectId ? 'Về dự toán' : 'Về Dashboard'}
         </Button>
         <Button variant="secondary" size="sm" onClick={() => exportCsv(tab === 'selling' ? 'selling' : 'ntp')}>

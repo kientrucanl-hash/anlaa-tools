@@ -146,7 +146,7 @@ function HistoryContent() {
                     </span>
                   </td>
                   <td style={{ padding: '0.75rem 1rem' }} onClick={(e) => e.stopPropagation()}>
-                    <Button size="sm" variant="secondary" onClick={() => router.push(`/estimate/${project.id}`)}>
+                    <Button size="sm" variant="secondary" onClick={() => router.push(`/estimate?projectId=${project.id}`)}>
                       <FolderOpen size={12} /> Mở
                     </Button>
                   </td>
@@ -204,7 +204,7 @@ function HistoryContent() {
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '1rem' }}>
               <Button variant="secondary" size="sm" onClick={closeDetail}>Đóng</Button>
-              <Button size="sm" onClick={() => { router.push(`/estimate/${detail.id}`); setDetail(null) }}>
+              <Button size="sm" onClick={() => { router.push(`/estimate?projectId=${detail.id}`); setDetail(null) }}>
                 <FolderOpen size={13} /> Mở trong Calculator
               </Button>
             </div>

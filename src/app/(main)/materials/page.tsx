@@ -83,7 +83,7 @@ function MaterialsContent() {
         subtitle={`${project?.name ?? 'Dự án'} · ${materials.length} loại vật tư từ bảng dự toán`}
         actions={(
           <>
-        <Button variant="secondary" size="sm" onClick={() => router.push(`/estimate/${projectId}`)}>
+        <Button variant="secondary" size="sm" onClick={() => router.push(`/estimate?projectId=${projectId}`)}>
           <ArrowLeft size={13} /> Về dự toán
         </Button>
         {materials.length > 0 && (
