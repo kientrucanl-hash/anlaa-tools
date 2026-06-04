@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { Suspense, useEffect, useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { FolderOpen, RefreshCw, FileText, CheckCircle, XCircle, Clock, Users } from 'lucide-react'
 import { useProjects } from '@/lib/hooks/useProjects'
 import { Button } from '@/components/ui/Button'
@@ -26,10 +26,34 @@ function statusIcon(s: string) {
 }
 
 export default function HistoryPage() {
+  return (
+    <Suspense fallback={<div style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '3rem' }}>Đang tải...</div>}>
+      <HistoryContent />
+    </Suspense>
+  )
+}
+
+function HistoryContent() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const detailId = Number(searchParams.get('id') || 0)
   const { data: projects = [], isLoading, refetch } = useProjects()
   const [filter, setFilter] = useState<ProjectStatus | 'ALL'>('ALL')
   const [detail, setDetail] = useState<Project | null>(null)
+
+  useEffect(() => {
+    if (!detailId) {
+      setDetail(null)
+      return
+    }
+    const found = (projects as Project[]).find((item) => item.id === detailId)
+    if (found) setDetail(found)
+  }, [detailId, projects])
+
+  function closeDetail() {
+    setDetail(null)
+    router.push('/history')
+  }
 
   const filtered = filter === 'ALL' ? projects : projects.filter((p) => p.status === filter)
 
@@ -89,7 +113,7 @@ export default function HistoryPage() {
                   }}
                   onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--bg-hover)')}
                   onMouseLeave={(e) => (e.currentTarget.style.background = '')}
-                  onClick={() => setDetail(project)}
+                  onClick={() => router.push(`/history/${project.id}`)}
                 >
                   <td style={{ padding: '0.75rem 1rem', fontWeight: 600, color: 'var(--text-primary)', maxWidth: 200 }}>
                     <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -122,7 +146,7 @@ export default function HistoryPage() {
                     </span>
                   </td>
                   <td style={{ padding: '0.75rem 1rem' }} onClick={(e) => e.stopPropagation()}>
-                    <Button size="sm" variant="secondary" onClick={() => router.push(`/estimate?projectId=${project.id}`)}>
+                    <Button size="sm" variant="secondary" onClick={() => router.push(`/estimate/${project.id}`)}>
                       <FolderOpen size={12} /> Mở
                     </Button>
                   </td>
@@ -134,7 +158,7 @@ export default function HistoryPage() {
       )}
 
       {/* Detail modal */}
-      <Modal open={!!detail} onClose={() => setDetail(null)} title={detail?.name ?? ''} width={640}>
+      <Modal open={!!detail} onClose={closeDetail} title={detail?.name ?? ''} width={640}>
         {detail && (
           <div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '1rem', fontSize: '0.82rem' }}>
@@ -179,8 +203,8 @@ export default function HistoryPage() {
             )}
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '1rem' }}>
-              <Button variant="secondary" size="sm" onClick={() => setDetail(null)}>Đóng</Button>
-              <Button size="sm" onClick={() => { router.push(`/estimate?projectId=${detail.id}`); setDetail(null) }}>
+              <Button variant="secondary" size="sm" onClick={closeDetail}>Đóng</Button>
+              <Button size="sm" onClick={() => { router.push(`/estimate/${detail.id}`); setDetail(null) }}>
                 <FolderOpen size={13} /> Mở trong Calculator
               </Button>
             </div>

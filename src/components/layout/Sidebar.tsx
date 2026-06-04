@@ -97,10 +97,10 @@ export function Sidebar({ open, onClose }: Props) {
             {NAV_MAIN.map((item, i) =>
               item === null
                 ? <div key={i} style={{ height: 1, background: 'var(--border-glass)', margin: '4px 8px' }} />
-                : <NavItem key={item.href + item.label} {...item} active={pathname === item.href.split('?')[0]} onClick={onClose} />
+                : <NavItem key={item.href + item.label} {...item} active={isActivePath(pathname, item.href)} onClick={onClose} />
             )}
             {user?.role === 'ADMIN' && (
-              <NavItem href="/admin" icon={ShieldCheck} label="Quản lý Admin" active={pathname === '/admin'} onClick={onClose} />
+              <NavItem href="/admin/users" icon={ShieldCheck} label="Quản lý Admin" active={pathname === '/admin' || pathname.startsWith('/admin/')} onClick={onClose} />
             )}
           </NavSection>
           <NavSection label="Công cụ bóc tách">
@@ -181,6 +181,11 @@ function NavSection({ label, children }: { label: string; children: React.ReactN
       </nav>
     </div>
   )
+}
+
+function isActivePath(pathname: string, href: string): boolean {
+  const base = href.split('?')[0] ?? href
+  return pathname === base || pathname.startsWith(`${base}/`)
 }
 
 function NavItem({ href, icon: Icon, label, active, onClick }: {

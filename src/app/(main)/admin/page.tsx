@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { formatDateTime, statusLabel, statusClass } from '@/lib/utils'
-import { useRouter } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 
 type Tab = 'users' | 'projects'
 
@@ -27,10 +27,17 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 export default function AdminPage() {
   const { user } = useAuth()
   const router = useRouter()
-  const [tab, setTab] = useState<Tab>('users')
+  const pathname = usePathname()
+  const pathTab = pathname.split('/').filter(Boolean).at(-1)
+  const selectedTab: Tab = pathTab === 'projects' ? 'projects' : 'users'
+  const [tab, setTab] = useState<Tab>(selectedTab)
   useEffect(() => {
     if (user && user.role !== 'ADMIN') router.replace('/dashboard')
   }, [router, user])
+  useEffect(() => {
+    setTab(selectedTab)
+    if (pathname === '/admin') router.replace(`/admin/${selectedTab}`, { scroll: false })
+  }, [pathname, router, selectedTab])
 
   if (user?.role !== 'ADMIN') return null
 
@@ -43,7 +50,7 @@ export default function AdminPage() {
       />
       <div style={{ display: 'flex', gap: '0.25rem', marginBottom: '1.25rem', background: 'rgba(255,255,255,0.04)', borderRadius: 8, padding: '0.25rem', width: 'fit-content', border: '1px solid var(--border-glass)' }}>
         {(['users', 'projects'] as Tab[]).map((t) => (
-          <button key={t} onClick={() => setTab(t)} style={{ padding: '0.4rem 1rem', borderRadius: 8, fontSize: '0.8125rem', fontWeight: 600, cursor: 'pointer', border: 'none', background: tab === t ? 'rgba(0,242,254,0.1)' : 'none', color: tab === t ? 'var(--border-focus)' : 'var(--text-muted)' }}>
+          <button key={t} onClick={() => router.push(`/admin/${t}`)} style={{ padding: '0.4rem 1rem', borderRadius: 8, fontSize: '0.8125rem', fontWeight: 600, cursor: 'pointer', border: 'none', background: tab === t ? 'rgba(0,242,254,0.1)' : 'none', color: tab === t ? 'var(--border-focus)' : 'var(--text-muted)' }}>
             {t === 'users' ? 'Người dùng' : 'Dự án'}
           </button>
         ))}

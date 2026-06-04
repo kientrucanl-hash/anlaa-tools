@@ -35,7 +35,7 @@ export default function DashboardPage() {
       setShowCreate(false)
       setNewName('')
       setNewAddress('Hà Nội')
-      router.push(`/estimate?projectId=${(project as Project).id}`)
+      router.push(`/estimate/${(project as Project).id}`)
     } catch (e) {
       showToast((e as Error).message, 'error')
     }
@@ -93,7 +93,7 @@ export default function DashboardPage() {
               key={project.id}
               project={project}
               isAdmin={user?.role === 'ADMIN'}
-              onOpen={() => router.push(`/estimate?projectId=${project.id}`)}
+              onOpen={() => router.push(`/estimate/${project.id}`)}
               onDelete={() => setDeleteTarget(project)}
               onSubmit={() => handleSubmit(project)}
             />

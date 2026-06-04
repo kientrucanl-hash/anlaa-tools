@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { Plus, Trash2, Send, ChevronLeft, CheckCircle, XCircle, Clock, FileText, Save } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/lib/hooks/useAuth'
@@ -63,6 +64,17 @@ function newRow(): QuotationRow {
 // ── Main ────────────────────────────────────────────────────────────────────
 
 export default function QuotationsPage() {
+  return (
+    <Suspense fallback={<div style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '3rem' }}>Đang tải...</div>}>
+      <QuotationsContent />
+    </Suspense>
+  )
+}
+
+function QuotationsContent() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const routeId = Number(searchParams.get('id') || 0)
   const { user } = useAuth()
   const { showToast } = useToast()
   const qc = useQueryClient()
@@ -85,11 +97,30 @@ export default function QuotationsPage() {
   const { data: quotations = [], isLoading } = useQuery({ queryKey: ['quotations'], queryFn: fetchQuotations })
   const { data: editQuotation } = useQuery({ queryKey: ['quotation', editId], queryFn: () => fetchQuotation(editId!), enabled: !!editId })
 
+  useEffect(() => {
+    if (!routeId) {
+      setView('list')
+      setEditId(null)
+      return
+    }
+    setEditId(routeId)
+    setView('editor')
+  }, [routeId])
+
+  useEffect(() => {
+    if (editQuotation) loadEditorState(editQuotation)
+  }, [editQuotation])
+
   const createMut = useMutation({ mutationFn: createQuotation, onSuccess: (q) => { qc.invalidateQueries({ queryKey: ['quotations'] }); setShowCreate(false); setNewName(''); openEditor(q) }, onError: (e: Error) => showToast(e.message, 'error') })
   const deleteMut = useMutation({ mutationFn: deleteQuotation, onSuccess: () => { qc.invalidateQueries({ queryKey: ['quotations'] }); setDeleteTarget(null); showToast('Đã xóa', 'success') }, onError: (e: Error) => showToast(e.message, 'error') })
   const actionMut = useMutation({ mutationFn: ({ id, action, body }: { id: number; action: string; body?: object }) => actionQuotation(id, action, body), onSuccess: () => { qc.invalidateQueries({ queryKey: ['quotations'] }); qc.invalidateQueries({ queryKey: ['quotation', editId] }); showToast('Thành công', 'success'); setShowReject(null) }, onError: (e: Error) => showToast(e.message, 'error') })
 
   function openEditor(q: Quotation) {
+    router.push(`/quotations/${q.id}`)
+    loadEditorState(q)
+  }
+
+  function loadEditorState(q: Quotation) {
     setEditId(q.id)
     setEditorName(q.name)
     setContractors(q.contractors.length >= 3 ? q.contractors : [...q.contractors, '', '', ''].slice(0, 3))
@@ -97,7 +128,7 @@ export default function QuotationsPage() {
     setView('editor')
   }
 
-  function backToList() { setView('list'); setEditId(null) }
+  function backToList() { setView('list'); setEditId(null); router.push('/quotations') }
 
   async function handleSave() {
     if (!editId) return

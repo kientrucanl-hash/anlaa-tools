@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { CheckCircle2, Plus, Search, Star, Phone, MapPin, Edit2, Trash2, ChevronDown, ChevronUp, Send, Users, XCircle } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/lib/hooks/useAuth'
@@ -169,6 +170,17 @@ function ContractorDraftPanel({ drafts, isAdmin, onSubmit, onApprove, onReject, 
 }
 
 export default function ContractorsPage() {
+  return (
+    <Suspense fallback={<div style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '3rem' }}>Đang tải...</div>}>
+      <ContractorsContent />
+    </Suspense>
+  )
+}
+
+function ContractorsContent() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const detailId = Number(searchParams.get('id') || 0)
   const { user } = useAuth()
   const { showToast } = useToast()
   const qc = useQueryClient()
@@ -220,6 +232,20 @@ export default function ContractorsPage() {
   }
 
   const all = contractors as Contractor[]
+  useEffect(() => {
+    if (!detailId) {
+      setDetail(null)
+      return
+    }
+    const found = all.find((item) => item.id === detailId)
+    if (found) setDetail(found)
+  }, [detailId, all])
+
+  function closeDetail() {
+    setDetail(null)
+    router.push('/contractors')
+  }
+
   const filtered = all
     .filter((c) => !search || c.name.toLowerCase().includes(search.toLowerCase()) || (c.phone ?? '').includes(search) || (c.contactName ?? '').toLowerCase().includes(search.toLowerCase()))
     .sort((a, b) => {
@@ -311,7 +337,7 @@ export default function ContractorsPage() {
                   <tr key={c.id} style={{ borderBottom: i < filtered.length - 1 ? '1px solid var(--border-glass)' : undefined, cursor: 'pointer', transition: 'background 0.1s' }}
                     onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--bg-hover)')}
                     onMouseLeave={(e) => (e.currentTarget.style.background = '')}
-                    onClick={() => setDetail(c)}>
+                    onClick={() => router.push(`/contractors/${c.id}`)}>
                     <td style={{ padding: '0.6rem 0.875rem', fontWeight: 600, color: 'var(--text-primary)', maxWidth: 160 }}>
                       <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.name}</div>
                     </td>
@@ -352,7 +378,7 @@ export default function ContractorsPage() {
       )}
 
       {/* Detail modal */}
-      <Modal open={!!detail} onClose={() => setDetail(null)} title={detail?.name ?? ''} width={520}>
+      <Modal open={!!detail} onClose={closeDetail} title={detail?.name ?? ''} width={520}>
         {detail && (
           <div style={{ fontSize: '0.84rem' }}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.6rem', marginBottom: '0.75rem' }}>
@@ -381,8 +407,8 @@ export default function ContractorsPage() {
             {detail.ratingNote && <InfoRow label="Ghi chú đánh giá" value={detail.ratingNote} />}
             {detail.note && <div style={{ marginTop: '0.5rem' }}><InfoRow label="Ghi chú" value={detail.note} /></div>}
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '1rem' }}>
-              {isAdmin && <Button size="sm" variant="secondary" onClick={() => { setDetail(null); openEdit(detail) }}><Edit2 size={12} /> Sửa</Button>}
-              <Button size="sm" variant="secondary" onClick={() => setDetail(null)}>Đóng</Button>
+              {isAdmin && <Button size="sm" variant="secondary" onClick={() => { closeDetail(); openEdit(detail) }}><Edit2 size={12} /> Sửa</Button>}
+              <Button size="sm" variant="secondary" onClick={closeDetail}>Đóng</Button>
             </div>
           </div>
         )}
