@@ -3,10 +3,21 @@
 import { Suspense, useEffect, useMemo, useState } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { useQuery } from '@tanstack/react-query'
-import { ArrowLeft, BarChart2, Download, Save, Table2 } from 'lucide-react'
+import { ArrowLeft, BarChart2, CheckCircle2, Download, Save, Table2 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { useToast } from '@/components/ui/Toast'
 import { formatNumber } from '@/lib/utils'
+import { apiFetch, projectsApi } from '@/lib/api/client'
+import {
+  calcEstimateItemQty,
+  getEstimateName,
+  getEstimateUnit,
+  getEstimateUnitPrice,
+  getEstimateWorkKey,
+  isEstimateSection,
+  serializeEstimateItems,
+  type EstimateItemLike,
+} from '@/lib/estimate/items'
 import {
   DEFAULT_WORK_ITEM_PRICES,
   LEGACY_PROJECT_TEMPLATES,
@@ -84,7 +95,7 @@ function PricingContent() {
   const { showToast } = useToast()
   const projectId = searchParams.get('projectId')
 
-  const { data: project, isLoading } = useQuery({
+  const { data: project, isLoading, refetch: refetchProject } = useQuery({
     queryKey: ['project', projectId],
     queryFn: () => fetchProject(projectId!),
     enabled: !!projectId,
@@ -191,6 +202,83 @@ function PricingContent() {
     URL.revokeObjectURL(a.href)
   }
 
+  async function savePricesToContractors() {
+    const selectedSlots = [0, 1, 2].filter((slot) => subState.contractorIds[slot])
+    if (selectedSlots.length === 0) {
+      showToast('Chưa chọn nhà thầu để lưu đơn giá', 'error')
+      return
+    }
+
+    try {
+      await Promise.all(selectedSlots.map(async (slot) => {
+        const contractorId = subState.contractorIds[slot]
+        const contractor = contractors.find((item) => item.id === contractorId)
+        if (!contractorId || !contractor) return
+        const priceNotes = { ...(contractor.priceNotes ?? {}) }
+        rows.forEach((row) => {
+          const price = slotPrices(subState, slot)[row.itemId] || 0
+          if (price > 0) priceNotes[row.workItemKey] = price
+        })
+        await apiFetch(`/contractors/${contractorId}`, {
+          method: 'PUT',
+          body: JSON.stringify({ priceNotes }),
+        })
+      }))
+      showToast('Đã lưu đơn giá vào hồ sơ nhà thầu', 'success')
+    } catch (e) {
+      showToast((e as Error).message || 'Lỗi lưu đơn giá nhà thầu', 'error')
+    }
+  }
+
+  async function applyNtpPrices(mode: 'lowest' | 'chosen') {
+    if (!projectId || source !== 'estimate') {
+      showToast('Cần mở bảng giá từ một dự án để áp giá vào dự toán', 'error')
+      return
+    }
+
+    const priceByKey: Record<string, number> = {}
+    rows.forEach((row) => {
+      const price = mode === 'lowest' ? getLowestSlotPrice(row, subState) : getChosenSlotPrice(row, subState)
+      if (price > 0) priceByKey[row.workItemKey] = price
+    })
+    await applyPricesToProject(priceByKey, mode === 'lowest' ? 'Đã áp giá thấp nhất vào dự toán' : 'Đã áp giá đã chọn vào dự toán')
+  }
+
+  async function applySellingPrices() {
+    if (!projectId || source !== 'estimate') {
+      showToast('Cần mở bảng giá từ một dự án để áp giá bán vào dự toán', 'error')
+      return
+    }
+
+    const priceByKey: Record<string, number> = {}
+    rows.forEach((row) => {
+      const margin = sellState.margins[row.itemId] ?? sellState.defaultMargin
+      priceByKey[row.workItemKey] = sellState.overrideSell[row.itemId] ?? Math.round(row.costPrice * margin)
+    })
+    await applyPricesToProject(priceByKey, 'Đã áp giá bán công ty vào dự toán')
+  }
+
+  async function applyPricesToProject(priceByKey: Record<string, number>, successMessage: string) {
+    const data = Array.isArray(project?.data) ? project.data as EstimateItemLike[] : []
+    if (Object.keys(priceByKey).length === 0) {
+      showToast('Chưa có đơn giá hợp lệ để áp vào dự toán', 'error')
+      return
+    }
+    const nextData = data.map((item) => {
+      if (isEstimateSection(item)) return item
+      const price = priceByKey[getEstimateWorkKey(item)] || 0
+      return price > 0 ? { ...item, unitPrice: price, unitPriceMat: price } : item
+    })
+
+    try {
+      await projectsApi.update(Number(projectId), { data: serializeEstimateItems(nextData) })
+      await refetchProject()
+      showToast(successMessage, 'success')
+    } catch (e) {
+      showToast((e as Error).message || 'Lỗi cập nhật dự toán', 'error')
+    }
+  }
+
   if (projectId === '__legacy-empty-state__') {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: 300, gap: '1rem', color: 'var(--text-muted)' }}>
@@ -267,6 +355,10 @@ function PricingContent() {
           onPriceChange={updateNtpPrice}
           onChosenChange={updateChosen}
           onNoteChange={updateNote}
+          onSaveToContractors={savePricesToContractors}
+          onApplyLowest={() => applyNtpPrices('lowest')}
+          onApplyChosen={() => applyNtpPrices('chosen')}
+          canApplyToEstimate={!!projectId && source === 'estimate'}
         />
       )}
 
@@ -277,6 +369,8 @@ function PricingContent() {
           onDefaultMargin={(value) => updateSell({ ...sellState, defaultMargin: value })}
           onMarginChange={updateMargin}
           onSellUnitChange={updateSellUnit}
+          onApplySelling={applySellingPrices}
+          canApplyToEstimate={!!projectId && source === 'estimate'}
         />
       )}
 
@@ -285,7 +379,7 @@ function PricingContent() {
   )
 }
 
-function SubcontractorPanel({ rows, contractors, subState, onContractorChange, onPriceChange, onChosenChange, onNoteChange }: {
+function SubcontractorPanel({ rows, contractors, subState, onContractorChange, onPriceChange, onChosenChange, onNoteChange, onSaveToContractors, onApplyLowest, onApplyChosen, canApplyToEstimate }: {
   rows: PriceRow[]
   contractors: Contractor[]
   subState: SubState
@@ -293,6 +387,10 @@ function SubcontractorPanel({ rows, contractors, subState, onContractorChange, o
   onPriceChange: (slot: number, itemId: string, value: string) => void
   onChosenChange: (itemId: string, value: string) => void
   onNoteChange: (itemId: string, value: string) => void
+  onSaveToContractors: () => void
+  onApplyLowest: () => void
+  onApplyChosen: () => void
+  canApplyToEstimate: boolean
 }) {
   const totals = [0, 1, 2].map((slot) => rows.reduce((sum, row) => sum + (slotPrices(subState, slot)[row.itemId] || 0) * row.qty, 0))
   const best = getBestIndex(totals)
@@ -308,6 +406,11 @@ function SubcontractorPanel({ rows, contractors, subState, onContractorChange, o
               {contractors.map((contractor) => <option key={contractor.id} value={contractor.id}>{contractor.name}</option>)}
             </select>
           ))}
+        </div>
+        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.75rem' }}>
+          <Button variant="secondary" size="sm" onClick={onSaveToContractors}><Save size={13} /> Lưu giá vào NTP</Button>
+          <Button variant="secondary" size="sm" onClick={onApplyLowest} disabled={!canApplyToEstimate}><CheckCircle2 size={13} /> Áp giá thấp nhất</Button>
+          <Button size="sm" onClick={onApplyChosen} disabled={!canApplyToEstimate}><CheckCircle2 size={13} /> Áp giá đã chọn</Button>
         </div>
       </div>
 
@@ -345,12 +448,14 @@ function SubcontractorPanel({ rows, contractors, subState, onContractorChange, o
   )
 }
 
-function SellingPanel({ rows, sellState, onDefaultMargin, onMarginChange, onSellUnitChange }: {
+function SellingPanel({ rows, sellState, onDefaultMargin, onMarginChange, onSellUnitChange, onApplySelling, canApplyToEstimate }: {
   rows: PriceRow[]
   sellState: SellState
   onDefaultMargin: (value: number) => void
   onMarginChange: (itemId: string, value: string) => void
   onSellUnitChange: (itemId: string, value: string) => void
+  onApplySelling: () => void
+  canApplyToEstimate: boolean
 }) {
   const summary = rows.reduce((acc, row) => {
     const margin = sellState.margins[row.itemId] ?? sellState.defaultMargin
@@ -368,6 +473,7 @@ function SellingPanel({ rows, sellState, onDefaultMargin, onMarginChange, onSell
         <SummaryPill label="Tổng vốn" value={summary.cost} />
         <SummaryPill label="Tổng bán" value={summary.sell} />
         <SummaryPill label="Lợi nhuận" value={summary.sell - summary.cost} />
+        <Button size="sm" onClick={onApplySelling} disabled={!canApplyToEstimate}><CheckCircle2 size={13} /> Áp giá bán vào dự toán</Button>
       </div>
 
       <PricingTableShell empty={rows.length === 0} emptyText="Chưa có hạng mục để lập bảng giá bán.">
@@ -517,19 +623,17 @@ function renderNtpRows(
 }
 
 function buildRowsFromProject(project: Record<string, unknown> | undefined): PriceRow[] {
-  const items = Array.isArray(project?.data) ? project.data as Array<Record<string, unknown>> : []
-  return items.map((item) => {
-    const type = String(item.type ?? item.workItemKey ?? 'custom')
-    const results = (item.results ?? {}) as Record<string, unknown>
-    const qty = numberValue(results.netArea) || numberValue(results.area) || numberValue(item.qty)
-    const dim = WORK_ITEM_DIMS[type]
+  const items = Array.isArray(project?.data) ? project.data as EstimateItemLike[] : []
+  return items.filter((item) => !isEstimateSection(item)).map((item) => {
+    const type = getEstimateWorkKey(item)
+    const qty = calcEstimateItemQty(item)
     return {
       itemId: String(item.id ?? `${type}-${item.name ?? ''}`),
       workItemKey: type,
-      itemName: String(item.name ?? dim?.label ?? 'Hạng mục'),
-      unit: String(item.unit ?? dim?.unit ?? DEFAULT_WORK_ITEM_PRICES[type]?.unit ?? 'm2'),
+      itemName: getEstimateName(item),
+      unit: getEstimateUnit(item),
       qty,
-      costPrice: numberValue(item.unitPriceMat) + numberValue(item.unitPriceLab) || DEFAULT_WORK_ITEM_PRICES[type]?.price || 0,
+      costPrice: getEstimateUnitPrice(item) || DEFAULT_WORK_ITEM_PRICES[type]?.price || 0,
     }
   })
 }
@@ -587,6 +691,18 @@ function numberValue(value: unknown): number {
 function getBestIndex(values: number[]): number {
   const positive = values.filter((value) => value > 0)
   return positive.length ? values.indexOf(Math.min(...positive)) : -1
+}
+
+function getLowestSlotPrice(row: PriceRow, state: SubState): number {
+  const values = [0, 1, 2].map((slot) => slotPrices(state, slot)[row.itemId] || 0).filter((value) => value > 0)
+  return values.length ? Math.min(...values) : 0
+}
+
+function getChosenSlotPrice(row: PriceRow, state: SubState): number {
+  const chosen = state.chosen[row.itemId]
+  if (chosen === 'lowest') return getLowestSlotPrice(row, state)
+  if (typeof chosen === 'number' && chosen >= 0) return slotPrices(state, chosen)[row.itemId] || 0
+  return 0
 }
 
 function formatCurrency(value: number): string {
