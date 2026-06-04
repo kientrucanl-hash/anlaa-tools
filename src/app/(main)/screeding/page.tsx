@@ -1,6 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
+import { PageHeader } from '@/components/layout/PageHeader'
 import { calculateScreeding } from '@/lib/calculations/screeding'
 import type { MortarGrade } from '@/lib/constants'
 import { formatNumber } from '@/lib/utils'
@@ -34,10 +35,7 @@ export default function ScreedingPage() {
 function ToolShell({ title, subtitle, children }: { title: string; subtitle: string; children: React.ReactNode }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-      <div>
-        <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)' }}>{title}</h2>
-        <p style={{ color: 'var(--text-muted)', fontSize: '0.8125rem', marginTop: 3 }}>{subtitle}</p>
-      </div>
+      <PageHeader eyebrow="Calculator bóc tách" title={title} subtitle={subtitle} />
       {children}
     </div>
   )

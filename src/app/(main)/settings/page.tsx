@@ -5,6 +5,7 @@ import { useAuth } from '@/lib/hooks/useAuth'
 import { authApi } from '@/lib/api/client'
 import { useToast } from '@/components/ui/Toast'
 import { Button } from '@/components/ui/Button'
+import { PageHeader } from '@/components/layout/PageHeader'
 
 export default function SettingsPage() {
   const { user } = useAuth()
@@ -31,8 +32,12 @@ export default function SettingsPage() {
   }
 
   return (
-    <div style={{ maxWidth: 480 }}>
-      <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '1.5rem' }}>Cài đặt Tài khoản</h2>
+    <div style={{ maxWidth: 620 }}>
+      <PageHeader
+        eyebrow="Tài khoản"
+        title="Cài đặt tài khoản"
+        subtitle="Thông tin đăng nhập và bảo mật của người dùng ANLAA Estimate."
+      />
 
       <div className="glass-card" style={{ padding: '1.5rem', marginBottom: '1.25rem' }}>
         <h3 style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.75rem' }}>Thông tin tài khoản</h3>

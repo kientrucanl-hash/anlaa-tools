@@ -45,9 +45,14 @@ export function TopBar({ title, onMenuClick }: Props) {
         <Menu size={20} />
       </button>
 
-      <h1 style={{ flex: 1, fontSize: '0.9375rem', fontWeight: 700, color: 'var(--text-primary)', fontFamily: 'var(--font-display)' }}>
-        {title}
-      </h1>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <h1 style={{ fontSize: '0.9375rem', fontWeight: 900, color: 'var(--text-primary)', fontFamily: 'var(--font-display)', lineHeight: 1.1 }}>
+          {title}
+        </h1>
+        <div style={{ color: 'var(--text-muted)', fontSize: '0.68rem', fontWeight: 700 }}>
+          App dự toán thay G8 · bóc KL · đơn giá · NTP
+        </div>
+      </div>
 
       {/* Theme switcher */}
       <div style={{ position: 'relative' }}>

@@ -1,6 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
+import { PageHeader } from '@/components/layout/PageHeader'
 import { calculateTiling } from '@/lib/calculations/tiling'
 import type { MixRatio, TileSize, TilingMethod } from '@/lib/constants'
 import { formatNumber } from '@/lib/utils'
@@ -20,10 +21,11 @@ export default function TilingPage() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-      <div>
-        <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)' }}>Ốp lát gạch</h2>
-        <p style={{ color: 'var(--text-muted)', fontSize: '0.8125rem', marginTop: 3 }}>Tính số viên/hộp gạch, keo dán, chà ron và phụ kiện căn chỉnh.</p>
-      </div>
+      <PageHeader
+        eyebrow="Calculator bóc tách"
+        title="Ốp lát gạch"
+        subtitle="Tính số viên/hộp gạch, keo dán, chà ron và phụ kiện căn chỉnh."
+      />
       <div className="glass-card" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: '0.75rem', padding: '1rem' }}>
         <NumberField label="Diện tích (m²)" value={area} onChange={setArea} />
         <SelectField label="Kích thước gạch" value={tileSize} onChange={(value) => setTileSize(value as TileSize)} options={['30x30', '40x40', '30x60', '60x60', '80x80', '60x120']} />

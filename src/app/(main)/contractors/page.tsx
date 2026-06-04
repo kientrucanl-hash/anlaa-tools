@@ -7,6 +7,7 @@ import { useAuth } from '@/lib/hooks/useAuth'
 import { useToast } from '@/components/ui/Toast'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
+import { PageHeader } from '@/components/layout/PageHeader'
 import { formatDateTime } from '@/lib/utils'
 import type { Contractor, ContractorType, ContractorStatus } from '@/lib/types/models'
 
@@ -230,12 +231,12 @@ export default function ContractorsPage() {
 
   return (
     <div>
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)' }}>Nhà thầu phụ</h2>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.8125rem', marginTop: 2 }}>{filtered.length} nhà thầu</p>
-        </div>
+      <PageHeader
+        eyebrow="Cơ sở dữ liệu NTP"
+        title="Nhà thầu phụ"
+        subtitle={`${filtered.length} nhà thầu · hồ sơ đơn giá và luồng đề xuất duyệt`}
+        actions={(
+          <>
         <div style={{ position: 'relative' }}>
           <Search size={13} style={{ position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
           <input className="input-base" style={{ paddingLeft: 28, paddingTop: '0.4rem', paddingBottom: '0.4rem', fontSize: '0.8rem', width: 180 }} placeholder="Tìm kiếm..." value={search} onChange={(e) => setSearch(e.target.value)} />
@@ -249,7 +250,9 @@ export default function ContractorsPage() {
           {Object.entries(STATUS_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
         </select>
         {isAdmin ? <Button size="sm" onClick={openCreate}><Plus size={13} /> Thêm</Button> : <Button size="sm" onClick={openDraftCreate}><Plus size={13} /> Đề xuất</Button>}
-      </div>
+          </>
+        )}
+      />
 
       {drafts.length > 0 && (
         <ContractorDraftPanel

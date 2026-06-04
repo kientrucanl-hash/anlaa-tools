@@ -1,6 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
+import { PageHeader } from '@/components/layout/PageHeader'
 import { calculateMasonry } from '@/lib/calculations/masonry'
 import type { BrickType, MortarGrade } from '@/lib/constants'
 import { formatNumber } from '@/lib/utils'
@@ -27,10 +28,11 @@ export default function MasonryPage() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-      <div>
-        <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)' }}>Xây & Trát</h2>
-        <p style={{ color: 'var(--text-muted)', fontSize: '0.8125rem', marginTop: 3 }}>Tính tường xây, gạch, vữa xây và tùy chọn trát tự động hai mặt.</p>
-      </div>
+      <PageHeader
+        eyebrow="Calculator bóc tách"
+        title="Xây & Trát"
+        subtitle="Tính tường xây, gạch, vữa xây và tùy chọn trát tự động hai mặt."
+      />
       <div className="glass-card" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: '0.75rem', padding: '1rem' }}>
         <NumberField label="Dài tường (m)" value={length} onChange={setLength} />
         <NumberField label="Cao tường (m)" value={height} onChange={setHeight} />

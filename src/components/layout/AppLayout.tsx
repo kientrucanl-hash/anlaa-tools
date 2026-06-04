@@ -9,7 +9,7 @@ interface Props {
   children: React.ReactNode
 }
 
-export function AppLayout({ title = 'MECALC', children }: Props) {
+export function AppLayout({ title = 'ANLAA Estimate', children }: Props) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   return (

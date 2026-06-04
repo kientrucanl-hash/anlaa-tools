@@ -6,6 +6,7 @@ import { BarChart2, ChevronLeft, Copy, Download, FolderPlus, LayoutTemplate, Plu
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
+import { PageHeader } from '@/components/layout/PageHeader'
 import { useToast } from '@/components/ui/Toast'
 import { useProject, useSubmitProject } from '@/lib/hooks/useProjects'
 import { projectsApi } from '@/lib/api/client'
@@ -281,25 +282,22 @@ function EstimateContent() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '0.75rem', flexWrap: 'wrap' }}>
-        <div style={{ display: 'flex', gap: '0.625rem', alignItems: 'flex-start' }}>
-          <Button variant="ghost" size="sm" onClick={() => router.push('/dashboard')} style={{ padding: '0.4rem 0.5rem' }}>
-            <ChevronLeft size={14} />
-          </Button>
-          <div>
-            <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)' }}>DỰ TOÁN CHI PHÍ THI CÔNG</h2>
-            <p style={{ color: 'var(--text-muted)', fontSize: '0.8125rem', marginTop: 3 }}>
-              {project?.name} · nhập hạng mục, kích thước, đơn giá và tự tính khối lượng.
-            </p>
-          </div>
-        </div>
-        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
+      <PageHeader
+        eyebrow="Bảng dự toán"
+        title={project?.name ?? 'Dự toán chi phí thi công'}
+        subtitle="Nhập hạng mục, diễn giải, kích thước và đơn giá theo bảng dự toán kiểu G8."
+        actions={(
+          <>
+            <Button variant="ghost" size="sm" onClick={() => router.push('/dashboard')} style={{ padding: '0.4rem 0.5rem' }}>
+              <ChevronLeft size={14} />
+            </Button>
           <SaveBadge state={saveState} />
           <Button variant="secondary" size="sm" onClick={() => router.push(`/pricing?projectId=${projectId}`)}><BarChart2 size={13} /> Bảng giá & NTP</Button>
           <Button variant="secondary" size="sm" onClick={exportCsv}><Download size={13} /> Xuất Excel</Button>
           {canEdit && <Button size="sm" onClick={handleSubmit} loading={submitProject.isPending}><Send size={13} /> Nộp duyệt</Button>}
-        </div>
-      </div>
+          </>
+        )}
+      />
 
       <div className="glass-card" style={{ overflow: 'hidden', padding: 0 }}>
         <div style={{ overflowX: 'auto' }}>
@@ -361,12 +359,6 @@ function EstimateContent() {
           <span style={{ color: totals.rounding >= 0 ? '#22c55e' : '#ef4444', textAlign: 'right', fontWeight: 800 }}>{formatCurrency(totals.rounding)}</span>
         </div>
         <TotalLine label="TỔNG DỰ TOÁN" value={totals.grand} strong accent />
-        <div style={{ borderTop: '1px solid var(--border-glass)', marginTop: '0.5rem', paddingTop: '0.5rem' }}>
-          <div style={{ color: 'var(--text-muted)', fontSize: '0.72rem', fontWeight: 800, marginBottom: '0.25rem' }}>LỊCH THANH TOÁN MẪU</div>
-          <TotalLine label="Đợt 1 - tạm ứng 30%" value={totals.grand * 0.3} />
-          <TotalLine label="Đợt 2 - thi công 40%" value={totals.grand * 0.4} />
-          <TotalLine label="Đợt 3 - quyết toán 30%" value={totals.grand * 0.3} />
-        </div>
       </div>
 
       <Modal open={showTemplates} onClose={() => setShowTemplates(false)} title="Chọn mẫu dự toán" width={620}>

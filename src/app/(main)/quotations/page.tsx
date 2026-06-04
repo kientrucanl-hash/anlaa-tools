@@ -7,6 +7,7 @@ import { useAuth } from '@/lib/hooks/useAuth'
 import { useToast } from '@/components/ui/Toast'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
+import { PageHeader } from '@/components/layout/PageHeader'
 import { formatDateTime, statusLabel, statusClass, generateId } from '@/lib/utils'
 import type { Quotation, QuotationRow, ProjectStatus } from '@/lib/types/models'
 
@@ -262,13 +263,14 @@ export default function QuotationsPage() {
 
   return (
     <div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.25rem' }}>
-        <div style={{ flex: 1 }}>
-          <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)' }}>Báo giá so sánh</h2>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.8125rem', marginTop: 2 }}>{(quotations as Quotation[]).length} báo giá</p>
-        </div>
+      <PageHeader
+        eyebrow="So sánh chào giá"
+        title="Báo giá so sánh"
+        subtitle={`${(quotations as Quotation[]).length} báo giá · bảng so sánh 3 nhà thầu`}
+        actions={(
         <Button size="sm" onClick={() => setShowCreate(true)}><Plus size={13} /> Tạo báo giá</Button>
-      </div>
+        )}
+      />
 
       {isLoading ? (
         <div style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '3rem' }}>Đang tải...</div>

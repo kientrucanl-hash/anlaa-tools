@@ -15,6 +15,7 @@
   --color-plastering: #ff9100;
   --color-tiling: #2979ff;
   --color-accent: #d500f9;
+  --color-primary: #00f2fe;
 
   --font-primary: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, Roboto, Helvetica, Arial, sans-serif;
   --font-display: "Segoe UI Variable Display", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
@@ -134,7 +135,7 @@ body {
 h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-display) !important;
   font-weight: 700;
-  letter-spacing: -0.02em;
+  letter-spacing: 0;
 }
 
 /* Tabular figures for numeric alignment */
@@ -146,10 +147,58 @@ table, th, td, input, select, textarea {
 .glass-card {
   background: var(--bg-card);
   border: 1px solid var(--border-glass);
-  border-radius: 16px;
+  border-radius: 8px;
   box-shadow: var(--shadow-glass);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
+}
+
+.page-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  padding-bottom: 0.875rem;
+  border-bottom: 1px solid var(--border-glass);
+}
+
+.page-eyebrow {
+  color: var(--color-primary);
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0;
+  text-transform: uppercase;
+  margin-bottom: 0.2rem;
+}
+
+.page-title {
+  color: var(--text-primary);
+  font-size: 1.18rem;
+  font-weight: 900;
+  line-height: 1.2;
+}
+
+.page-subtitle {
+  color: var(--text-muted);
+  font-size: 0.8125rem;
+  margin-top: 0.25rem;
+}
+
+.page-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-top: 0.5rem;
+}
+
+.page-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  flex-wrap: wrap;
 }
 
 /* --- Input base --- */

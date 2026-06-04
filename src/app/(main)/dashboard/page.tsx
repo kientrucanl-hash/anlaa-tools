@@ -9,6 +9,7 @@ import { useToast } from '@/components/ui/Toast'
 import { Modal } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
+import { PageHeader } from '@/components/layout/PageHeader'
 import { formatDateTime, statusLabel, statusClass } from '@/lib/utils'
 import type { Project } from '@/lib/types/models'
 
@@ -62,20 +63,16 @@ export default function DashboardPage() {
 
   return (
     <div>
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
-        <div style={{ flex: 1 }}>
-          <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)' }}>
-            Dự án của tôi
-          </h2>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.8125rem', marginTop: 2 }}>
-            {projects.length} dự án
-          </p>
-        </div>
+      <PageHeader
+        eyebrow="Workspace dự toán"
+        title="Dự án của tôi"
+        subtitle={`${projects.length} dự án · mở dự án để lập bảng dự toán thay G8`}
+        actions={(
         <Button onClick={() => setShowCreate(true)} size="sm">
           <Plus size={14} /> Tạo dự án
         </Button>
-      </div>
+        )}
+      />
 
       {/* Project grid */}
       {isLoading ? (

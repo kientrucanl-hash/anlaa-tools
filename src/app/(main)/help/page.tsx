@@ -1,3 +1,5 @@
+import { PageHeader } from '@/components/layout/PageHeader'
+
 const sections = [
   ['Dự toán chi phí', 'Mở dự án từ Dashboard, chọn Từ mẫu hoặc thêm hạng mục, nhập dòng diễn giải và kích thước. Dùng Bảng giá & NTP để so sánh đơn giá rồi áp ngược vào dự toán.'],
   ['Vật tư cần mua', 'Trang này tự bóc định mức từ các hạng mục dự toán có work item như xây, trát, cán nền, ốp lát, bê tông. Có thể in hoặc xuất CSV.'],
@@ -10,10 +12,11 @@ const sections = [
 export default function HelpPage() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-      <div>
-        <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)' }}>Hướng dẫn sử dụng</h2>
-        <p style={{ color: 'var(--text-muted)', fontSize: '0.8125rem', marginTop: 3 }}>Quy trình thao tác chính của MECALC.</p>
-      </div>
+      <PageHeader
+        eyebrow="User guide"
+        title="Hướng dẫn sử dụng"
+        subtitle="Quy trình thao tác chính của ANLAA Estimate, app dự toán thay G8."
+      />
       <div className="glass-card" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '0.875rem', padding: '1rem' }}>
         {sections.map(([title, body]) => (
           <section key={title} style={{ border: '1px solid var(--border-glass)', borderRadius: 8, padding: '0.875rem' }}>

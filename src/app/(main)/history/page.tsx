@@ -6,6 +6,7 @@ import { FolderOpen, RefreshCw, FileText, CheckCircle, XCircle, Clock, Users } f
 import { useProjects } from '@/lib/hooks/useProjects'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
+import { PageHeader } from '@/components/layout/PageHeader'
 import { formatDateTime, statusLabel, statusClass } from '@/lib/utils'
 import type { Project, ProjectStatus } from '@/lib/types/models'
 
@@ -34,16 +35,12 @@ export default function HistoryPage() {
 
   return (
     <div>
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.25rem' }}>
-        <div style={{ flex: 1 }}>
-          <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)' }}>Lịch sử Dự toán</h2>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.8125rem', marginTop: 2 }}>
-            {filtered.length} dự án{filter !== 'ALL' ? ` · ${statusLabel(filter as ProjectStatus)}` : ''}
-          </p>
-        </div>
-        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-          {/* Status filter */}
+      <PageHeader
+        eyebrow="Audit dự toán"
+        title="Lịch sử dự toán"
+        subtitle={`${filtered.length} dự án${filter !== 'ALL' ? ` · ${statusLabel(filter as ProjectStatus)}` : ''}`}
+        actions={(
+          <>
           <select
             value={filter}
             onChange={(e) => setFilter(e.target.value as ProjectStatus | 'ALL')}
@@ -57,8 +54,9 @@ export default function HistoryPage() {
           <Button variant="secondary" size="sm" onClick={() => refetch()} title="Làm mới">
             <RefreshCw size={13} />
           </Button>
-        </div>
-      </div>
+          </>
+        )}
+      />
 
       {/* List */}
       {isLoading ? (

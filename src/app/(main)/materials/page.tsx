@@ -5,6 +5,7 @@ import { useSearchParams, useRouter } from 'next/navigation'
 import { useQuery } from '@tanstack/react-query'
 import { ArrowLeft, Download, Package, Printer } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
+import { PageHeader } from '@/components/layout/PageHeader'
 import { extractMaterialsFromEstimateItems, type EstimateItemLike } from '@/lib/estimate/items'
 import { formatNumber } from '@/lib/utils'
 
@@ -76,13 +77,12 @@ function MaterialsContent() {
 
   return (
     <div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.25rem', flexWrap: 'wrap' }}>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)' }}>Vật tư cần mua</h2>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.8125rem', marginTop: 2 }}>
-            {project?.name} · {materials.length} loại vật tư
-          </p>
-        </div>
+      <PageHeader
+        eyebrow="Bóc vật tư"
+        title="Vật tư cần mua"
+        subtitle={`${project?.name ?? 'Dự án'} · ${materials.length} loại vật tư từ bảng dự toán`}
+        actions={(
+          <>
         <Button variant="secondary" size="sm" onClick={() => router.push(`/estimate?projectId=${projectId}`)}>
           <ArrowLeft size={13} /> Về dự toán
         </Button>
@@ -92,7 +92,9 @@ function MaterialsContent() {
             <Button size="sm" onClick={exportCsv}><Download size={13} /> Xuất CSV</Button>
           </>
         )}
-      </div>
+          </>
+        )}
+      />
 
       {materials.length === 0 ? (
         <div className="glass-card" style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>

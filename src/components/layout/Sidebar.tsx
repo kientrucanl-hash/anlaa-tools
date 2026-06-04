@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import {
-  Square, Layers, Grid3x3, Coins, HardHat,
+  Square, Layers, Grid3x3,
   FileSpreadsheet, Package, BarChart2, Users,
   Clock, Settings, BookOpen, ShieldCheck,
   Bell, LogOut, X, ChevronRight,
@@ -22,9 +22,6 @@ const NAV_TOOLS = [
   { href: '/masonry',   icon: Square,      label: 'Xây & Trát' },
   { href: '/screeding', icon: Layers,      label: 'Cán nền' },
   { href: '/tiling',    icon: Grid3x3,     label: 'Ốp lát gạch' },
-  null,
-  { href: '/pricing',   icon: Coins,       label: 'Đơn giá Vật tư' },
-  { href: '/pricing',   icon: HardHat,     label: 'Đơn giá Thi công' },
 ]
 
 const NAV_MAIN = [
@@ -81,9 +78,9 @@ export function Sidebar({ open, onClose }: Props) {
         }}>
           <div style={{ flex: 1 }}>
             <div style={{ fontWeight: 800, fontSize: '1rem', background: 'var(--gradient-primary)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-              Dự toán ANLAA
+              ANLAA Estimate
             </div>
-            <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Mecalc v3.0</div>
+            <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Dự toán thay G8</div>
           </div>
           <button
             onClick={onClose}
@@ -105,6 +102,11 @@ export function Sidebar({ open, onClose }: Props) {
             {user?.role === 'ADMIN' && (
               <NavItem href="/admin" icon={ShieldCheck} label="Quản lý Admin" active={pathname === '/admin'} onClick={onClose} />
             )}
+          </NavSection>
+          <NavSection label="Công cụ bóc tách">
+            {NAV_TOOLS.map((item) => (
+              <NavItem key={item.href} {...item} active={pathname === item.href} onClick={onClose} />
+            ))}
           </NavSection>
         </div>
 

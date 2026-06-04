@@ -6,8 +6,8 @@ import { ToastProvider } from '@/components/ui/Toast'
 import '@/styles/globals.css'
 
 export const metadata: Metadata = {
-  title: 'MECALC — Công cụ Tính Vật tư Xây dựng',
-  description: 'Tool tính vật tư xây dựng miền Bắc: gạch, xi măng, cát, keo dán, gạch ốp lát',
+  title: 'ANLAA Estimate — App dự toán thay G8',
+  description: 'App dự toán chi phí thi công, bóc khối lượng, so sánh NTP và quản lý đơn giá cho ANLAA.',
 }
 
 export default function RootLayout({

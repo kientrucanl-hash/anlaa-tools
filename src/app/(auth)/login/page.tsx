@@ -54,10 +54,10 @@ export default function LoginPage() {
             WebkitTextFillColor: 'transparent',
             marginBottom: '0.25rem',
           }}>
-            MECALC
+            ANLAA Estimate
           </div>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>
-            Công cụ Tính Vật tư Xây dựng
+            App dự toán thay G8 cho ANLAA
           </p>
         </div>
 

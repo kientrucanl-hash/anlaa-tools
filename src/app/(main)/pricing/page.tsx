@@ -6,6 +6,7 @@ import { useQuery } from '@tanstack/react-query'
 import { ArrowLeft, BarChart2, CheckCircle2, Download, Save, Table2 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { useToast } from '@/components/ui/Toast'
+import { PageHeader } from '@/components/layout/PageHeader'
 import { formatNumber } from '@/lib/utils'
 import { apiFetch, projectsApi } from '@/lib/api/client'
 import {
@@ -294,13 +295,12 @@ function PricingContent() {
 
   return (
     <div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
-        <div style={{ flex: 1, minWidth: 240 }}>
-          <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)' }}>Bảng Giá & NTP</h2>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.8125rem', marginTop: 2 }}>
-            {(projectId ? project?.name : 'Catalog mẫu') ?? 'Dự án'} · {rows.length} hạng mục · nguồn {source === 'estimate' ? 'dự toán' : 'template'}
-          </p>
-        </div>
+      <PageHeader
+        eyebrow="Đơn giá và NTP"
+        title="Bảng giá thay G8"
+        subtitle={`${(projectId ? project?.name : 'Catalog mẫu') ?? 'Dự án'} · ${rows.length} hạng mục · nguồn ${source === 'estimate' ? 'dự toán' : 'template'}`}
+        actions={(
+          <>
         <Button variant="secondary" size="sm" onClick={() => router.push(projectId ? `/estimate?projectId=${projectId}` : '/dashboard')}>
           <ArrowLeft size={13} /> {projectId ? 'Về dự toán' : 'Về Dashboard'}
         </Button>
@@ -310,7 +310,9 @@ function PricingContent() {
         <Button size="sm" onClick={() => { persist(); showToast('Đã lưu bảng giá trên trình duyệt', 'success') }}>
           <Save size={13} /> Lưu
         </Button>
-      </div>
+          </>
+        )}
+      />
 
       <div className="glass-card" style={{ padding: '0.875rem 1rem', marginBottom: '1rem' }}>
         <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center' }}>
